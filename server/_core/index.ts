@@ -7,6 +7,7 @@ import { publicPlatformScript } from "./publicConfig";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { registerGoogleCalendarRoutes } from "../routes/google-calendar";
 
 async function startServer() {
   const app = express();
@@ -19,6 +20,7 @@ async function startServer() {
     res.set("Cache-Control", "no-store").type("application/javascript").send(publicPlatformScript());
   });
   registerOAuthRoutes(app);
+  registerGoogleCalendarRoutes(app);
   // tRPC API
   app.use(
     "/api/trpc",

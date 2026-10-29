@@ -9,4 +9,9 @@ export const ENV = {
   get isProduction() { return process.env.NODE_ENV === "production"; },
   get forgeApiUrl() { return process.env.MANUS_API_URL ?? ""; },
   get forgeApiKey() { return process.env.MANUS_API_KEY ?? ""; },
+  // Supabase configuration
+  get supabaseUrl() { return process.env.SUPABASE_URL ?? ""; },
+  get supabaseAnonKey() { return process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? ""; },
+  get supabaseServiceKey() { return process.env.SUPABASE_SECRET_KEY ?? ""; },
+  get supabaseJwksUrl() { return process.env.SUPABASE_JWKS_URL ?? ""; },
 };
