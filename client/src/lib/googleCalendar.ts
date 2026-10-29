@@ -4,6 +4,12 @@
  *
  * Sincronização bidirecional de agendamentos OllCLin ↔ Google Calendar.
  * Usa OAuth2 para autenticação do profissional.
+ *
+ * ⚠️ SEGURANÇA LGPD:
+ * - VITE_GOOGLE_CLIENT_SECRET NUNCA deve estar no frontend.
+ * - A troca de código por tokens (exchangeGoogleCodeForTokens) deve ser
+ *   feita exclusivamente no backend através do endpoint
+ *   /api/google-calendar/callback.
  */
 
 const GOOGLE_CALENDAR_API_BASE = "https://www.googleapis.com/calendar/v3";
@@ -46,37 +52,6 @@ export function startGoogleCalendarAuth() {
 
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   window.location.href = authUrl;
-}
-
-/**
- * Trocar código de autorização por tokens de acesso
- * Deve ser chamado no servidor (backend) após o callback do Google
- */
-export async function exchangeGoogleCodeForTokens(
-  code: string,
-): Promise<{
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  token_type: string;
-}> {
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      code,
-      client_id: googleCalendarConfig.clientId || "",
-      client_secret: import.meta.env.VITE_GOOGLE_CLIENT_SECRET || "",
-      redirect_uri: googleCalendarConfig.redirectUri,
-      grant_type: "authorization_code",
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error("Falha ao trocar código por tokens do Google");
-  }
-
-  return response.json();
 }
 
 /**
