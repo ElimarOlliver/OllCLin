@@ -31,7 +31,7 @@ import { trpc } from "@/lib/trpc";
 
 export default function ProcedimentosView() {
   const [search, setSearch] = useState("");
-  [procedures, setProcedures] = useState<Array<{
+  const [procedures, setProcedures] = useState<Array<{
     id: number;
     name: string;
     description?: string;
@@ -39,7 +39,9 @@ export default function ProcedimentosView() {
     price: string;
     isActive: boolean;
   }>>([]);
-  [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const utils = trpc.useUtils();
 
   useEffect(() => {
     loadProcedures();
@@ -48,7 +50,7 @@ export default function ProcedimentosView() {
   async function loadProcedures() {
     setIsLoading(true);
     try {
-      const data = await trpc.procedimentos.list.query({
+      const data = await utils.procedimentos.list.fetch({
         organizationId: 1,
         search: search || undefined,
         isActive: true,

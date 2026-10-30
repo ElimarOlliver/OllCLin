@@ -11,13 +11,8 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import {
-  Button,
-  buttonVariants,
-} from "@/components/ui/button";
-import {
-  Input,
-} from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -34,9 +29,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  Calendar,
-  CalendarProps,
-} from "@/components/ui/calendar";
+  Badge,
+  badgeVariants,
+} from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -45,10 +40,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Badge,
-  badgeVariants,
-} from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import {
   Calendar as CalendarIcon,
@@ -64,6 +55,7 @@ import {
 import { format, parseISO, startOfDay, endOfDay, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import type { VariantProps } from "class-variance-authority";
 import {
   googleCalendarConfig,
   startGoogleCalendarAuth,
@@ -112,9 +104,11 @@ type Appointment = {
 };
 
 // Status badge configuration
+type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;
+
 const STATUS_CONFIG: Record<
   AppointmentStatus,
-  { label: string; variant: keyof ReturnType<typeof badgeVariants> }
+  { label: string; variant: BadgeVariant }
 > = {
   solicitado: { label: "Solicitado", variant: "secondary" },
   confirmado: { label: "Confirmado", variant: "default" },
@@ -136,23 +130,23 @@ export default function AgendaView() {
     null,
   );
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  [professionalsData, setProfessionalsData] = useState<Array<{
+  const [professionalsData, setProfessionalsData] = useState<Array<{
     id: number;
     fullName: string;
     specialty?: string;
   }>>([]);
-  [proceduresData, setProceduresData] = useState<Array<{
+  const [proceduresData, setProceduresData] = useState<Array<{
     id: number;
     name: string;
     durationMinutes: number;
   }>>([]);
-  [patientsData, setPatientsData] = useState<Array<{
+  const [patientsData, setPatientsData] = useState<Array<{
     id: number;
     fullName: string;
     cpf?: string;
   }>>([]);
-  [isLoading, setIsLoading] = useState(true);
-  [googleConnected, setGoogleConnected] = useState(
+  const [isLoading, setIsLoading] = useState(true);
+  const [googleConnected, setGoogleConnected] = useState(
     hasGoogleCalendarTokens(),
   );
 
@@ -171,17 +165,17 @@ export default function AgendaView() {
       const end = endOfDay(selectedDate);
 
       if (viewMode === "dia") {
-        const data = await trpc.agendamentos.list.query({
+        const data = await utils.agendamentos.list.fetch({
           organizationId: 1, // TODO: pegar do contexto do usuário/tenant
-          startsAtFrom: start,
-          startsAtTo: end,
+          startsAtFrom: start.toISOString(),
+          startsAtTo: end.toISOString(),
           limit: 100,
         });
         setAppointments(data as unknown as Appointment[]);
       }
 
       // Carregar profissionais
-      const profs = await trpc.profissionais.list.query({
+      const profs = await utils.profissionais.list.fetch({
         organizationId: 1,
         isActive: true,
         limit: 50,
@@ -189,7 +183,7 @@ export default function AgendaView() {
       setProfessionalsData(profs as any);
 
       // Carregar procedimentos
-      const procs = await trpc.procedimentos.list.query({
+      const procs = await utils.procedimentos.list.fetch({
         organizationId: 1,
         isActive: true,
         limit: 50,
@@ -197,7 +191,7 @@ export default function AgendaView() {
       setProceduresData(procs as any);
 
       // Carregar pacientes
-      const pats = await trpc.pacientes.list.query({
+      const pats = await utils.pacientes.list.fetch({
         organizationId: 1,
         isActive: true,
         limit: 100,
@@ -256,7 +250,7 @@ export default function AgendaView() {
   }) {
     try {
       if (editingAppointment) {
-        await trpc.agendamentos.update.mutate({
+        await utils.client.agendamentos.update.mutate({
           id: editingAppointment.id,
           organizationId: 1,
           patientId: formData.patientId,
@@ -268,7 +262,7 @@ export default function AgendaView() {
           notes: formData.notes,
         });
       } else {
-        await trpc.agendamentos.create.mutate({
+        await utils.client.agendamentos.create.mutate({
           organizationId: 1,
           patientId: formData.patientId,
           professionalId: formData.professionalId,
@@ -479,7 +473,7 @@ export default function AgendaView() {
                   size="icon"
                   onClick={() => setSelectedDate(new Date())}
                 >
-                  <Calendar className="h-4 w-4" />
+                  <CalendarIcon className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
@@ -561,9 +555,7 @@ export default function AgendaView() {
                         >
                           <div className="flex justify-between items-start">
                             <div className="font-bold">{appt.procedure.name}</div>
-                            <Badge variant={status.variant as any} size="sm">
-                              {status.label}
-                            </Badge>
+                            <Badge variant={status.variant}>{status.label}</Badge>
                           </div>
                           <div className="text-foreground/70">
                             {appt.patient.fullName}
@@ -619,7 +611,7 @@ export default function AgendaView() {
                           <TableCell>{appt.procedure.name}</TableCell>
                           <TableCell>{appt.professional.fullName}</TableCell>
                           <TableCell>
-                            <Badge variant={status.variant as any}>
+                            <Badge variant={status.variant}>
                               {status.label}
                             </Badge>
                           </TableCell>

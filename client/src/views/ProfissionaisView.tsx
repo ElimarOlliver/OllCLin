@@ -31,7 +31,7 @@ import { trpc } from "@/lib/trpc";
 
 export default function ProfissionaisView() {
   const [search, setSearch] = useState("");
-  [professionals, setProfessionals] = useState<Array<{
+  const [professionals, setProfessionals] = useState<Array<{
     id: number;
     fullName: string;
     cpf?: string;
@@ -42,7 +42,9 @@ export default function ProfissionaisView() {
     email?: string;
     isActive: boolean;
   }>>([]);
-  [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const utils = trpc.useUtils();
 
   useEffect(() => {
     loadProfessionals();
@@ -51,7 +53,7 @@ export default function ProfissionaisView() {
   async function loadProfessionals() {
     setIsLoading(true);
     try {
-      const data = await trpc.profissionais.list.query({
+      const data = await utils.profissionais.list.fetch({
         organizationId: 1,
         search: search || undefined,
         isActive: true,
@@ -146,9 +148,9 @@ export default function ProfissionaisView() {
                     {prof.specialty || "—"}
                   </TableCell>
                   <TableCell className="text-sm text-center text-foreground/90 font-mono">
-                    {prof.council} {prof.councilNumber}
-                      ? `${prof.council} ${prof.councilNumber}`
-                      : "—"
+                    {prof.council || prof.councilNumber
+                      ? `${prof.council ?? ""} ${prof.councilNumber ?? ""}`.trim()
+                      : "—"}
                   </TableCell>
                   <TableCell className="text-sm text-center text-foreground/90 font-mono">
                     {prof.cpf || "—"}

@@ -18,6 +18,9 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
+  // Só redireciona se o OAuth do Manus estiver configurado.
+  if (!window.__MANUS_CONFIG__?.oauthPortalUrl) return;
+
   startLogin();
 };
 

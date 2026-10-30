@@ -5,25 +5,25 @@
  * Simplifica o acesso ao estado de autenticação via tRPC context.
  */
 
-import { useQuery } from "@tanstack/react-query";
 import { trpc } from "@/lib/trpc";
 
 export function useAuth() {
-  const query = useQuery({
-    queryKey: ["auth", "me"],
-    queryFn: async () => {
-      const data = await trpc.auth.me.query();
-      return data;
-    },
+  const utils = trpc.useUtils();
+  const query = trpc.auth.me.useQuery(undefined, {
     staleTime: 5 * 60 * 1000, // 5 minutos
+    retry: false,
   });
 
   return {
-    user: query.data,
+    user: query.data ?? null,
     loading: query.isLoading,
     isAuthenticated: !!query.data,
     logout: async () => {
-      await trpc.auth.logout.mutate();
+      try {
+        await utils.client.auth.logout.mutate();
+      } catch {
+        // Sessão já inválida: segue para a tela inicial.
+      }
       window.location.href = "/";
     },
   };

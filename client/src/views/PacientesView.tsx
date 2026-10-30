@@ -51,7 +51,7 @@ import { cn } from "@/lib/utils";
 export default function PacientesView() {
   const [search, setSearch] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
-  [patients, setPatients] = useState<Array<{
+  const [patients, setPatients] = useState<Array<{
     id: number;
     fullName: string;
     cpf?: string;
@@ -62,7 +62,9 @@ export default function PacientesView() {
     isActive: boolean;
     createdAt: string;
   }>>([]);
-  [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const utils = trpc.useUtils();
 
   useEffect(() => {
     loadPatients();
@@ -71,7 +73,7 @@ export default function PacientesView() {
   async function loadPatients() {
     setIsLoading(true);
     try {
-      const data = await trpc.pacientes.list.query({
+      const data = await utils.pacientes.list.fetch({
         organizationId: 1,
         search: search || undefined,
         isActive: true,
