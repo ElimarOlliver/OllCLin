@@ -1,3 +1,4 @@
+import type { AnyMySqlColumn } from "drizzle-orm/mysql-core";
 import {
   int,
   mysqlEnum,
@@ -260,7 +261,7 @@ export const appointments = mysqlTable(
     googleCalendarEventId: varchar("google_calendar_event_id", { length: 255 }),
     recurrenceRule: text("recurrence_rule"), // iCal RRULE
     isRecurrenceParent: boolean("is_recurrence_parent").default(false).notNull(),
-    recurrenceParentId: int("recurrence_parent_id").references(() => appointments.id, { onDelete: "set null" }),
+    recurrenceParentId: int("recurrence_parent_id").references((): AnyMySqlColumn => appointments.id, { onDelete: "set null" }),
     notes: text("notes"),
     createdBy: int("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").defaultNow().notNull(),
