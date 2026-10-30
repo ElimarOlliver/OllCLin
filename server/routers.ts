@@ -16,6 +16,10 @@ import { patientRouter } from "./controllers/patient.controller";
 import { appointmentRouter } from "./controllers/appointment.controller";
 import { professionalRouter } from "./controllers/professional.controller";
 import { procedureRouter } from "./controllers/procedure.controller";
+import { expenseRouter } from "./controllers/expense.controller";
+import { settingsRouter } from "./controllers/settings.controller";
+import { healthPlanRouter } from "./controllers/health-plan.controller";
+import { revenueRouter } from "./controllers/revenue.controller";
 
 export const appRouter = router({
   // Sistema / Saúde
@@ -45,7 +49,19 @@ export const appRouter = router({
   // Procedimentos
   procedimentos: procedureRouter,
 
-  // TODO: Prontuário, Exames, Cirurgias, Financeiro, TISS, Telessaúde, Marketing, Relatórios
+  // Convênios (Configurações Gerais)
+  convenios: healthPlanRouter,
+
+  // Financeiro — Receitas
+  receitas: revenueRouter,
+
+  // Financeiro — Despesas + categorias
+  despesas: expenseRouter,
+
+  // Configurações: locais/salas + campos obrigatórios
+  configuracoes: settingsRouter,
+
+  // TODO: Prontuário, Exames, Cirurgias, Despesas, Repasse, TISS, Telessaúde, Marketing, Relatórios
   // exemplo:
   // prontuario: prontuarioRouter,
   // exames: examesRouter,
