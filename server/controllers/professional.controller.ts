@@ -1,17 +1,17 @@
 /**
  * OllCLin - Camada Controller
  * Controlador de Profissionais de Saúde
- * Arquitetura MVC - Recebe requisições, valida e chama o Model
  */
 
 import { z } from "zod";
-import { professionalModel } from "../models/professional.model";
-import { publicProcedure, protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
+import { professionalModel } from "../models/professional.model";
+import { protectedProcedure, router } from "../_core/trpc";
+import { writeAuditLog } from "../lib/audit";
 
 export const createProfessionalSchema = z.object({
-  organizationId: z.number(),
-  userId: z.number().optional(),
+  organizationId: z.number().int().positive(),
+  userId: z.number().int().optional(),
   fullName: z.string().min(2, "Nome completo é obrigatório"),
   cpf: z.string().optional(),
   council: z.string().optional(),
@@ -23,8 +23,9 @@ export const createProfessionalSchema = z.object({
 });
 
 export const updateProfessionalSchema = z.object({
-  id: z.number(),
-  organizationId: z.number(),
+  id: z.number().int().positive(),
+  organizationId: z.number().int().positive(),
+  userId: z.number().int().optional(),
   fullName: z.string().min(2).optional(),
   cpf: z.string().optional(),
   council: z.string().optional(),
@@ -36,84 +37,109 @@ export const updateProfessionalSchema = z.object({
 });
 
 export const professionalFilterSchema = z.object({
-  organizationId: z.number(),
+  organizationId: z.number().int().positive(),
   search: z.string().optional(),
   specialty: z.string().optional(),
   isActive: z.boolean().optional(),
-  limit: z.number().default(50).optional(),
-  offset: z.number().default(0).optional(),
+  limit: z.number().int().min(1).max(200).default(50),
+  offset: z.number().int().min(0).default(0),
 });
 
-export const professionalRouter = {
-  list: publicProcedure
+export const professionalRouter = router({
+  list: protectedProcedure
     .input(professionalFilterSchema)
-    .query(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
+    .query(async ({ input }) => professionalModel.findMany(input)),
 
-      return await professionalModel.findMany({
-        organizationId: input.organizationId,
-        search: input.search,
-        specialty: input.specialty,
-        isActive: input.isActive,
-        limit: input.limit,
-        offset: input.offset,
-      });
-    }),
-
-  getById: publicProcedure
-    .input(z.object({ id: z.number(), organizationId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
-
+  getById: protectedProcedure
+    .input(z.object({ id: z.number().int(), organizationId: z.number().int() }))
+    .query(async ({ input }) => {
       const professional = await professionalModel.findById(
         input.id,
         input.organizationId,
       );
       if (!professional) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Profissional não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Profissional não encontrado",
+        });
       }
-
       return professional;
     }),
 
   create: protectedProcedure
     .input(createProfessionalSchema)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
+      const professional = await professionalModel.create(input);
 
-      return await professionalModel.create(input);
+      await writeAuditLog({
+        organizationId: input.organizationId,
+        userId: ctx.user.id,
+        action: "CREATE",
+        entity: "professional",
+        entityId: professional.id,
+        newValues: { fullName: input.fullName, specialty: input.specialty },
+        request: ctx.req,
+      });
+
+      return professional;
     }),
 
   update: protectedProcedure
     .input(updateProfessionalSchema)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
-
       const { id, organizationId, ...data } = input;
 
       const existing = await professionalModel.findById(id, organizationId);
       if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Profissional não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Profissional não encontrado",
+        });
       }
 
-      return await professionalModel.update(id, organizationId, data);
+      const professional = await professionalModel.update(id, organizationId, {
+        id,
+        ...data,
+      });
+
+      await writeAuditLog({
+        organizationId,
+        userId: ctx.user.id,
+        action: "UPDATE",
+        entity: "professional",
+        entityId: id,
+        oldValues: existing,
+        newValues: data,
+        request: ctx.req,
+      });
+
+      return professional;
     }),
 
   delete: protectedProcedure
-    .input(z.object({ id: z.number(), organizationId: z.number() }))
+    .input(z.object({ id: z.number().int(), organizationId: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
+      const professional = await professionalModel.delete(
+        input.id,
+        input.organizationId,
+      );
+      if (!professional) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Profissional não encontrado",
+        });
       }
 
-      return await professionalModel.delete(input.id, input.organizationId);
+      await writeAuditLog({
+        organizationId: input.organizationId,
+        userId: ctx.user.id,
+        action: "DELETE",
+        entity: "professional",
+        entityId: input.id,
+        newValues: { isActive: false },
+        request: ctx.req,
+      });
+
+      return { success: true };
     }),
-};
+});

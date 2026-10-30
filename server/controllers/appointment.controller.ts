@@ -1,168 +1,149 @@
 /**
  * OllCLin - Camada Controller
- * Controlador de Agendamentos
- * Arquitetura MVC - Recebe requisições, valida e chama o Model
+ * Controlador de Agendamentos (Agenda)
  */
 
 import { z } from "zod";
-import { appointmentModel } from "../models/appointment.model";
-import { publicProcedure, protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
-import { auditLog } from "../../drizzle/schema";
-import { db } from "../db";
+import { appointmentModel } from "../models/appointment.model";
+import { protectedProcedure, router } from "../_core/trpc";
+import { writeAuditLog } from "../lib/audit";
 
-// Schemas de validação
+const statusSchema = z.enum([
+  "solicitado",
+  "confirmado",
+  "em_espera",
+  "em_atendimento",
+  "atendido",
+  "faltou",
+  "desmarcado",
+]);
+
+/** Datas chegam do cliente como ISO string; normaliza para o Postgres. */
+const isoDate = z
+  .string()
+  .refine((value) => !Number.isNaN(new Date(value).getTime()), {
+    message: "Data inválida",
+  });
+
 export const createAppointmentSchema = z.object({
-  organizationId: z.number(),
-  patientId: z.number(),
-  professionalId: z.number(),
-  procedureId: z.number(),
-  establishmentId: z.number().optional(),
-  locationId: z.number().optional(),
-  roomId: z.number().optional(),
-  startsAt: z.string().datetime(),
-  endsAt: z.string().datetime(),
-  status: z
-    .enum([
-      "solicitado",
-      "confirmado",
-      "em_espera",
-      "em_atendimento",
-      "atendido",
-      "faltou",
-      "desmarcado",
-    ])
-    .default("solicitado"),
+  organizationId: z.number().int().positive(),
+  patientId: z.number().int().positive(),
+  professionalId: z.number().int().positive(),
+  procedureId: z.number().int().positive(),
+  establishmentId: z.number().int().optional(),
+  locationId: z.number().int().optional(),
+  roomId: z.number().int().optional(),
+  startsAt: isoDate,
+  endsAt: isoDate,
+  status: statusSchema.default("solicitado"),
   notes: z.string().optional(),
 });
 
 export const updateAppointmentSchema = z.object({
-  id: z.number(),
-  organizationId: z.number(),
-  patientId: z.number().optional(),
-  professionalId: z.number().optional(),
-  procedureId: z.number().optional(),
-  establishmentId: z.number().optional(),
-  locationId: z.number().optional(),
-  roomId: z.number().optional(),
-  startsAt: z.string().datetime().optional(),
-  endsAt: z.string().datetime().optional(),
-  status: z
-    .enum([
-      "solicitado",
-      "confirmado",
-      "em_espera",
-      "em_atendimento",
-      "atendido",
-      "faltou",
-      "desmarcado",
-    ])
-    .optional(),
+  id: z.number().int().positive(),
+  organizationId: z.number().int().positive(),
+  patientId: z.number().int().positive().optional(),
+  professionalId: z.number().int().positive().optional(),
+  procedureId: z.number().int().positive().optional(),
+  establishmentId: z.number().int().optional(),
+  locationId: z.number().int().optional(),
+  roomId: z.number().int().optional(),
+  startsAt: isoDate.optional(),
+  endsAt: isoDate.optional(),
+  status: statusSchema.optional(),
   notes: z.string().optional(),
 });
 
 export const appointmentFilterSchema = z.object({
-  organizationId: z.number(),
-  professionalId: z.number().optional(),
-  patientId: z.number().optional(),
-  status: z.string().optional(),
-  startsAtFrom: z.string().datetime().optional(),
-  startsAtTo: z.string().datetime().optional(),
-  limit: z.number().default(50).optional(),
-  offset: z.number().default(0).optional(),
+  organizationId: z.number().int().positive(),
+  professionalId: z.number().int().optional(),
+  patientId: z.number().int().optional(),
+  status: statusSchema.optional(),
+  startsAtFrom: z.string().optional(),
+  startsAtTo: z.string().optional(),
+  limit: z.number().int().min(1).max(500).default(50),
+  offset: z.number().int().min(0).default(0),
 });
 
 export const conflictCheckSchema = z.object({
-  professionalId: z.number(),
-  startsAt: z.string().datetime(),
-  endsAt: z.string().datetime(),
-  excludeId: z.number().optional(),
-  roomId: z.number().optional(),
+  professionalId: z.number().int().positive(),
+  startsAt: isoDate,
+  endsAt: isoDate,
+  excludeId: z.number().int().optional(),
+  roomId: z.number().int().optional(),
 });
 
-export const appointmentRouter = {
-  list: publicProcedure
+export const appointmentRouter = router({
+  list: protectedProcedure
     .input(appointmentFilterSchema)
-    .query(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
+    .query(async ({ input }) => appointmentModel.findMany(input)),
 
-      return await appointmentModel.findMany({
-        organizationId: input.organizationId,
-        professionalId: input.professionalId,
-        patientId: input.patientId,
-        status: input.status,
-        startsAtFrom: input.startsAtFrom ? new Date(input.startsAtFrom) : undefined,
-        startsAtTo: input.startsAtTo ? new Date(input.startsAtTo) : undefined,
-        limit: input.limit,
-        offset: input.offset,
-      });
-    }),
-
-  getById: publicProcedure
-    .input(z.object({ id: z.number(), organizationId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
-
+  getById: protectedProcedure
+    .input(z.object({ id: z.number().int(), organizationId: z.number().int() }))
+    .query(async ({ input }) => {
       const appointment = await appointmentModel.findById(
         input.id,
         input.organizationId,
       );
       if (!appointment) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Agendamento não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Agendamento não encontrado",
+        });
       }
-
       return appointment;
     }),
 
   create: protectedProcedure
     .input(createAppointmentSchema)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
+      const startsAt = new Date(input.startsAt);
+      const endsAt = new Date(input.endsAt);
+
+      if (endsAt <= startsAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "O horário final deve ser posterior ao inicial",
+        });
       }
 
-      // Verificar conflito de horário para o profissional
       const hasConflict = await appointmentModel.checkConflict({
         professionalId: input.professionalId,
-        startsAt: new Date(input.startsAt),
-        endsAt: new Date(input.endsAt),
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
         roomId: input.roomId,
       });
 
       if (hasConflict) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: "Conflito de horário: profissional ou sala já possui agendamento neste período",
+          message:
+            "Conflito de horário: profissional ou sala já possui agendamento neste período",
         });
       }
 
       const appointment = await appointmentModel.create({
         ...input,
-        startsAt: new Date(input.startsAt),
-        endsAt: new Date(input.endsAt),
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
         createdBy: ctx.user.id,
       });
 
-      // Auditoria
-      await db.insert(auditLog).values({
+      await writeAuditLog({
         organizationId: input.organizationId,
         userId: ctx.user.id,
         action: "CREATE",
         entity: "appointment",
         entityId: appointment.id,
-        newValues: JSON.stringify({
+        newValues: {
           patientId: input.patientId,
           professionalId: input.professionalId,
           startsAt: input.startsAt,
           endsAt: input.endsAt,
           status: input.status,
-        }),
-        ipAddress: ctx.req.headers["x-forwarded-for"] as string | undefined,
-        userAgent: ctx.req.headers["user-agent"],
+        },
+        request: ctx.req,
       });
 
       return appointment;
@@ -171,113 +152,111 @@ export const appointmentRouter = {
   update: protectedProcedure
     .input(updateAppointmentSchema)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
-
       const { id, organizationId, startsAt, endsAt, ...data } = input;
 
       const existing = await appointmentModel.findById(id, organizationId);
       if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Agendamento não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Agendamento não encontrado",
+        });
       }
 
-      // Verificar conflito se mudou horário ou profissional
+      const nextStartsAt = startsAt ? new Date(startsAt) : new Date(existing.startsAt);
+      const nextEndsAt = endsAt ? new Date(endsAt) : new Date(existing.endsAt);
+
+      if (nextEndsAt <= nextStartsAt) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "O horário final deve ser posterior ao inicial",
+        });
+      }
+
       if (startsAt || endsAt || data.professionalId || data.roomId) {
         const hasConflict = await appointmentModel.checkConflict({
           professionalId: data.professionalId ?? existing.professionalId,
-          startsAt: startsAt ? new Date(startsAt) : existing.startsAt,
-          endsAt: endsAt ? new Date(endsAt) : existing.endsAt,
+          startsAt: nextStartsAt.toISOString(),
+          endsAt: nextEndsAt.toISOString(),
           excludeId: id,
-          roomId: data.roomId ?? existing.roomId,
+          roomId: data.roomId ?? existing.roomId ?? undefined,
         });
 
         if (hasConflict) {
           throw new TRPCError({
             code: "CONFLICT",
-            message: "Conflito de horário: profissional ou sala já possui agendamento neste período",
+            message:
+              "Conflito de horário: profissional ou sala já possui agendamento neste período",
           });
         }
       }
 
-      const oldValues = JSON.stringify({
-        status: existing.status,
-        startsAt: existing.startsAt,
-        endsAt: existing.endsAt,
-        professionalId: existing.professionalId,
-        roomId: existing.roomId,
-      });
-
       const appointment = await appointmentModel.update(id, organizationId, {
+        id,
         ...data,
-        startsAt: startsAt ? new Date(startsAt) : undefined,
-        endsAt: endsAt ? new Date(endsAt) : undefined,
+        startsAt: nextStartsAt.toISOString(),
+        endsAt: nextEndsAt.toISOString(),
       });
 
-      const newValues = JSON.stringify({
-        status: data.status,
-        startsAt: startsAt,
-        endsAt: endsAt,
-        professionalId: data.professionalId,
-        roomId: data.roomId,
-      });
-
-      await db.insert(auditLog).values({
+      await writeAuditLog({
         organizationId,
         userId: ctx.user.id,
         action: "UPDATE",
         entity: "appointment",
         entityId: id,
-        oldValues,
-        newValues,
-        ipAddress: ctx.req.headers["x-forwarded-for"] as string | undefined,
-        userAgent: ctx.req.headers["user-agent"],
+        oldValues: {
+          status: existing.status,
+          startsAt: existing.startsAt,
+          endsAt: existing.endsAt,
+        },
+        newValues: {
+          status: data.status ?? existing.status,
+          startsAt: nextStartsAt.toISOString(),
+          endsAt: nextEndsAt.toISOString(),
+        },
+        request: ctx.req,
       });
 
       return appointment;
     }),
 
   delete: protectedProcedure
-    .input(z.object({ id: z.number(), organizationId: z.number() }))
+    .input(z.object({ id: z.number().int(), organizationId: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
-
-      const appointment = await appointmentModel.delete(input.id, input.organizationId);
+      const appointment = await appointmentModel.delete(
+        input.id,
+        input.organizationId,
+      );
       if (!appointment) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Agendamento não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Agendamento não encontrado",
+        });
       }
 
-      await db.insert(auditLog).values({
+      await writeAuditLog({
         organizationId: input.organizationId,
         userId: ctx.user.id,
         action: "DELETE",
         entity: "appointment",
         entityId: input.id,
-        newValues: JSON.stringify({ status: "desmarcado" }),
-        ipAddress: ctx.req.headers["x-forwarded-for"] as string | undefined,
-        userAgent: ctx.req.headers["user-agent"],
+        newValues: { status: "desmarcado" },
+        request: ctx.req,
       });
 
       return { success: true };
     }),
 
-  checkConflict: publicProcedure
+  checkConflict: protectedProcedure
     .input(conflictCheckSchema)
-    .query(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
-
+    .query(async ({ input }) => {
       const hasConflict = await appointmentModel.checkConflict({
         professionalId: input.professionalId,
-        startsAt: new Date(input.startsAt),
-        endsAt: new Date(input.endsAt),
+        startsAt: new Date(input.startsAt).toISOString(),
+        endsAt: new Date(input.endsAt).toISOString(),
         excludeId: input.excludeId,
         roomId: input.roomId,
       });
 
       return { hasConflict };
     }),
-};
+});

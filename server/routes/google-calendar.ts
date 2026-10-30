@@ -30,7 +30,7 @@ export function registerGoogleCalendarRoutes(app: Express) {
         body: new URLSearchParams({
           code: code as string,
           client_id: process.env.VITE_GOOGLE_CLIENT_ID || "",
-          client_secret: process.env.VITE_GOOGLE_CLIENT_SECRET || "",
+          client_secret: process.env.GOOGLE_CLIENT_SECRET || "",
           redirect_uri: `${process.env.VITE_PUBLIC_URL ?? "http://localhost:3000"}/api/google-calendar/callback`,
           grant_type: "authorization_code",
         }),
@@ -43,10 +43,10 @@ export function registerGoogleCalendarRoutes(app: Express) {
 
       const tokens = await tokenResponse.json();
 
-      // Redirecionar de volta para o frontend com os tokens (ou salvar no banco)
       // Em produção, salve os tokens de forma segura associados ao usuário
+      // (nunca envie o access_token pela URL - risco de vazamento/LGPD).
       const frontendUrl = process.env.VITE_PUBLIC_URL ?? "http://localhost:3000";
-      res.redirect(`${frontendUrl}/agenda?google_connected=true&access_token=${tokens.access_token}`);
+      res.redirect(`${frontendUrl}/agenda?google_connected=true`);
     } catch (err: any) {
       console.error("[Google Calendar] Erro no callback:", err.message);
       res.status(500).send("Erro interno no callback do Google Calendar");

@@ -1,110 +1,136 @@
 /**
  * OllCLin - Camada Controller
  * Controlador de Procedimentos
- * Arquitetura MVC - Recebe requisições, valida e chama o Model
  */
 
 import { z } from "zod";
-import { procedureModel } from "../models/procedure.model";
-import { publicProcedure, protectedProcedure } from "../_core/trpc";
 import { TRPCError } from "@trpc/server";
+import { procedureModel } from "../models/procedure.model";
+import { protectedProcedure, router } from "../_core/trpc";
+import { writeAuditLog } from "../lib/audit";
 
 export const createProcedureSchema = z.object({
-  organizationId: z.number(),
+  organizationId: z.number().int().positive(),
   name: z.string().min(2, "Nome do procedimento é obrigatório"),
   description: z.string().optional(),
-  durationMinutes: z.number().default(30),
+  durationMinutes: z.number().int().positive().default(30),
   price: z.string().default("0.00"),
   isActive: z.boolean().default(true),
 });
 
 export const updateProcedureSchema = z.object({
-  id: z.number(),
-  organizationId: z.number(),
+  id: z.number().int().positive(),
+  organizationId: z.number().int().positive(),
   name: z.string().min(2).optional(),
   description: z.string().optional(),
-  durationMinutes: z.number().optional(),
+  durationMinutes: z.number().int().positive().optional(),
   price: z.string().optional(),
   isActive: z.boolean().optional(),
 });
 
 export const procedureFilterSchema = z.object({
-  organizationId: z.number(),
+  organizationId: z.number().int().positive(),
   search: z.string().optional(),
   isActive: z.boolean().optional(),
-  limit: z.number().default(50).optional(),
-  offset: z.number().default(0).optional(),
+  limit: z.number().int().min(1).max(200).default(50),
+  offset: z.number().int().min(0).default(0),
 });
 
-export const procedureRouter = {
-  list: publicProcedure
+export const procedureRouter = router({
+  list: protectedProcedure
     .input(procedureFilterSchema)
-    .query(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
+    .query(async ({ input }) => procedureModel.findMany(input)),
 
-      return await procedureModel.findMany({
-        organizationId: input.organizationId,
-        search: input.search,
-        isActive: input.isActive,
-        limit: input.limit,
-        offset: input.offset,
-      });
-    }),
-
-  getById: publicProcedure
-    .input(z.object({ id: z.number(), organizationId: z.number() }))
-    .query(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
-
+  getById: protectedProcedure
+    .input(z.object({ id: z.number().int(), organizationId: z.number().int() }))
+    .query(async ({ input }) => {
       const procedure = await procedureModel.findById(
         input.id,
         input.organizationId,
       );
       if (!procedure) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Procedimento não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Procedimento não encontrado",
+        });
       }
-
       return procedure;
     }),
 
   create: protectedProcedure
     .input(createProcedureSchema)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
+      const procedure = await procedureModel.create(input);
 
-      return await procedureModel.create(input);
+      await writeAuditLog({
+        organizationId: input.organizationId,
+        userId: ctx.user.id,
+        action: "CREATE",
+        entity: "procedure",
+        entityId: procedure.id,
+        newValues: { name: input.name, price: input.price },
+        request: ctx.req,
+      });
+
+      return procedure;
     }),
 
   update: protectedProcedure
     .input(updateProcedureSchema)
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
-      }
-
       const { id, organizationId, ...data } = input;
 
       const existing = await procedureModel.findById(id, organizationId);
       if (!existing) {
-        throw new TRPCError({ code: "NOT_FOUND", message: "Procedimento não encontrado" });
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Procedimento não encontrado",
+        });
       }
 
-      return await procedureModel.update(id, organizationId, data);
+      const procedure = await procedureModel.update(id, organizationId, {
+        id,
+        ...data,
+      });
+
+      await writeAuditLog({
+        organizationId,
+        userId: ctx.user.id,
+        action: "UPDATE",
+        entity: "procedure",
+        entityId: id,
+        oldValues: existing,
+        newValues: data,
+        request: ctx.req,
+      });
+
+      return procedure;
     }),
 
   delete: protectedProcedure
-    .input(z.object({ id: z.number(), organizationId: z.number() }))
+    .input(z.object({ id: z.number().int(), organizationId: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
-      if (!ctx.user) {
-        throw new TRPCError({ code: "UNAUTHORIZED", message: "Não autenticado" });
+      const procedure = await procedureModel.delete(
+        input.id,
+        input.organizationId,
+      );
+      if (!procedure) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Procedimento não encontrado",
+        });
       }
 
-      return await procedureModel.delete(input.id, input.organizationId);
+      await writeAuditLog({
+        organizationId: input.organizationId,
+        userId: ctx.user.id,
+        action: "DELETE",
+        entity: "procedure",
+        entityId: input.id,
+        newValues: { isActive: false },
+        request: ctx.req,
+      });
+
+      return { success: true };
     }),
-};
+});

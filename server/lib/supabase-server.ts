@@ -2,90 +2,103 @@
  * OllCLin - Supabase Server SDK (Backend)
  * Arquitetura MVC - Camada de integração com Supabase (lado servidor)
  *
- * Este arquivo cria o cliente Supabase com privilégios de servidor (service role),
- * permitindo operações que contornam o RLS (Row Level Security) quando necessário.
- * Use apenas no backend, nunca expõe a SUPABASE_SECRET_KEY ao frontend.
+ * IMPORTANTE (LGPD): a SUPABASE_SECRET_KEY (service role) só pode ser usada no
+ * backend. Ela ignora RLS e nunca deve chegar ao navegador.
  */
 
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import type { Express } from "express";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { Request, Response } from "express";
 import { ENV } from "../_core/env";
 
-/**
- * Cria um cliente Supabase autenticado com cookies de sessão do Express.
- * Ideal para usar dentro de middlewares tRPC ou rotas Express.
- */
-export function createSupabaseServerClient(req: Express.Request, res: Express.Response) {
-  const supabaseUrl = ENV.supabaseUrl;
-  const supabaseKey = ENV.supabaseAnonKey;
+let adminClient: SupabaseClient | null = null;
+let publicClient: SupabaseClient | null = null;
 
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error(
-      "Supabase não configurado: defina SUPABASE_URL e SUPABASE_ANON_KEY no .env",
-    );
-  }
-
-  return createServerClient(supabaseUrl, supabaseKey, {
-    cookies: {
-      get(name: string) {
-        return req.cookies?.[name];
-      },
-      set(name: string, value: string, options: CookieOptions) {
-        res.cookie(name, value, {
-          ...options,
-          path: options.path ?? "/",
-          sameSite: options.sameSite ?? "lax",
-          secure: options.secure ?? process.env.NODE_ENV === "production",
-        });
-      },
-      remove(name: string, options: CookieOptions) {
-        res.clearCookie(name, {
-          ...options,
-          path: options.path ?? "/",
-        });
-      },
-    },
-  });
+export function isSupabaseConfigured(): boolean {
+  return Boolean(ENV.supabaseUrl && ENV.supabaseServiceKey);
 }
 
 /**
- * Cria um cliente Supabase com chave de serviço (service role).
- * USE APENAS NO BACKEND para operações administrativas que ignoram RLS.
- * Nunca exponha esta chave ao navegador.
+ * Cliente administrativo (service role). Uso exclusivo no backend.
+ * Ignora RLS - por isso todo acesso deve filtrar organization_id.
  */
-export function createSupabaseAdminClient() {
-  const supabaseUrl = ENV.supabaseUrl;
-  const supabaseServiceKey = ENV.supabaseServiceKey;
-
-  if (!supabaseUrl || !supabaseServiceKey) {
+export function getSupabaseAdmin(): SupabaseClient {
+  if (!ENV.supabaseUrl || !ENV.supabaseServiceKey) {
     throw new Error(
-      "Supabase Admin não configurado: defina SUPABASE_URL e SUPABASE_SERVICE_KEY no .env",
+      "Supabase não configurado: defina SUPABASE_URL e SUPABASE_SECRET_KEY no .env",
     );
   }
 
-  return createServerClient(supabaseUrl, supabaseServiceKey, {
-    cookies: {
-      get() { return undefined; },
-      set() { /* no-op */ },
-      remove() { /* no-op */ },
-    },
-  });
+  if (!adminClient) {
+    adminClient = createClient(ENV.supabaseUrl, ENV.supabaseServiceKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  }
+
+  return adminClient;
+}
+
+/** Cliente público (chave publishable/anon) - respeita RLS. */
+export function getSupabasePublic(): SupabaseClient {
+  if (!ENV.supabaseUrl || !ENV.supabaseAnonKey) {
+    throw new Error(
+      "Supabase não configurado: defina SUPABASE_URL e SUPABASE_PUBLISHABLE_KEY no .env",
+    );
+  }
+
+  if (!publicClient) {
+    publicClient = createClient(ENV.supabaseUrl, ENV.supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+  }
+
+  return publicClient;
+}
+
+/** Extrai o token Bearer do header Authorization (ou cookie de sessão). */
+function getAccessToken(req: Request): string | null {
+  const header = req.headers.authorization;
+  if (header?.toLowerCase().startsWith("bearer ")) {
+    return header.slice(7).trim();
+  }
+  const cookies = (req as Request & { cookies?: Record<string, string> }).cookies;
+  return cookies?.sb_access_token ?? null;
 }
 
 /**
- * Verifica o JWT do Supabase a partir do cookie de sessão.
- * Retorna o usuário autenticado ou null.
+ * Valida o JWT do Supabase e retorna o usuário autenticado (ou null).
+ * Útil quando a autenticação passar a ser feita pelo Supabase Auth.
  */
-export async function getSupabaseUser(req: Express.Request, res: Express.Response) {
-  const supabase = createSupabaseServerClient(req, res);
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+export async function getSupabaseUser(req: Request, _res: Response) {
+  const token = getAccessToken(req);
+  if (!token) return null;
 
-  if (error || !user) {
-    return null;
+  const { data, error } = await getSupabasePublic().auth.getUser(token);
+  if (error) return null;
+  return data.user ?? null;
+}
+
+/** Testa a conexão com o banco (usado pelo endpoint /api/health/db). */
+export async function checkSupabaseConnection(): Promise<{
+  ok: boolean;
+  message: string;
+  organizations?: number;
+}> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { count, error } = await supabase
+      .from("organizations")
+      .select("id", { count: "exact", head: true });
+
+    if (error) return { ok: false, message: error.message };
+    return {
+      ok: true,
+      message: "Conexão com o Supabase estabelecida",
+      organizations: count ?? 0,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Erro desconhecido",
+    };
   }
-
-  return user;
 }
