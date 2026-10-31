@@ -19,6 +19,7 @@ export const createProfessionalSchema = z.object({
   specialty: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email().optional(),
+  commissionPercentage: z.number().min(0).max(100).optional(),
   isActive: z.boolean().default(true),
 });
 
@@ -33,6 +34,7 @@ export const updateProfessionalSchema = z.object({
   specialty: z.string().optional(),
   phone: z.string().optional(),
   email: z.string().email().optional(),
+  commissionPercentage: z.number().min(0).max(100).optional(),
   isActive: z.boolean().optional(),
 });
 
