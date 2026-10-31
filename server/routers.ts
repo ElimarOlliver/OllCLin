@@ -20,6 +20,10 @@ import { expenseRouter } from "./controllers/expense.controller";
 import { settingsRouter } from "./controllers/settings.controller";
 import { healthPlanRouter } from "./controllers/health-plan.controller";
 import { revenueRouter } from "./controllers/revenue.controller";
+import { saleRouter } from "./controllers/sale.controller";
+import { payoutRouter } from "./controllers/payout.controller";
+import { statementRouter } from "./controllers/statement.controller";
+import { receiptRouter } from "./controllers/receipt.controller";
 
 export const appRouter = router({
   // Sistema / Saúde
@@ -57,6 +61,18 @@ export const appRouter = router({
 
   // Financeiro — Despesas + categorias
   despesas: expenseRouter,
+
+  // Financeiro — Vendas (Cap. 15.1.2)
+  vendas: saleRouter,
+
+  // Financeiro — Repasse (Cap. 15.3)
+  repasses: payoutRouter,
+
+  // Financeiro — Extrato derivado (Cap. 15.4)
+  extrato: statementRouter,
+
+  // Financeiro — Recibos (Cap. 15.5)
+  recibos: receiptRouter,
 
   // Configurações: locais/salas + campos obrigatórios
   configuracoes: settingsRouter,
