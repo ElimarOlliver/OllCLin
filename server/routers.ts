@@ -24,6 +24,7 @@ import { saleRouter } from "./controllers/sale.controller";
 import { payoutRouter } from "./controllers/payout.controller";
 import { statementRouter } from "./controllers/statement.controller";
 import { receiptRouter } from "./controllers/receipt.controller";
+import { googleAgendaRouter } from "./controllers/google-calendar.controller";
 
 export const appRouter = router({
   // Sistema / Saúde
@@ -76,6 +77,9 @@ export const appRouter = router({
 
   // Configurações: locais/salas + campos obrigatórios
   configuracoes: settingsRouter,
+
+  // Integração Google Calendar (OAuth no servidor + sincronização de eventos)
+  googleAgenda: googleAgendaRouter,
 
   // TODO: Prontuário, Exames, Cirurgias, Despesas, Repasse, TISS, Telessaúde, Marketing, Relatórios
   // exemplo:
