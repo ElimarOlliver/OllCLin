@@ -9,6 +9,11 @@ import { TRPCError } from "@trpc/server";
 import { patientModel } from "../models/patient.model";
 import { protectedProcedure, router } from "../_core/trpc";
 import { writeAuditLog } from "../lib/audit";
+import {
+  getRequiredPatientFields,
+  missingRequiredPatientFields,
+  requiredFieldsMessage,
+} from "../lib/patient-requirements";
 
 const genderSchema = z.enum(["M", "F", "O"]);
 
@@ -70,6 +75,14 @@ export const patientRouter = router({
       return patientModel.findMany(input);
     }),
 
+  /**
+   * Campos obrigatórios configurados pela clínica (REQ-05-015..019).
+   * Usado pelo formulário para marcar dinamicamente o que é obrigatório.
+   */
+  requiredFields: protectedProcedure
+    .input(z.object({ organizationId: z.number().int().positive() }))
+    .query(({ input }) => getRequiredPatientFields(input.organizationId)),
+
   getById: protectedProcedure
     .input(z.object({ id: z.number().int(), organizationId: z.number().int() }))
     .query(async ({ input }) => {
@@ -86,6 +99,16 @@ export const patientRouter = router({
   create: protectedProcedure
     .input(createPatientSchema)
     .mutation(async ({ ctx, input }) => {
+      // REQ-05-015..019: aplica os campos obrigatórios configurados na clínica
+      const required = await getRequiredPatientFields(input.organizationId);
+      const missing = missingRequiredPatientFields(required, input);
+      if (missing.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: requiredFieldsMessage(missing),
+        });
+      }
+
       if (input.cpf) {
         const exists = await patientModel.existsByCpf(
           input.cpf,
@@ -125,6 +148,30 @@ export const patientRouter = router({
           code: "NOT_FOUND",
           message: "Paciente não encontrado",
         });
+      }
+
+      // Campos obrigatórios também valem na edição: o registro resultante
+      // (atual + alterações) precisa continuar completo (REQ-05-015..019).
+      const required = await getRequiredPatientFields(organizationId);
+      const missing = missingRequiredPatientFields(required, {
+        ...existing,
+        ...data,
+      });
+      if (missing.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: requiredFieldsMessage(missing),
+        });
+      }
+
+      if (data.cpf && data.cpf !== existing.cpf) {
+        const exists = await patientModel.existsByCpf(data.cpf, organizationId, id);
+        if (exists) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "Já existe um paciente com este CPF",
+          });
+        }
       }
 
       const patient = await patientModel.update(id, organizationId, { id, ...data });

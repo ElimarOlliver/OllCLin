@@ -9,21 +9,10 @@ import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../_core/trpc";
 import { getSupabaseAdmin } from "../lib/supabase-server";
 import { writeAuditLog } from "../lib/audit";
-
-/** REQ-05-019: o campo Nome nunca pode ser desabilitado. */
-const ALWAYS_REQUIRED_FIELDS = ["fullName"] as const;
-
-const DEFAULT_PATIENT_FIELDS: Record<string, boolean> = {
-  fullName: true,
-  cpf: false,
-  rg: false,
-  birthDate: false,
-  gender: false,
-  phone: false,
-  email: false,
-  address: false,
-  emergencyContact: false,
-};
+import {
+  ALWAYS_REQUIRED_FIELDS,
+  getRequiredPatientFields,
+} from "../lib/patient-requirements";
 
 export const settingsRouter = router({
   /* --------------------------- Locais de atendimento --------------------- */
@@ -174,20 +163,14 @@ export const settingsRouter = router({
   getRequiredPatientFields: protectedProcedure
     .input(z.object({ organizationId: z.number().int().positive() }))
     .query(async ({ input }) => {
-      const { data, error } = await getSupabaseAdmin()
-        .from("org_settings")
-        .select("required_patient_fields")
-        .eq("organization_id", input.organizationId)
-        .maybeSingle();
-      if (error) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
-
-      const stored = (data?.required_patient_fields as Record<string, boolean> | null) ?? {};
-      const merged: Record<string, boolean> = { ...DEFAULT_PATIENT_FIELDS };
-      for (const key of Object.keys(merged)) {
-        if (key in stored) merged[key] = stored[key];
+      try {
+        return await getRequiredPatientFields(input.organizationId);
+      } catch (error) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: error instanceof Error ? error.message : "Falha ao ler configuração",
+        });
       }
-      for (const always of ALWAYS_REQUIRED_FIELDS) merged[always] = true;
-      return merged;
     }),
 
   /** REQ-05-018: salvamento imediato ao marcar/desmarcar. */
