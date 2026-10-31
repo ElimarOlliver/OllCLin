@@ -404,15 +404,17 @@ export const payoutModel = financeGuarded({
       throw new Error("Repasse já está cancelado");
     }
 
-    const { error } = await getSupabaseAdmin()
+    const { data: updated, error } = await getSupabaseAdmin()
       .from("payouts")
       .update({ status: "cancelado", updated_at: new Date().toISOString() })
       .eq("id", id)
-      .eq("organization_id", organizationId);
+      .eq("organization_id", organizationId)
+      .select(PAYOUT_COLUMNS)
+      .maybeSingle<PayoutRow>();
     if (error) fail("cancelar", error);
 
     await this.addHistory(id, userId, "CANCEL", { status: "cancelado" }, reason);
-    return toPayout(existing);
+    return updated ? toPayout(updated) : null;
   },
 
   async addHistory(

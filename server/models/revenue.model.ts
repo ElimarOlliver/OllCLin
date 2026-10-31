@@ -205,7 +205,11 @@ export const revenueModel = {
       amount: data.amount,
       status: data.status ?? "a_receber",
       due_date: data.dueDate ?? null,
-      received_at: data.receivedAt ?? null,
+      // Se a receita já nasce RECEBIDA, `received_at` precisa existir: o
+      // Repasse e o Extrato filtram por essa data.
+      received_at:
+        data.receivedAt ??
+        (data.status === "recebido" ? new Date().toISOString() : null),
       description: data.description ?? null,
       attachment_url: data.attachmentUrl ?? null,
       created_by: data.createdBy ?? null,

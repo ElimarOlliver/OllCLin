@@ -38,6 +38,7 @@ export const createRevenueSchema = z.object({
   amount: z.number().min(0, "Valor não pode ser negativo"),
   status: revenueStatusSchema.default("a_receber"),
   dueDate: z.string().optional(),
+  receivedAt: z.string().optional(),
   description: z.string().optional(),
 });
 
