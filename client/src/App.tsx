@@ -15,6 +15,10 @@ import ProcedimentosView from "@/views/ProcedimentosView";
 import ConveniosView from "@/views/ConveniosView";
 import ReceitasView from "@/views/ReceitasView";
 import DespesasView from "@/views/DespesasView";
+import VendasView from "@/views/VendasView";
+import RepasseView from "@/views/RepasseView";
+import ExtratoView from "@/views/ExtratoView";
+import RecibosView from "@/views/RecibosView";
 import ConfiguracoesView from "@/views/ConfiguracoesView";
 
 // Importar componentes de layout
@@ -51,6 +55,10 @@ import {
   Wallet,
   ReceiptText,
   MapPin,
+  ShoppingCart,
+  HandCoins,
+  Scale,
+  FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -63,6 +71,10 @@ const menuItems = [
   { icon: ShieldCheck, label: "Convênios", path: "/convenios" },
   { icon: Wallet, label: "Receitas", path: "/receitas" },
   { icon: ReceiptText, label: "Despesas", path: "/despesas" },
+  { icon: ShoppingCart, label: "Vendas", path: "/vendas" },
+  { icon: HandCoins, label: "Repasse", path: "/repasses" },
+  { icon: Scale, label: "Extrato", path: "/extrato" },
+  { icon: FileText, label: "Recibos", path: "/recibos" },
   { icon: MapPin, label: "Configurações", path: "/configuracoes" },
 ];
 
