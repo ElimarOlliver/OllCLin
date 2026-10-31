@@ -19,6 +19,7 @@ const calls = [
   ["/api/trpc/repasses.list", { organizationId: 1, limit: 3 }],
   ["/api/trpc/extrato.list", { organizationId: 1, limit: 3 }],
   ["/api/trpc/recibos.list", { organizationId: 1, limit: 3 }],
+  ["/api/trpc/googleAgenda.status", { organizationId: 1 }],
 ];
 
 const home = await fetch(base + "/");
