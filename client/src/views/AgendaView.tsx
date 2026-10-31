@@ -45,8 +45,6 @@ import {
   Calendar as CalendarIcon,
   Plus,
   RefreshCw,
-  Search,
-  User,
   CalendarCheck,
   Cloud,
   Link,
@@ -57,13 +55,8 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { VariantProps } from "class-variance-authority";
 import {
-  googleCalendarConfig,
-  startGoogleCalendarAuth,
-  hasGoogleCalendarTokens,
-  storeGoogleCalendarTokens,
-  getStoredGoogleCalendarTokens,
-  clearGoogleCalendarTokens,
-  GOOGLE_CALENDAR_COLORS,
+  formatGoogleEventTime,
+  type GoogleCalendarEvent,
 } from "@/lib/googleCalendar";
 
 // Tipos
@@ -146,11 +139,56 @@ export default function AgendaView() {
     cpf?: string;
   }>>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [googleConnected, setGoogleConnected] = useState(
-    hasGoogleCalendarTokens(),
+  const [googleNotice, setGoogleNotice] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+  const [showConnectBanner, setShowConnectBanner] = useState(true);
+
+  const organizationId = 1; // TODO: pegar do contexto do usuário/tenant
+  const utils = trpc.useUtils();
+
+  const { data: googleStatus, refetch: refetchGoogleStatus } =
+    trpc.googleAgenda.status.useQuery({ organizationId });
+  const googleConnected = Boolean(googleStatus?.connected);
+
+  // Eventos do Google para o dia selecionado (somente leitura).
+  const { data: googleEventsData } = trpc.googleAgenda.listEvents.useQuery(
+    {
+      organizationId,
+      from: startOfDay(selectedDate).toISOString(),
+      to: endOfDay(selectedDate).toISOString(),
+    },
+    { enabled: googleConnected },
   );
 
-  const utils = trpc.useUtils();
+  // Retorno do OAuth do Google: mostra o resultado e limpa a URL.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("google_connected");
+    const errorMessage = params.get("google_error");
+
+    if (connected) {
+      setGoogleNotice({
+        type: "success",
+        message: "Google Calendar conectado com sucesso.",
+      });
+      void refetchGoogleStatus();
+    } else if (errorMessage) {
+      setGoogleNotice({ type: "error", message: errorMessage });
+    }
+
+    if (connected || errorMessage) {
+      params.delete("google_connected");
+      params.delete("google_error");
+      const query = params.toString();
+      window.history.replaceState(
+        {},
+        "",
+        `${window.location.pathname}${query ? `?${query}` : ""}`,
+      );
+    }
+  }, []);
 
   // Carregar dados iniciais
   useEffect(() => {
@@ -204,20 +242,36 @@ export default function AgendaView() {
     }
   }
 
-  // Verificar conexão Google Calendar
-  useEffect(() => {
-    setGoogleConnected(hasGoogleCalendarTokens());
-  }, []);
-
-  // Função para conectar Google Calendar
-  function handleConnectGoogleCalendar() {
-    startGoogleCalendarAuth();
+  // Conectar Google Calendar (a URL de consentimento vem do servidor)
+  async function handleConnectGoogleCalendar() {
+    try {
+      const { url } = await utils.client.googleAgenda.connectUrl.query({
+        organizationId,
+      });
+      window.location.href = url;
+    } catch (error: any) {
+      setGoogleNotice({
+        type: "error",
+        message: error?.message ?? "Não foi possível iniciar a conexão com o Google.",
+      });
+    }
   }
 
-  // Função para desconectar Google Calendar
-  function handleDisconnectGoogleCalendar() {
-    clearGoogleCalendarTokens();
-    setGoogleConnected(false);
+  // Desconectar Google Calendar (revoga o token no Google)
+  async function handleDisconnectGoogleCalendar() {
+    try {
+      await utils.client.googleAgenda.disconnect.mutate({ organizationId });
+      await refetchGoogleStatus();
+      setGoogleNotice({
+        type: "success",
+        message: "Google Calendar desconectado.",
+      });
+    } catch (error: any) {
+      setGoogleNotice({
+        type: "error",
+        message: error?.message ?? "Não foi possível desconectar o Google Calendar.",
+      });
+    }
   }
 
   // Abrir diálogo de novo agendamento
@@ -284,41 +338,102 @@ export default function AgendaView() {
     }
   }
 
-  // Sincronizar com Google Calendar
+  // Sincronizar o dia com o Google Calendar (OllCLin → Google)
   async function handleSyncGoogleCalendar() {
-    const tokens = getStoredGoogleCalendarTokens();
-    if (!tokens) {
-      handleConnectGoogleCalendar();
+    if (!googleConnected) {
+      await handleConnectGoogleCalendar();
       return;
     }
 
     try {
       const start = startOfDay(selectedDate);
       const end = endOfDay(selectedDate);
+      const from = start.toISOString();
+      const to = end.toISOString();
 
-      const events = await fetch(
-        `${window.location.origin}/api/google-calendar/events?` +
-          new URLSearchParams({
-            accessToken: tokens.access_token,
-            timeMin: start.toISOString(),
-            timeMax: end.toISOString(),
-          }),
-      );
+      const result = await utils.client.googleAgenda.syncRange.mutate({
+        organizationId,
+        from,
+        to,
+      });
 
-      if (!events.ok) {
-        throw new Error("Falha ao sincronizar com Google Calendar");
+      // Leitura opcional: mostra quantos eventos já existem na agenda do Google.
+      let googleEvents: GoogleCalendarEvent[] = [];
+      try {
+        googleEvents = await utils.client.googleAgenda.listEvents.query({
+          organizationId,
+          from,
+          to,
+        });
+      } catch {
+        // Se a leitura falhar, a sincronização já executada continua válida.
       }
 
-      const googleEvents = await events.json();
-      console.log("Eventos do Google Calendar:", googleEvents);
+      const parts = [
+        result.requested === 0
+          ? "Nenhum agendamento neste dia para sincronizar."
+          : `${result.synced} agendamento(s) enviado(s) ao Google`,
+      ];
+      if (result.skipped > 0) parts.push(`${result.skipped} desmarcado(s) removido(s)`);
+      if (result.failed > 0) parts.push(`${result.failed} falha(s)`);
+      if (result.requested > 0) {
+        parts.push(`${googleEvents.length} evento(s) na agenda do Google hoje`);
+      }
 
-      // TODO: Implementar lógica de sincronização completa
-      alert(
-        `Sincronizado: ${googleEvents.length} evento(s) do Google Calendar`,
-      );
+      setGoogleNotice({
+        type: result.failed > 0 ? "error" : "success",
+        message: `${parts.join(". ")}.`,
+      });
+
+      if (result.synced > 0 || result.skipped > 0) await loadData();
+      await utils.googleAgenda.listEvents.invalidate();
     } catch (error: any) {
-      console.error("Erro ao sincronizar Google Calendar:", error);
-      alert(error.message || "Erro ao sincronizar com Google Calendar");
+      setGoogleNotice({
+        type: "error",
+        message: error?.message ?? "Erro ao sincronizar com o Google Calendar.",
+      });
+    }
+  }
+
+  // Sincroniza um único agendamento com o Google
+  async function handleSyncAppointment(appt: Appointment) {
+    try {
+      await utils.client.googleAgenda.syncAppointment.mutate({
+        organizationId,
+        appointmentId: appt.id,
+      });
+      setGoogleNotice({
+        type: "success",
+        message: `Agendamento de ${appt.patient.fullName} sincronizado com o Google Calendar.`,
+      });
+      await loadData();
+      await utils.googleAgenda.listEvents.invalidate();
+    } catch (error: any) {
+      setGoogleNotice({
+        type: "error",
+        message: error?.message ?? "Erro ao sincronizar o agendamento.",
+      });
+    }
+  }
+
+  // Remove o evento do Google e desfaz o vínculo
+  async function handleUnlinkAppointment(appt: Appointment) {
+    try {
+      await utils.client.googleAgenda.removeAppointment.mutate({
+        organizationId,
+        appointmentId: appt.id,
+      });
+      setGoogleNotice({
+        type: "success",
+        message: `Evento de ${appt.patient.fullName} removido do Google Calendar.`,
+      });
+      await loadData();
+      await utils.googleAgenda.listEvents.invalidate();
+    } catch (error: any) {
+      setGoogleNotice({
+        type: "error",
+        message: error?.message ?? "Erro ao remover o evento do Google.",
+      });
     }
   }
 
@@ -347,10 +462,20 @@ export default function AgendaView() {
 
         <div className="flex items-center gap-2">
           <Badge
-            variant={googleConnected ? "success" : "secondary"}
+            variant={
+              googleStatus?.migrationRequired
+                ? "warning"
+                : googleConnected
+                  ? "success"
+                  : "secondary"
+            }
             className="flex items-center gap-1.5"
           >
-            {googleConnected ? (
+            {googleStatus?.migrationRequired ? (
+              <>
+                <Cloud className="h-4 w-4" /> Migração pendente
+              </>
+            ) : googleConnected ? (
               <>
                 <Cloud className="h-4 w-4" /> Conectado ao Google Calendar
               </>
@@ -366,19 +491,30 @@ export default function AgendaView() {
             size="icon"
             onClick={handleSyncGoogleCalendar}
             disabled={!googleConnected}
-            title="Sincronizar com Google Calendar"
+            title="Sincronizar o dia com o Google Calendar"
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
 
-          {!googleConnected && (
+          {googleConnected ? (
             <Button
               variant="outline"
               size="sm"
-              onClick={handleConnectGoogleCalendar}
+              onClick={handleDisconnectGoogleCalendar}
             >
-              Conectar Google
+              Desconectar
             </Button>
+          ) : (
+            !googleStatus?.migrationRequired &&
+            googleStatus?.configured !== false && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleConnectGoogleCalendar}
+              >
+                Conectar Google
+              </Button>
+            )
           )}
 
           <Button
@@ -390,6 +526,29 @@ export default function AgendaView() {
           </Button>
         </div>
       </div>
+
+      {/* Resultado da conexão/sincronização com o Google */}
+      {googleNotice && (
+        <div
+          role="status"
+          className={cn(
+            "flex items-start justify-between gap-3 rounded-lg border p-3 text-sm",
+            googleNotice.type === "success"
+              ? "border-success/30 bg-success/10 text-foreground"
+              : "border-destructive/30 bg-red-50 text-foreground",
+          )}
+        >
+          <span>{googleNotice.message}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setGoogleNotice(null)}
+            aria-label="Fechar aviso"
+          >
+            Fechar
+          </Button>
+        </div>
+      )}
 
       {/* Filtros e Visualização */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
@@ -593,6 +752,7 @@ export default function AgendaView() {
                       <TableHead>Procedimento</TableHead>
                       <TableHead>Profissional</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Google</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -615,6 +775,29 @@ export default function AgendaView() {
                               {status.label}
                             </Badge>
                           </TableCell>
+                          <TableCell>
+                            {appt.googleCalendarEventId ? (
+                              <div className="flex items-center gap-2">
+                                <Badge variant="success">Sincronizado</Badge>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleUnlinkAppointment(appt)}
+                                >
+                                  Desvincular
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!googleConnected}
+                                onClick={() => handleSyncAppointment(appt)}
+                              >
+                                Sincronizar
+                              </Button>
+                            )}
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button
                               variant="outline"
@@ -631,6 +814,48 @@ export default function AgendaView() {
                 </Table>
               )}
             </div>
+
+            {/* Eventos existentes na agenda do Google (leitura) */}
+            {googleConnected && (
+              <div className="mt-8 border-t border-line pt-6">
+                <h3 className="text-sm font-semibold text-foreground mb-3">
+                  Eventos no Google Calendar
+                </h3>
+                {googleEventsData && googleEventsData.length > 0 ? (
+                  <ul className="space-y-2">
+                    {googleEventsData.map((event) => (
+                      <li
+                        key={event.id}
+                        className="flex items-start justify-between gap-3 rounded-md border border-line p-2 text-sm"
+                      >
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {event.summary}
+                          </p>
+                          <p className="text-xs text-muted">
+                            {formatGoogleEventTime(event)}
+                          </p>
+                        </div>
+                        {event.htmlLink && (
+                          <a
+                            className="text-xs text-primary hover:underline"
+                            href={event.htmlLink}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Abrir
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted">
+                    Nenhum evento encontrado no Google Calendar neste dia.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -783,26 +1008,45 @@ export default function AgendaView() {
       </Dialog>
 
       {/* Toast para Google Calendar não conectado */}
-      {!googleConnected && (
-        <div className="fixed bottom-4 right-4 bg-white border border-line shadow-lg rounded-lg p-4 z-50">
+      {!googleConnected && showConnectBanner && (
+        <div className="fixed bottom-4 right-4 max-w-sm bg-white border border-line shadow-lg rounded-lg p-4 z-50">
           <div className="flex items-start gap-3">
             <Cloud className="h-5 w-5 text-muted mt-0.5" />
             <div>
               <h3 className="text-sm font-semibold text-foreground">
-                Conecte ao Google Calendar
+                {googleStatus?.migrationRequired
+                  ? "Integração Google Calendar pendente"
+                  : googleStatus?.configured === false
+                    ? "Google Calendar não configurado"
+                    : "Conecte ao Google Calendar"}
               </h3>
               <p className="text-xs text-muted mt-1">
-                Sincronize seus agendamentos com o Google Calendar para ter
-                acesso em qualquer lugar.
+                {googleStatus?.migrationRequired
+                  ? googleStatus.hint ??
+                    "Aplique a migração 0004 no Supabase para habilitar a integração."
+                  : googleStatus?.configured === false
+                    ? "Informe credenciais reais (GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET) no .env do servidor para habilitar a conexão."
+                    : "Sincronize seus agendamentos com o Google Calendar para ter acesso em qualquer lugar."}
               </p>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleConnectGoogleCalendar}
-                className="mt-2"
-              >
-                Conectar agora
-              </Button>
+              <div className="flex items-center gap-2 mt-2">
+                {!googleStatus?.migrationRequired &&
+                  googleStatus?.configured !== false && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={handleConnectGoogleCalendar}
+                    >
+                      Conectar agora
+                    </Button>
+                  )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowConnectBanner(false)}
+                >
+                  Agora não
+                </Button>
+              </div>
             </div>
           </div>
         </div>
