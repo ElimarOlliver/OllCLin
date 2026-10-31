@@ -36,9 +36,9 @@
   - Criado `scripts/fix-mojibake.mjs` para reparar acentos em arquivos UTF-8 mal gravados.
   - `tsc --noEmit` sem erros; Vitest 6/6 passando.
 
-## Incremento 3 — Financeiro completo (Vendas, Repasse, Extrato, Recibos) [CÓDIGO CONCLUÍDO — MIGRAÇÃO PENDENTE]
+## Incremento 3 — Financeiro completo (Vendas, Repasse, Extrato, Recibos) [CONCLUÍDO]
 - [x] Migração `drizzle/migrations/0003_financeiro_completo.sql` criada: `sales`/`sale_items`/`sale_history`, `payouts`/`payout_items`/`payout_history`, `receipts`/`receipt_history`, colunas `revenues.professional_id`/`revenues.location_id` (com backfill por agendamento) e `professionals.commission_percentage`.
-- [ ] **Aplicar a migração 0003 no Supabase** (SQL Editor) ou rodar `node scripts/pg-client.mjs --file drizzle/migrations/0003_financeiro_completo.sql`. Sem `DATABASE_URL`/senha do banco a aplicação não é possível por CLI/REST; enquanto isso, os módulos novos exibem uma mensagem clara pedindo a migração.
+- [x] **Migração 0003 aplicada no Supabase** e validada via PostgREST: colunas/tabelas presentes; suíte ponta a ponta via HTTP passou 19/19 (receita, venda, recibo, repasse e extrato), com limpeza dos dados de teste ao final.
 - [x] `server/lib/schema-capabilities.ts`: detecta (com cache de 60s) se a migração 0003 já foi aplicada. Profissionais/Receitas continuam funcionando nas colunas legadas e os módulos novos respondem com instrução objetiva em vez de erro cru do PostgREST; aplicar a migração com o servidor ligado já é reconhecido na próxima operação.
 - [x] Financeiro > Vendas (Cap. 15.1.2): Model/Controller + `VendasView.tsx` — cabeçalho + múltiplos itens, status A Receber/Recebido/Cancelada, totais (a receber, recebido, geral), histórico e cancelamento com motivo obrigatório.
 - [x] Financeiro > Repasse (Cap. 15.3): Model/Controller + `RepasseView.tsx` — abas Receitas/Repasses, elegibilidade por profissional/local/período, percentual padrão do profissional (ajustável), retroativo automático entre repasses, cancelamento com motivo devolvendo as receitas à elegibilidade.
@@ -51,12 +51,24 @@
 - [x] `scripts/smoke-api.mjs`: verificação rápida das rotas principais com o servidor local, usada para confirmar que a migração pendente não derrubou módulos existentes.
 - [x] Validação: `tsc --noEmit` sem erros; Vitest 6/6.
 
+## Incremento 4 — Google Calendar server-side [CÓDIGO CONCLUÍDO — MIGRAÇÃO/CREDENCIAIS PENDENTES]
+- [x] Migração `drizzle/migrations/0004_google_calendar.sql`: tabela `google_calendar_accounts` (tokens cifrados por organização/usuário, unicidade, auditoria de conexão/revogação) e índice em `appointments.google_calendar_event_id` (coluna idempotente).
+- [x] `server/lib/token-crypto.ts`: AES-256-GCM com envelope `v1:<iv>:<tag>:<ciphertext>`; chave de `GOOGLE_TOKEN_ENCRYPTION_KEY` (fallback derivado da `SUPABASE_SECRET_KEY`). Nenhum token em texto puro no banco.
+- [x] `server/lib/google-calendar.ts`: OAuth2 (URL de consentimento, troca de código, refresh, revogação), `state` assinado com HMAC-SHA256 (validade de 10 min, proteção CSRF), listar/criar/atualizar/excluir eventos e normalização de datas sem fuso.
+- [x] `server/models/google-calendar.model.ts` + `server/controllers/google-calendar.controller.ts`: procedures tRPC `googleAgenda.status`, `connectUrl`, `disconnect`, `listEvents`, `syncAppointment`, `removeAppointment` e `syncRange`; renovação automática de token, isolamento por `organization_id`/`user_id` e auditoria das ações.
+- [x] Callback OAuth reescrito em `server/routes/google-calendar.ts`: valida `state`, cifra e grava os tokens, redireciona para `/agenda?google_connected=true` (ou `google_error=...`) e **removeu** o endpoint inseguro `/events?accessToken=`.
+- [x] `client/src/lib/googleCalendar.ts` reescrito sem `localStorage`/tokens: apenas tipos e formatação. `AgendaView.tsx` agora usa tRPC para status, conexão, desconexão, sincronização do dia, sincronização/desvinculação por agendamento e leitura dos eventos do Google do dia; aviso de migração/credenciais pendentes.
+- [ ] **Aplicar a migração 0004 no Supabase** (SQL Editor) ou `node scripts/pg-client.mjs --file drizzle/migrations/0004_google_calendar.sql`.
+- [ ] **Configurar credenciais reais do Google**: `.env` ainda tem placeholders (`seu-...`). Criar OAuth Client ID (Web), cadastrar `${PUBLIC_URL}/api/google-calendar/callback` em "Authorized redirect URIs" e preencher `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`. Teste ao vivo do OAuth fica bloqueado até isso.
+- [x] Validação local: `tsc --noEmit` sem erros; Vitest 16/16 (10 testes novos do Google Calendar); smoke test 10/10 rotas 200; `googleAgenda.status` responde com `migrationRequired`/`configured`.
+
 ## Próximos passos (roadmap Cap. 15)
 - [x] Financeiro: Vendas, Repasse, Extrato, Recibos (menu completo).
 - [x] Aplicar Campos Obrigatórios na validação real do cadastro de pacientes (criar/atualizar consultam `org_settings`).
-- [ ] Aplicar a migração `0003_financeiro_completo.sql` e fazer o smoke test real dos quatro módulos financeiros.
+- [x] Aplicar a migração `0003_financeiro_completo.sql` e fazer o smoke test real dos quatro módulos financeiros.
+- [ ] Aplicar a migração `0004_google_calendar.sql` e configurar credenciais reais do Google (redirect URI `${PUBLIC_URL}/api/google-calendar/callback`).
 - [ ] Habilitar RLS por `organization_id` e concluir a integração com o Supabase Auth (hoje há bypass de desenvolvimento `ALLOW_DEV_AUTH`).
-- [ ] Integrar o Google Calendar (bloqueado até receber as credenciais OAuth).
+- [ ] Testar o fluxo OAuth do Google Calendar de ponta a ponta após aplicar 0004 e configurar as credenciais.
 
 ## Experiência de roadmap baseada no relatório
 - [ ] Entregar uma página inicial em português do Brasil que explique a tese do produto: construir um núcleo clínico transacional confiável antes de expandir para financeiro, TISS, integrações, telessaúde, marketing e analítica.
