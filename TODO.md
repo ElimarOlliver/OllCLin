@@ -36,18 +36,27 @@
   - Criado `scripts/fix-mojibake.mjs` para reparar acentos em arquivos UTF-8 mal gravados.
   - `tsc --noEmit` sem erros; Vitest 6/6 passando.
 
-## Incremento 2 — Despesas + Locais/Salas + Campos Obrigatórios [CONCLUÍDO]
-- [x] Migração `0002_despesas_locais_campos.sql` aplicada no Supabase: `expense_categories` (hierárquica, Fixas/Variáveis), `expenses`, `expense_history`, `org_settings` (campos obrigatórios + inatividade + funcionalidades), colunas extras em `locations`.
-- [x] Financeiro > Despesas: Model (`expense.model.ts`) + Controller (`expense.controller.ts`) com categorias hierárquicas (REQ-08-016..026), favorecido, parcelas condicionais, recorrência, resumo pago/a pagar/atrasado, cancelamento com motivo obrigatório e histórico por despesa (Cap. 15.2).
-- [x] `DespesasView.tsx` (rota `/despesas`): listagem, nova despesa (tipo de custo → categoria, forma de pagamento, recorrência), gerenciador de categorias com subcategorias, resumo e cancelamento com motivo.
-- [x] Configurações > Gerais: Controller `settings.controller.ts` com locais (REQ-05-010..012, só "Local" obrigatório), salas por local (REQ-05-013/014) e campos obrigatórios de pacientes (REQ-05-015..018) — campo Nome bloqueado contra desativação (REQ-05-019).
-- [x] `ConfiguracoesView.tsx` (rota `/configuracoes`): locais com aba Salas (criar/excluir sala) + toggles de campos obrigatórios com salvamento imediato.
-- [x] Menu atualizado: Despesas e Configurações; antigo atalho "Configurações" (que apontava para 404) removido.
-- [x] Validação: `tsc --noEmit` sem erros; Vitest 6/6; tabelas verificadas via PostgREST (`expense_categories` com Fixas/Variáveis, locations com `organization_id`).
+## Incremento 3 — Financeiro completo (Vendas, Repasse, Extrato, Recibos) [CÓDIGO CONCLUÍDO — MIGRAÇÃO PENDENTE]
+- [x] Migração `drizzle/migrations/0003_financeiro_completo.sql` criada: `sales`/`sale_items`/`sale_history`, `payouts`/`payout_items`/`payout_history`, `receipts`/`receipt_history`, colunas `revenues.professional_id`/`revenues.location_id` (com backfill por agendamento) e `professionals.commission_percentage`.
+- [ ] **Aplicar a migração 0003 no Supabase** (SQL Editor) ou rodar `node scripts/pg-client.mjs --file drizzle/migrations/0003_financeiro_completo.sql`. Sem `DATABASE_URL`/senha do banco a aplicação não é possível por CLI/REST; enquanto isso, os módulos novos exibem uma mensagem clara pedindo a migração.
+- [x] `server/lib/schema-capabilities.ts`: detecta (com cache de 60s) se a migração 0003 já foi aplicada. Profissionais/Receitas continuam funcionando nas colunas legadas e os módulos novos respondem com instrução objetiva em vez de erro cru do PostgREST; aplicar a migração com o servidor ligado já é reconhecido na próxima operação.
+- [x] Financeiro > Vendas (Cap. 15.1.2): Model/Controller + `VendasView.tsx` — cabeçalho + múltiplos itens, status A Receber/Recebido/Cancelada, totais (a receber, recebido, geral), histórico e cancelamento com motivo obrigatório.
+- [x] Financeiro > Repasse (Cap. 15.3): Model/Controller + `RepasseView.tsx` — abas Receitas/Repasses, elegibilidade por profissional/local/período, percentual padrão do profissional (ajustável), retroativo automático entre repasses, cancelamento com motivo devolvendo as receitas à elegibilidade.
+- [x] Financeiro > Extrato (Cap. 15.4): Model/Controller + `ExtratoView.tsx` — extrato derivado de receitas/vendas/despesas/repasses, filtros por período/tipo/origem, saldo do período e exportação CSV.
+- [x] Financeiro > Recibos (Cap. 15.5): Model/Controller + `RecibosView.tsx` — emitente usuário ou estabelecimento, vínculo opcional a receita, impressão, histórico e cancelamento com motivo.
+- [x] `revenues` estendida com `professionalId`/`locationId` (create/update/filtros) e preenchimento automático de `received_at` ao marcar como recebido; `ReceitasView.tsx` ganhou selects de profissional/local e ação "Marcar como recebido".
+- [x] `professionals.commissionPercentage` (0–100) no Model/Controller; `ProfissionaisView.tsx` reescrita com cadastro/edição reais, campo de repasse (%) e desativação com confirmação (soft delete).
+- [x] Campos obrigatórios de paciente aplicados de verdade (REQ-05-015..019): helper compartilhado `server/lib/patient-requirements.ts` usado no create (payload) e no update (registro atual + alterações); Nome sempre obrigatório; `PacientesView.tsx` marca dinamicamente os campos exigidos e o backend retorna mensagem clara.
+- [x] Rotas tRPC `vendas`, `repasses`, `extrato`, `recibos` registradas; menu e rotas do frontend atualizados.
+- [x] `scripts/smoke-api.mjs`: verificação rápida das rotas principais com o servidor local, usada para confirmar que a migração pendente não derrubou módulos existentes.
+- [x] Validação: `tsc --noEmit` sem erros; Vitest 6/6.
 
 ## Próximos passos (roadmap Cap. 15)
-- [ ] Financeiro: Vendas, Repasse, Extrato, Recibos (menu completo).
-- [ ] Aplicar Campos Obrigatórios na validação real do cadastro de pacientes (criar/atualizar consultam `org_settings`).
+- [x] Financeiro: Vendas, Repasse, Extrato, Recibos (menu completo).
+- [x] Aplicar Campos Obrigatórios na validação real do cadastro de pacientes (criar/atualizar consultam `org_settings`).
+- [ ] Aplicar a migração `0003_financeiro_completo.sql` e fazer o smoke test real dos quatro módulos financeiros.
+- [ ] Habilitar RLS por `organization_id` e concluir a integração com o Supabase Auth (hoje há bypass de desenvolvimento `ALLOW_DEV_AUTH`).
+- [ ] Integrar o Google Calendar (bloqueado até receber as credenciais OAuth).
 
 ## Experiência de roadmap baseada no relatório
 - [ ] Entregar uma página inicial em português do Brasil que explique a tese do produto: construir um núcleo clínico transacional confiável antes de expandir para financeiro, TISS, integrações, telessaúde, marketing e analítica.
