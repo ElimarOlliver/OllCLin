@@ -31,6 +31,8 @@ export const createRevenueSchema = z.object({
   appointmentId: z.number().int().positive().optional(),
   healthPlanId: z.number().int().positive().optional(),
   paymentMethodId: z.number().int().positive().optional(),
+  professionalId: z.number().int().positive().optional(),
+  locationId: z.number().int().positive().optional(),
   installmentNo: z.number().int().min(1).max(48).default(1),
   installmentsTotal: z.number().int().min(1).max(48).default(1),
   amount: z.number().min(0, "Valor não pode ser negativo"),
@@ -48,11 +50,15 @@ export const updateRevenueSchema = z.object({
   dueDate: z.string().optional(),
   receivedAt: z.string().optional(),
   description: z.string().optional(),
+  professionalId: z.number().int().positive().optional(),
+  locationId: z.number().int().positive().optional(),
 });
 
 export const revenueFilterSchema = z.object({
   organizationId: z.number().int().positive(),
   patientId: z.number().int().positive().optional(),
+  professionalId: z.number().int().positive().optional(),
+  locationId: z.number().int().positive().optional(),
   status: revenueStatusSchema.optional(),
   from: z.string().optional(),
   to: z.string().optional(),

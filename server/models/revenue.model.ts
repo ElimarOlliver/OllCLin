@@ -13,6 +13,10 @@
  */
 
 import { getSupabaseAdmin } from "../lib/supabase-server";
+import {
+  MIGRATION_0003_FIELDS_HINT,
+  getSchemaCapabilities,
+} from "../lib/schema-capabilities";
 
 export type RevenueStatus =
   | "a_receber"
@@ -30,6 +34,8 @@ export type Revenue = {
   appointmentId: number | null;
   healthPlanId: number | null;
   paymentMethodId: number | null;
+  professionalId: number | null;
+  locationId: number | null;
   installmentNo: number;
   installmentsTotal: number;
   amount: number;
@@ -53,6 +59,8 @@ export type CreateRevenueInput = {
   appointmentId?: number;
   healthPlanId?: number;
   paymentMethodId?: number;
+  professionalId?: number;
+  locationId?: number;
   installmentNo?: number;
   installmentsTotal?: number;
   amount: number;
@@ -71,6 +79,8 @@ export type UpdateRevenueInput = Partial<
 export type RevenueFilter = {
   organizationId: number;
   patientId?: number;
+  professionalId?: number;
+  locationId?: number;
   status?: RevenueStatus;
   /** Limite documentado: intervalo de pesquisa de até 90 dias (Cap. 15.1). */
   from?: string;
@@ -93,6 +103,9 @@ type RevenueRow = {
   appointment_id: number | null;
   health_plan_id: number | null;
   payment_method_id: number | null;
+  /** Ausentes quando a migração 0003 ainda não foi aplicada. */
+  professional_id?: number | null;
+  location_id?: number | null;
   installment_no: number | null;
   installments_total: number | null;
   amount: string | number;
@@ -108,8 +121,24 @@ type RevenueRow = {
   updated_at: string | null;
 };
 
-const REVENUE_COLUMNS =
+/**
+ * Colunas lidas do banco. `professional_id`/`location_id` só existem depois da
+ * migração 0003; até lá a seleção usa apenas as colunas legadas para que a tela
+ * de Receitas continue funcionando.
+ */
+const LEGACY_REVENUE_COLUMNS =
   "id, organization_id, patient_id, payer_name, procedure_id, appointment_id, health_plan_id, payment_method_id, installment_no, installments_total, amount, status, due_date, received_at, description, attachment_url, sent_to_omie, sent_to_conta_azul, created_by, created_at, updated_at";
+
+const LINKED_REVENUE_COLUMNS =
+  "id, organization_id, patient_id, payer_name, procedure_id, appointment_id, health_plan_id, payment_method_id, professional_id, location_id, installment_no, installments_total, amount, status, due_date, received_at, description, attachment_url, sent_to_omie, sent_to_conta_azul, created_by, created_at, updated_at" as const;
+
+function revenueColumns(hasLinks: boolean): typeof LINKED_REVENUE_COLUMNS {
+  // A lista legada é um subconjunto; o tipo "completo" mantém a inferência das
+  // colunas mesmo quando a leitura usa apenas as colunas antigas.
+  return (hasLinks
+    ? LINKED_REVENUE_COLUMNS
+    : LEGACY_REVENUE_COLUMNS) as typeof LINKED_REVENUE_COLUMNS;
+}
 
 function toRevenue(row: RevenueRow): Revenue {
   return {
@@ -121,6 +150,8 @@ function toRevenue(row: RevenueRow): Revenue {
     appointmentId: row.appointment_id,
     healthPlanId: row.health_plan_id,
     paymentMethodId: row.payment_method_id,
+    professionalId: row.professional_id ?? null,
+    locationId: row.location_id ?? null,
     installmentNo: row.installment_no ?? 1,
     installmentsTotal: row.installments_total ?? 1,
     amount: Number(row.amount),
@@ -157,36 +188,47 @@ export function assertRangeWithin90Days(from?: string, to?: string): void {
 
 export const revenueModel = {
   async create(data: CreateRevenueInput): Promise<Revenue> {
+    const caps = await getSchemaCapabilities();
+    const wantsLinks = data.professionalId !== undefined || data.locationId !== undefined;
+    if (wantsLinks && !caps.revenueLinks) throw new Error(MIGRATION_0003_FIELDS_HINT);
+
+    const payload: Record<string, unknown> = {
+      organization_id: data.organizationId,
+      patient_id: data.patientId ?? null,
+      payer_name: data.payerName ?? null,
+      procedure_id: data.procedureId ?? null,
+      appointment_id: data.appointmentId ?? null,
+      health_plan_id: data.healthPlanId ?? null,
+      payment_method_id: data.paymentMethodId ?? null,
+      installment_no: data.installmentNo ?? 1,
+      installments_total: data.installmentsTotal ?? 1,
+      amount: data.amount,
+      status: data.status ?? "a_receber",
+      due_date: data.dueDate ?? null,
+      received_at: data.receivedAt ?? null,
+      description: data.description ?? null,
+      attachment_url: data.attachmentUrl ?? null,
+      created_by: data.createdBy ?? null,
+    };
+    if (caps.revenueLinks) {
+      payload.professional_id = data.professionalId ?? null;
+      payload.location_id = data.locationId ?? null;
+    }
+
     const { data: row, error } = await getSupabaseAdmin()
       .from("revenues")
-      .insert({
-        organization_id: data.organizationId,
-        patient_id: data.patientId ?? null,
-        payer_name: data.payerName ?? null,
-        procedure_id: data.procedureId ?? null,
-        appointment_id: data.appointmentId ?? null,
-        health_plan_id: data.healthPlanId ?? null,
-        payment_method_id: data.paymentMethodId ?? null,
-        installment_no: data.installmentNo ?? 1,
-        installments_total: data.installmentsTotal ?? 1,
-        amount: data.amount,
-        status: data.status ?? "a_receber",
-        due_date: data.dueDate ?? null,
-        received_at: data.receivedAt ?? null,
-        description: data.description ?? null,
-        attachment_url: data.attachmentUrl ?? null,
-        created_by: data.createdBy ?? null,
-      })
-      .select(REVENUE_COLUMNS)
+      .insert(payload)
+      .select(revenueColumns(caps.revenueLinks))
       .single();
     if (error) fail("criar", error);
     return toRevenue(row);
   },
 
   async findById(id: number, organizationId: number): Promise<Revenue | null> {
+    const caps = await getSchemaCapabilities();
     const { data: row, error } = await getSupabaseAdmin()
       .from("revenues")
-      .select(REVENUE_COLUMNS)
+      .select(revenueColumns(caps.revenueLinks))
       .eq("id", id)
       .eq("organization_id", organizationId)
       .maybeSingle();
@@ -197,13 +239,23 @@ export const revenueModel = {
   async findMany(filter: RevenueFilter): Promise<Revenue[]> {
     assertRangeWithin90Days(filter.from, filter.to);
 
+    const caps = await getSchemaCapabilities();
+    const wantsLinkFilters = filter.professionalId !== undefined || filter.locationId !== undefined;
+    if (wantsLinkFilters && !caps.revenueLinks) throw new Error(MIGRATION_0003_FIELDS_HINT);
+
     let query = getSupabaseAdmin()
       .from("revenues")
-      .select(REVENUE_COLUMNS)
+      .select(revenueColumns(caps.revenueLinks))
       .eq("organization_id", filter.organizationId)
       .order("created_at", { ascending: false });
 
     if (filter.patientId) query = query.eq("patient_id", filter.patientId);
+    if (filter.professionalId && caps.revenueLinks) {
+      query = query.eq("professional_id", filter.professionalId);
+    }
+    if (filter.locationId && caps.revenueLinks) {
+      query = query.eq("location_id", filter.locationId);
+    }
     if (filter.status) query = query.eq("status", filter.status);
     if (filter.from) query = query.gte("created_at", filter.from);
     if (filter.to) query = query.lte("created_at", filter.to);
@@ -243,6 +295,7 @@ export const revenueModel = {
   },
 
   async update(id: number, organizationId: number, data: UpdateRevenueInput): Promise<Revenue | null> {
+    const caps = await getSchemaCapabilities();
     const patch: Record<string, unknown> = {};
     if (data.amount !== undefined) patch.amount = data.amount;
     if (data.status !== undefined) patch.status = data.status;
@@ -252,8 +305,19 @@ export const revenueModel = {
     if (data.description !== undefined) patch.description = data.description;
     if (data.attachmentUrl !== undefined) patch.attachment_url = data.attachmentUrl;
     if (data.paymentMethodId !== undefined) patch.payment_method_id = data.paymentMethodId;
+    if (data.professionalId !== undefined || data.locationId !== undefined) {
+      if (!caps.revenueLinks) throw new Error(MIGRATION_0003_FIELDS_HINT);
+      if (data.professionalId !== undefined) patch.professional_id = data.professionalId;
+      if (data.locationId !== undefined) patch.location_id = data.locationId;
+    }
     if (data.installmentNo !== undefined) patch.installment_no = data.installmentNo;
     if (data.installmentsTotal !== undefined) patch.installments_total = data.installmentsTotal;
+
+    // Ao marcar como recebido sem data explícita, registra o momento atual
+    // para que o Repasse e o Extrato encontrem o lançamento no período.
+    if (data.status === "recebido" && data.receivedAt === undefined) {
+      patch.received_at = new Date().toISOString();
+    }
 
     if (Object.keys(patch).length === 0) return this.findById(id, organizationId);
 
@@ -262,7 +326,7 @@ export const revenueModel = {
       .update(patch)
       .eq("id", id)
       .eq("organization_id", organizationId)
-      .select(REVENUE_COLUMNS)
+      .select(revenueColumns(caps.revenueLinks))
       .maybeSingle();
     if (error) fail("atualizar", error);
     return row ? toRevenue(row) : null;
@@ -285,12 +349,13 @@ export const revenueModel = {
       throw new Error("Somente receitas com status A RECEBER podem ser canceladas");
     }
 
+    const caps = await getSchemaCapabilities();
     const { data: row, error } = await getSupabaseAdmin()
       .from("revenues")
       .update({ status: "cancelado" })
       .eq("id", id)
       .eq("organization_id", organizationId)
-      .select(REVENUE_COLUMNS)
+      .select(revenueColumns(caps.revenueLinks))
       .maybeSingle();
     if (error) fail("cancelar", error);
 

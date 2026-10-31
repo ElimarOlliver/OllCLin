@@ -47,6 +47,7 @@ import {
   Clock,
   History,
   Ban,
+  CheckCircle2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -62,6 +63,8 @@ type Revenue = {
   installmentsTotal: number;
   dueDate: string | null;
   description: string | null;
+  professionalId: number | null;
+  locationId: number | null;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -96,6 +99,8 @@ const emptyForm = {
   description: "",
   paymentMethodId: "",
   healthPlanId: "",
+  professionalId: "",
+  locationId: "",
   useAlternatePayer: false,
   installmentsTotal: "1",
   dueDate: todayPlus(0),
@@ -115,6 +120,22 @@ export default function ReceitasView() {
   const [saving, setSaving] = useState(false);
 
   const utils = trpc.useUtils();
+
+  // Profissionais e locais alimentam os campos que ligam a receita ao Repasse
+  // e ao Extrato (Cap. 15.3 / 15.4).
+  const { data: professionalsData } = trpc.profissionais.list.useQuery({
+    organizationId: ORGANIZATION_ID,
+    isActive: true,
+    limit: 200,
+  });
+  const { data: locationsData } = trpc.configuracoes.locations.useQuery({
+    organizationId: ORGANIZATION_ID,
+  });
+  const professionals = (professionalsData ?? []) as Array<{
+    id: number;
+    fullName: string;
+  }>;
+  const locations = (locationsData ?? []) as Array<{ id: number; name: string }>;
 
   const load = useCallback(async () => {
     setIsLoading(true);
@@ -162,6 +183,8 @@ export default function ReceitasView() {
         description: form.description.trim() || undefined,
         paymentMethodId: form.paymentMethodId ? Number(form.paymentMethodId) : undefined,
         healthPlanId: form.healthPlanId ? Number(form.healthPlanId) : undefined,
+        professionalId: form.professionalId ? Number(form.professionalId) : undefined,
+        locationId: form.locationId ? Number(form.locationId) : undefined,
         installmentsTotal: Math.max(1, Number(form.installmentsTotal) || 1),
         dueDate: form.dueDate || undefined,
       });
@@ -209,6 +232,25 @@ export default function ReceitasView() {
     } catch (error) {
       console.error(error);
       toast.error("Falha ao cancelar (somente A RECEBER pode ser cancelado)");
+    }
+  }
+
+  /**
+   * Marca um recebimento como recebido. O backend preenche `received_at`
+   * automaticamente, o que faz o lançamento aparecer no Repasse e no Extrato.
+   */
+  async function markAsReceived(rev: Revenue) {
+    try {
+      await utils.client.receitas.update.mutate({
+        id: rev.id,
+        organizationId: ORGANIZATION_ID,
+        status: "recebido",
+      });
+      toast.success("Receita marcada como recebida");
+      await load();
+    } catch (error) {
+      console.error(error);
+      toast.error((error as Error).message || "Falha ao marcar como recebida");
     }
   }
 
@@ -275,13 +317,13 @@ export default function ReceitasView() {
               {visible.map((rev) => (
                 <TableRow key={rev.id}>
                   <TableCell className="font-medium">{rev.description || `Receita #${rev.id}`}</TableCell>
-                  <TableCell>{rev.payerName || "””"}</TableCell>
+                  <TableCell>{rev.payerName || "—"}</TableCell>
                   <TableCell>
                     {rev.installmentsTotal > 1
                       ? `${rev.installmentNo}/${rev.installmentsTotal}`
-                      : "””"}
+                      : "—"}
                   </TableCell>
-                  <TableCell>{rev.dueDate ?? "””"}</TableCell>
+                  <TableCell>{rev.dueDate ?? "—"}</TableCell>
                   <TableCell className="font-semibold">{brl(rev.amount)}</TableCell>
                   <TableCell>
                     <Badge className={STATUS_STYLE[rev.status] ?? "bg-gray-100"}>
@@ -293,6 +335,16 @@ export default function ReceitasView() {
                       <Button variant="ghost" size="sm" title="Histórico" onClick={() => openHistory(rev)}>
                         <History className="h-4 w-4" />
                       </Button>
+                      {rev.status === "a_receber" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Marcar como recebido"
+                          onClick={() => markAsReceived(rev)}
+                        >
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        </Button>
+                      )}
                       {rev.status === "a_receber" && (
                         <Button
                           variant="ghost"
@@ -411,6 +463,56 @@ export default function ReceitasView() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
+                <Label>Profissional responsável</Label>
+                <Select
+                  value={form.professionalId}
+                  onValueChange={(v) => setForm({ ...form, professionalId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {professionals.length === 0 ? (
+                      <SelectItem value="none" disabled>
+                        Nenhum profissional cadastrado
+                      </SelectItem>
+                    ) : (
+                      professionals.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          {p.fullName}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label>Local de atendimento</Label>
+                <Select
+                  value={form.locationId}
+                  onValueChange={(v) => setForm({ ...form, locationId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {locations.length === 0 ? (
+                      <SelectItem value="none" disabled>
+                        Nenhum local cadastrado
+                      </SelectItem>
+                    ) : (
+                      locations.map((l) => (
+                        <SelectItem key={l.id} value={String(l.id)}>
+                          {l.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
                 <Label htmlFor="dueDate">Vencimento</Label>
                 <Input
                   id="dueDate"
@@ -454,7 +556,7 @@ export default function ReceitasView() {
               {historyRows.map((h) => (
                 <li key={h.id} className="border-b pb-2">
                   <span className="font-medium">{h.action}</span>
-                  {h.reason ? <span className="text-muted"> ”” {h.reason}</span> : null}
+                  {h.reason ? <span className="text-muted"> — {h.reason}</span> : null}
                   <div className="text-xs text-muted">
                     {h.createdAt ? new Date(h.createdAt).toLocaleString("pt-BR") : ""}
                   </div>
