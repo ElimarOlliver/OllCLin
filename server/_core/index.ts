@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { publicPlatformScript } from "./publicConfig";
@@ -23,6 +25,16 @@ async function startServer() {
   });
   app.get("/api/platform/config.js", (_req, res) => {
     res.set("Cache-Control", "no-store").type("application/javascript").send(publicPlatformScript());
+  });
+  // Rotas do site (usadas pelo framework externo / agentes para descobrir o
+  // caminho principal antes de iniciar o servidor).
+  app.get("/manus-routes.json", (_req, res) => {
+    const routesPath = join(process.cwd(), "public", "manus-routes.json");
+    if (!existsSync(routesPath)) {
+      res.status(404).json({ routes: [] });
+      return;
+    }
+    res.type("application/json").send(readFileSync(routesPath, "utf8"));
   });
   registerOAuthRoutes(app);
   registerGoogleCalendarRoutes(app);
