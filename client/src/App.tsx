@@ -88,6 +88,10 @@ function Router() {
       <Route path="/convenios" component={ConveniosView} />
       <Route path="/receitas" component={ReceitasView} />
       <Route path="/despesas" component={DespesasView} />
+      <Route path="/vendas" component={VendasView} />
+      <Route path="/repasses" component={RepasseView} />
+      <Route path="/extrato" component={ExtratoView} />
+      <Route path="/recibos" component={RecibosView} />
       <Route path="/configuracoes" component={ConfiguracoesView} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
