@@ -93,7 +93,7 @@
 - [x] Servir /manus-routes.json com a rota principal do site antes de iniciar o servidor.
 
 ## Validação e entrega
-- [ ] Confirmar diagnósticos TypeScript sem erros acionáveis.
-- [ ] Confirmar que o site responde no Preview e que a interface principal renderiza sem overflow horizontal indevido.
-- [ ] Confirmar que o build estático gera a saída esperada.
-- [ ] Definir metadados de marca em app.config.ts antes do checkpoint.
+- [x] Confirmar diagnósticos TypeScript sem erros acionáveis.
+- [x] Confirmar que o site responde no Preview e que a interface principal renderiza sem overflow horizontal indevido.
+- [x] Confirmar que o build estático gera a saída esperada.
+- [x] Definir metadados de marca em app.config.ts antes do checkpoint.
