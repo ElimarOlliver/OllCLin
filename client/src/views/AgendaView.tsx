@@ -525,9 +525,9 @@ export default function AgendaView() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {/* Cabeçalho da Agenda */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
           <p className="text-slate-500 text-sm">
@@ -535,7 +535,7 @@ export default function AgendaView() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">
           <Badge
             variant={
               googleStatus?.migrationRequired
@@ -594,7 +594,7 @@ export default function AgendaView() {
 
           <Button
             onClick={handleNewAppointment}
-            className="bg-primary text-white hover:bg-primary/90"
+            className="w-full bg-primary text-white hover:bg-primary/90 sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
             Novo Agendamento
@@ -626,14 +626,14 @@ export default function AgendaView() {
       )}
 
       {/* Filtros e Visualização */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+      <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-12">
         {/* Filtros laterais */}
-        <div className="md:col-span-3 space-y-4">
+        <div className="min-w-0 space-y-4 xl:col-span-3">
           <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
             <h3 className="text-sm font-semibold text-foreground mb-3">
               Visualização
             </h3>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {["dia", "semana", "mes"].map((mode) => (
                 <Button
                   key={mode}
@@ -673,7 +673,7 @@ export default function AgendaView() {
         </div>
 
         {/* Área principal do calendário */}
-        <div className="md:col-span-9">
+        <div className="min-w-0 xl:col-span-9">
           <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
             {/* Data selecionada */}
             <div className="flex items-center justify-between mb-6">

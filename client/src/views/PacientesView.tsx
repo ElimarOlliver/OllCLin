@@ -278,9 +278,9 @@ export default function PacientesView() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       {/* Cabeçalho */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#075e63]">Núcleo clínico</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Pacientes</h1>
