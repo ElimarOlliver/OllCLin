@@ -52,7 +52,7 @@ export default function LoginView() {
           <h1 className="text-2xl font-bold text-foreground text-center">
             OllCLin
           </h1>
-          <p className="text-muted text-sm text-center">
+          <p className="text-slate-500 text-sm text-center">
             Acesse o sistema clínico com sua conta da organização.
           </p>
         </div>
@@ -96,7 +96,7 @@ export default function LoginView() {
           </Button>
         </form>
 
-        <p className="text-xs text-muted text-center">
+        <p className="text-xs text-slate-500 text-center">
           Ainda em ambiente de desenvolvimento? Defina <code>ALLOW_DEV_AUTH=true</code> no
           <code>.env</code> para usar o modo local sem Supabase Auth.
         </p>

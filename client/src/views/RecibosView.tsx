@@ -308,14 +308,14 @@ export default function RecibosView() {
 
   return (
     <div className="p-2 space-y-4">
-      <div className="bg-white rounded-lg border border-line shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
         <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
           <div>
             <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
               Recibos
             </h1>
-            <p className="text-muted text-sm mt-1">
+            <p className="text-slate-500 text-sm mt-1">
               Emita, imprima e gerencie recibos de pagamento da clínica.
             </p>
           </div>
@@ -326,7 +326,7 @@ export default function RecibosView() {
 
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -347,11 +347,11 @@ export default function RecibosView() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-muted">
+          <div className="flex items-center justify-center py-12 text-slate-500">
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando recibos...
           </div>
         ) : receipts.length === 0 ? (
-          <p className="text-muted text-sm py-8 text-center">Nenhum recibo emitido.</p>
+          <p className="text-slate-500 text-sm py-8 text-center">Nenhum recibo emitido.</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -433,7 +433,7 @@ export default function RecibosView() {
             <DialogTitle>Novo recibo</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Tipo de emitente</Label>
                 <Select
@@ -500,7 +500,7 @@ export default function RecibosView() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label htmlFor="receiptPayer">Pagador *</Label>
                 <Input
@@ -521,7 +521,7 @@ export default function RecibosView() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label htmlFor="receiptIssuedAt">Data de emissão</Label>
                 <Input
@@ -565,14 +565,14 @@ export default function RecibosView() {
             <DialogTitle>Histórico do recibo</DialogTitle>
           </DialogHeader>
           {historyRows.length === 0 ? (
-            <p className="text-muted text-sm py-4 text-center">Sem registros.</p>
+            <p className="text-slate-500 text-sm py-4 text-center">Sem registros.</p>
           ) : (
             <ul className="space-y-2 py-2 text-sm">
               {historyRows.map((h) => (
                 <li key={h.id} className="border-b pb-2">
                   <span className="font-medium">{h.action}</span>
-                  {h.reason ? <span className="text-muted"> — {h.reason}</span> : null}
-                  <div className="text-xs text-muted">
+                  {h.reason ? <span className="text-slate-500"> — {h.reason}</span> : null}
+                  <div className="text-xs text-slate-500">
                     {h.createdAt ? new Date(h.createdAt).toLocaleString("pt-BR") : ""}
                   </div>
                 </li>
@@ -589,7 +589,7 @@ export default function RecibosView() {
             <DialogTitle>Cancelar recibo</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-2">
-            <p className="text-sm text-muted">
+            <p className="text-sm text-slate-500">
               O recibo permanece no histórico com o status Cancelado. O motivo é obrigatório.
             </p>
             <div className="grid gap-2">

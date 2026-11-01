@@ -53,6 +53,7 @@ import {
 import { format, parseISO, startOfDay, endOfDay, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import type { VariantProps } from "class-variance-authority";
 import {
   formatGoogleEventTime,
@@ -95,6 +96,33 @@ type Appointment = {
     name: string;
   };
 };
+
+type AppointmentForm = {
+  patientId: string;
+  professionalId: string;
+  procedureId: string;
+  startsAt: string;
+  endsAt: string;
+  status: AppointmentStatus;
+  notes: string;
+};
+
+const emptyAppointmentForm: AppointmentForm = {
+  patientId: "",
+  professionalId: "",
+  procedureId: "",
+  startsAt: "",
+  endsAt: "",
+  status: "solicitado",
+  notes: "",
+};
+
+function toDateTimeInput(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
+}
 
 // Status badge configuration
 type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;
@@ -144,6 +172,9 @@ export default function AgendaView() {
     message: string;
   } | null>(null);
   const [showConnectBanner, setShowConnectBanner] = useState(true);
+  const [appointmentForm, setAppointmentForm] = useState<AppointmentForm>(emptyAppointmentForm);
+  const [appointmentErrors, setAppointmentErrors] = useState<Record<string, string>>({});
+  const [savingAppointment, setSavingAppointment] = useState(false);
 
   const organizationId = 1; // TODO: pegar do contexto do usuário/tenant
   const utils = trpc.useUtils();
@@ -277,12 +308,24 @@ export default function AgendaView() {
   // Abrir diálogo de novo agendamento
   function handleNewAppointment() {
     setEditingAppointment(null);
+    setAppointmentForm(emptyAppointmentForm);
+    setAppointmentErrors({});
     setOpenDialog(true);
   }
 
   // Editar agendamento existente
   function handleEditAppointment(appt: Appointment) {
     setEditingAppointment(appt);
+    setAppointmentForm({
+      patientId: String(appt.patientId),
+      professionalId: String(appt.professionalId),
+      procedureId: String(appt.procedureId),
+      startsAt: toDateTimeInput(appt.startsAt),
+      endsAt: toDateTimeInput(appt.endsAt),
+      status: appt.status,
+      notes: appt.notes ?? "",
+    });
+    setAppointmentErrors({});
     setOpenDialog(true);
   }
 
@@ -302,6 +345,7 @@ export default function AgendaView() {
     status: AppointmentStatus;
     notes?: string;
   }) {
+    setSavingAppointment(true);
     try {
       if (editingAppointment) {
         await utils.client.agendamentos.update.mutate({
@@ -332,10 +376,41 @@ export default function AgendaView() {
       await utils.agendamentos.list.invalidate();
       setOpenDialog(false);
       setEditingAppointment(null);
+      toast.success(editingAppointment ? "Agendamento atualizado" : "Agendamento criado");
+      await loadData();
     } catch (error: any) {
       console.error("Erro ao salvar agendamento:", error);
-      alert(error.message || "Erro ao salvar agendamento");
+      toast.error(error.message || "Erro ao salvar agendamento");
+    } finally {
+      setSavingAppointment(false);
     }
+  }
+
+  async function submitAppointmentForm(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const errors: Record<string, string> = {};
+    if (!appointmentForm.patientId) errors.patientId = "Selecione um paciente.";
+    if (!appointmentForm.professionalId) errors.professionalId = "Selecione um profissional.";
+    if (!appointmentForm.procedureId) errors.procedureId = "Selecione um procedimento.";
+    if (!appointmentForm.startsAt) errors.startsAt = "Informe o início.";
+    if (!appointmentForm.endsAt) errors.endsAt = "Informe o fim.";
+    if (appointmentForm.startsAt && appointmentForm.endsAt && appointmentForm.endsAt <= appointmentForm.startsAt) {
+      errors.endsAt = "O fim deve ser depois do início.";
+    }
+    setAppointmentErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error("Revise os campos obrigatórios do agendamento");
+      return;
+    }
+    await handleSaveAppointment({
+      patientId: Number(appointmentForm.patientId),
+      professionalId: Number(appointmentForm.professionalId),
+      procedureId: Number(appointmentForm.procedureId),
+      startsAt: new Date(appointmentForm.startsAt),
+      endsAt: new Date(appointmentForm.endsAt),
+      status: appointmentForm.status,
+      notes: appointmentForm.notes.trim() || undefined,
+    });
   }
 
   // Sincronizar o dia com o Google Calendar (OllCLin → Google)
@@ -452,10 +527,10 @@ export default function AgendaView() {
   return (
     <div className="space-y-6">
       {/* Cabeçalho da Agenda */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
-          <p className="text-muted text-sm">
+          <p className="text-slate-500 text-sm">
             Gerencie agendamentos, visualize disponibilidade e sincronize com o Google Calendar.
           </p>
         </div>
@@ -554,7 +629,7 @@ export default function AgendaView() {
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
         {/* Filtros laterais */}
         <div className="md:col-span-3 space-y-4">
-          <div className="bg-white p-4 rounded-lg border border-line shadow-sm">
+          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
             <h3 className="text-sm font-semibold text-foreground mb-3">
               Visualização
             </h3>
@@ -572,7 +647,7 @@ export default function AgendaView() {
             </div>
           </div>
 
-          <div className="bg-white p-4 rounded-lg border border-line shadow-sm">
+          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
             <h3 className="text-sm font-semibold text-foreground mb-3">
               Profissional
             </h3>
@@ -599,14 +674,14 @@ export default function AgendaView() {
 
         {/* Área principal do calendário */}
         <div className="md:col-span-9">
-          <div className="bg-white p-6 rounded-lg border border-line shadow-sm">
+          <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
             {/* Data selecionada */}
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-foreground">
                   {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
                 </h2>
-                <p className="text-muted text-sm">
+                <p className="text-slate-500 text-sm">
                   {format(selectedDate, "EEEE", { locale: ptBR })}
                 </p>
               </div>
@@ -660,7 +735,7 @@ export default function AgendaView() {
                   {[8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((hour) => (
                     <div
                       key={hour}
-                      className="text-xs text-muted text-right w-full h-12 flex items-end pr-2"
+                      className="text-xs text-slate-500 text-right w-full h-12 flex items-end pr-2"
                     >
                       {hour.toString().padStart(2, "0")}:00
                     </div>
@@ -671,7 +746,7 @@ export default function AgendaView() {
               <div className="col-span-9">
                 {/* Grade de agendamentos */}
                 <div
-                  className="relative h-[600px] border-b border-line overflow-hidden"
+                  className="relative h-[600px] border-b border-slate-200 overflow-hidden"
                   style={{ position: "relative" }}
                 >
                   {dayAppointments.map((appt) => {
@@ -708,7 +783,7 @@ export default function AgendaView() {
                               : status.variant === "destructive"
                               ? "bg-red-100 text-red-800 border-red-200"
                               : status.variant === "outline"
-                              ? "bg-transparent text-foreground border-line"
+                              ? "bg-transparent text-foreground border-slate-200"
                               : "bg-secondary text-secondary-foreground border-secondary",
                           )}
                         >
@@ -742,7 +817,7 @@ export default function AgendaView() {
                 Agendamentos de hoje
               </h3>
               {dayAppointments.length === 0 ? (
-                <p className="text-muted text-sm">Nenhum agendamento para este dia.</p>
+                <p className="text-slate-500 text-sm">Nenhum agendamento para este dia.</p>
               ) : (
                 <Table>
                   <TableHeader>
@@ -761,7 +836,7 @@ export default function AgendaView() {
                       const startTime = parseISO(appt.startsAt);
                       const status = STATUS_CONFIG[appt.status];
                       return (
-                        <TableRow key={appt.id} className="hover:bg-surface/50 transition-colors">
+                        <TableRow key={appt.id} className="hover:bg-slate-50 transition-colors">
                           <TableCell className="font-medium text-foreground">
                             {format(startTime, "HH:mm", { locale: ptBR })}
                           </TableCell>
@@ -817,7 +892,7 @@ export default function AgendaView() {
 
             {/* Eventos existentes na agenda do Google (leitura) */}
             {googleConnected && (
-              <div className="mt-8 border-t border-line pt-6">
+              <div className="mt-8 border-t border-slate-200 pt-6">
                 <h3 className="text-sm font-semibold text-foreground mb-3">
                   Eventos no Google Calendar
                 </h3>
@@ -826,13 +901,13 @@ export default function AgendaView() {
                     {googleEventsData.map((event) => (
                       <li
                         key={event.id}
-                        className="flex items-start justify-between gap-3 rounded-md border border-line p-2 text-sm"
+                        className="flex items-start justify-between gap-3 rounded-md border border-slate-200 p-2 text-sm"
                       >
                         <div>
                           <p className="font-medium text-foreground">
                             {event.summary}
                           </p>
-                          <p className="text-xs text-muted">
+                          <p className="text-xs text-slate-500">
                             {formatGoogleEventTime(event)}
                           </p>
                         </div>
@@ -850,7 +925,7 @@ export default function AgendaView() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted">
+                  <p className="text-sm text-slate-500">
                     Nenhum evento encontrado no Google Calendar neste dia.
                   </p>
                 )}
@@ -874,17 +949,18 @@ export default function AgendaView() {
               Preencha as informações do agendamento
             </DialogDescription>
           </DialogHeader>
-          <form className="space-y-4 p-4">
-            <div className="grid grid-cols-2 gap-4">
+          <form className="space-y-4" onSubmit={submitAppointmentForm} noValidate>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-xs font-medium text-foreground/70">
+                <label htmlFor="appointmentPatient" className="text-sm font-medium text-slate-700">
                   Paciente
+                  <span className="text-red-600"> *</span>
                 </label>
                 <Select
-                  value={editingAppointment?.patientId?.toString() ?? ""}
-                  onValueChange={(_) => {}} // TODO: conectar ao formulário
+                  value={appointmentForm.patientId}
+                  onValueChange={(value) => setAppointmentForm((current) => ({ ...current, patientId: value }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="appointmentPatient" aria-invalid={Boolean(appointmentErrors.patientId)}>
                     <SelectValue placeholder="Selecionar paciente" />
                   </SelectTrigger>
                   <SelectContent>
@@ -895,17 +971,19 @@ export default function AgendaView() {
                     ))}
                   </SelectContent>
                 </Select>
+                {appointmentErrors.patientId && <p className="text-xs text-red-600">{appointmentErrors.patientId}</p>}
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-medium text-foreground/70">
+                <label htmlFor="appointmentProfessional" className="text-sm font-medium text-slate-700">
                   Profissional
+                  <span className="text-red-600"> *</span>
                 </label>
                 <Select
-                  value={editingAppointment?.professionalId?.toString() ?? ""}
-                  onValueChange={(_) => {}}
+                  value={appointmentForm.professionalId}
+                  onValueChange={(value) => setAppointmentForm((current) => ({ ...current, professionalId: value }))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="appointmentProfessional" aria-invalid={Boolean(appointmentErrors.professionalId)}>
                     <SelectValue placeholder="Selecionar profissional" />
                   </SelectTrigger>
                   <SelectContent>
@@ -916,18 +994,20 @@ export default function AgendaView() {
                     ))}
                   </SelectContent>
                 </Select>
+                {appointmentErrors.professionalId && <p className="text-xs text-red-600">{appointmentErrors.professionalId}</p>}
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-medium text-foreground/70">
+              <label htmlFor="appointmentProcedure" className="text-sm font-medium text-slate-700">
                 Procedimento
+                <span className="text-red-600"> *</span>
               </label>
-                <Select
-                  value={editingAppointment?.procedureId?.toString() ?? ""}
-                  onValueChange={(_) => {}}
-                >
-                  <SelectTrigger>
+              <Select
+                value={appointmentForm.procedureId}
+                onValueChange={(value) => setAppointmentForm((current) => ({ ...current, procedureId: value }))}
+              >
+                <SelectTrigger id="appointmentProcedure" aria-invalid={Boolean(appointmentErrors.procedureId)}>
                     <SelectValue placeholder="Selecionar procedimento" />
                   </SelectTrigger>
                   <SelectContent>
@@ -937,33 +1017,38 @@ export default function AgendaView() {
                       </SelectItem>
                     ))}
                   </SelectContent>
-                </Select>
+              </Select>
+              {appointmentErrors.procedureId && <p className="text-xs text-red-600">{appointmentErrors.procedureId}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-xs font-medium text-foreground/70">
+                <label htmlFor="appointmentStartsAt" className="text-sm font-medium text-slate-700">
                   Data e Hora Início
+                  <span className="text-red-600"> *</span>
                 </label>
-                <Input type="datetime-local" defaultValue="" />
+                <Input id="appointmentStartsAt" type="datetime-local" value={appointmentForm.startsAt} aria-invalid={Boolean(appointmentErrors.startsAt)} onChange={(event) => setAppointmentForm((current) => ({ ...current, startsAt: event.target.value }))} />
+                {appointmentErrors.startsAt && <p className="text-xs text-red-600">{appointmentErrors.startsAt}</p>}
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-medium text-foreground/70">
+                <label htmlFor="appointmentEndsAt" className="text-sm font-medium text-slate-700">
                   Data e Hora Fim
+                  <span className="text-red-600"> *</span>
                 </label>
-                <Input type="datetime-local" defaultValue="" />
+                <Input id="appointmentEndsAt" type="datetime-local" value={appointmentForm.endsAt} aria-invalid={Boolean(appointmentErrors.endsAt)} onChange={(event) => setAppointmentForm((current) => ({ ...current, endsAt: event.target.value }))} />
+                {appointmentErrors.endsAt && <p className="text-xs text-red-600">{appointmentErrors.endsAt}</p>}
               </div>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-medium text-foreground/70">
+              <label htmlFor="appointmentStatus" className="text-sm font-medium text-slate-700">
                 Status
               </label>
               <Select
-                value={editingAppointment?.status ?? "solicitado"}
-                onValueChange={(_) => {}}
+                value={appointmentForm.status}
+                onValueChange={(value) => setAppointmentForm((current) => ({ ...current, status: value as AppointmentStatus }))}
               >
-                <SelectTrigger>
+                <SelectTrigger id="appointmentStatus">
                   <SelectValue placeholder="Selecionar status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -980,26 +1065,27 @@ export default function AgendaView() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-medium text-foreground/70">
+              <label htmlFor="appointmentNotes" className="text-sm font-medium text-slate-700">
                 Observações
               </label>
-              <Input type="text" placeholder="Observações adicionais" />
+              <Input id="appointmentNotes" type="text" placeholder="Observações adicionais" value={appointmentForm.notes} onChange={(event) => setAppointmentForm((current) => ({ ...current, notes: event.target.value }))} />
             </div>
 
-            <div className="flex justify-end gap-2 mt-6">
+            <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end">
               <Button
+                type="button"
                 variant="outline"
                 onClick={handleCloseDialog}
+                disabled={savingAppointment}
               >
                 Cancelar
               </Button>
               <Button
+                type="submit"
                 variant="primary"
-                onClick={() => {
-                  // TODO: conectar submit do formulário
-                  handleCloseDialog();
-                }}
+                disabled={savingAppointment}
               >
+                {savingAppointment && <Loader2 className="h-4 w-4 animate-spin" />}
                 Salvar Agendamento
               </Button>
             </div>
@@ -1009,9 +1095,9 @@ export default function AgendaView() {
 
       {/* Toast para Google Calendar não conectado */}
       {!googleConnected && showConnectBanner && (
-        <div className="fixed bottom-4 right-4 max-w-sm bg-white border border-line shadow-lg rounded-lg p-4 z-50">
+        <div className="fixed bottom-4 right-4 max-w-sm bg-white border border-slate-200 shadow-lg rounded-lg p-4 z-50">
           <div className="flex items-start gap-3">
-            <Cloud className="h-5 w-5 text-muted mt-0.5" />
+            <Cloud className="h-5 w-5 text-slate-500 mt-0.5" />
             <div>
               <h3 className="text-sm font-semibold text-foreground">
                 {googleStatus?.migrationRequired
@@ -1020,7 +1106,7 @@ export default function AgendaView() {
                     ? "Google Calendar não configurado"
                     : "Conecte ao Google Calendar"}
               </h3>
-              <p className="text-xs text-muted mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 {googleStatus?.migrationRequired
                   ? googleStatus.hint ??
                     "Aplique a migração 0004 no Supabase para habilitar a integração."

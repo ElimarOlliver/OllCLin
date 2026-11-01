@@ -209,10 +209,10 @@ export default function ProfissionaisView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Profissionais de Saúde</h1>
-          <p className="text-muted text-sm">
+          <p className="text-slate-500 text-sm">
             Cadastre médicos, dentistas, terapeutas e outros profissionais da clínica.
           </p>
         </div>
@@ -224,7 +224,7 @@ export default function ProfissionaisView() {
 
       <div className="flex max-w-md">
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <Input
             placeholder="Buscar por nome, especialidade ou CPF..."
             value={search}
@@ -234,7 +234,7 @@ export default function ProfissionaisView() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-line shadow-sm overflow-x-auto">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -252,7 +252,7 @@ export default function ProfissionaisView() {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={8} className="text-center py-8">
-                  <div className="flex items-center justify-center gap-2 text-muted">
+                  <div className="flex items-center justify-center gap-2 text-slate-500">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Carregando profissionais...
                   </div>
@@ -260,7 +260,7 @@ export default function ProfissionaisView() {
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted">
+                <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                   Nenhum profissional encontrado.
                 </TableCell>
               </TableRow>
@@ -268,16 +268,16 @@ export default function ProfissionaisView() {
               filtered.map((prof) => (
                 <TableRow
                   key={prof.id}
-                  className="hover:bg-surface/50 transition-colors border-b border-line/50 last:border-0"
+                  className="hover:bg-slate-50 transition-colors border-b border-slate-200 last:border-0"
                 >
                   <TableCell className="font-medium text-foreground">
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-surface/50 flex items-center justify-center text-primary font-medium">
+                      <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-primary font-medium">
                         {prof.fullName.charAt(0).toUpperCase()}
                       </div>
                       <div>
                         <div className="text-sm font-medium">{prof.fullName}</div>
-                        <div className="text-xs text-muted">{prof.email || "—"}</div>
+                        <div className="text-xs text-slate-500">{prof.email || "—"}</div>
                       </div>
                     </div>
                   </TableCell>

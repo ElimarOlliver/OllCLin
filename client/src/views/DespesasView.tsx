@@ -238,14 +238,14 @@ export default function DespesasView() {
 
   return (
     <div className="p-2 space-y-4">
-      <div className="bg-white rounded-lg border border-line shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
         <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
           <div>
             <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
               <ReceiptText className="h-5 w-5 text-primary" />
               Despesas
             </h1>
-            <p className="text-muted text-sm mt-1">
+            <p className="text-slate-500 text-sm mt-1">
               Registre e acompanhe os pagamentos da clínica.
             </p>
           </div>
@@ -260,7 +260,7 @@ export default function DespesasView() {
         </div>
 
         <div className="relative mb-4 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -270,11 +270,11 @@ export default function DespesasView() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-muted">
+          <div className="flex items-center justify-center py-12 text-slate-500">
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando...
           </div>
         ) : visible.length === 0 ? (
-          <p className="text-muted text-sm py-8 text-center">Nenhuma despesa registrada.</p>
+          <p className="text-slate-500 text-sm py-8 text-center">Nenhuma despesa registrada.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -294,7 +294,7 @@ export default function DespesasView() {
                   <TableCell className="font-medium">
                     {exp.description || `Despesa #${exp.id}`}
                     {exp.recurrenceRule ? (
-                      <span className="ml-2 text-xs text-muted">(recorrente)</span>
+                      <span className="ml-2 text-xs text-slate-500">(recorrente)</span>
                     ) : null}
                   </TableCell>
                   <TableCell>{exp.payeeName || "—"}</TableCell>
@@ -338,17 +338,17 @@ export default function DespesasView() {
         <div className="mt-4 flex gap-6 justify-end text-sm">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-amber-600" />
-            <span className="text-muted">A pagar:</span>
+            <span className="text-slate-500">A pagar:</span>
             <span className="font-bold text-amber-700">{brl(summary.toPayTotal)}</span>
           </div>
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-red-500" />
-            <span className="text-muted">Atrasado:</span>
+            <span className="text-slate-500">Atrasado:</span>
             <span className="font-bold text-red-600">{brl(summary.overdueTotal)}</span>
           </div>
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            <span className="text-muted">Pago:</span>
+            <span className="text-slate-500">Pago:</span>
             <span className="font-bold text-emerald-700">{brl(summary.paidTotal)}</span>
           </div>
         </div>
@@ -361,7 +361,7 @@ export default function DespesasView() {
             <DialogTitle>Nova despesa</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label htmlFor="amount">Valor (R$) *</Label>
                 <Input
@@ -384,7 +384,7 @@ export default function DespesasView() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Tipo de custo → Categoria</Label>
                 <Select value={form.categoryId} onValueChange={(v) => setForm({ ...form, categoryId: v })}>
@@ -422,7 +422,7 @@ export default function DespesasView() {
                 onChange={(e) => setForm({ ...form, payeeName: e.target.value })}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="grid gap-2">
                 <Label htmlFor="dueDate">Vencimento</Label>
                 <Input
@@ -486,7 +486,7 @@ export default function DespesasView() {
                 .map((parent) => (
                   <li key={parent.id}>
                     <span className="font-medium">{parent.name}</span>
-                    <ul className="ml-4 text-muted">
+                    <ul className="ml-4 text-slate-500">
                       {categories
                         .filter((c) => c.parentId === parent.id)
                         .map((sub) => (
@@ -507,14 +507,14 @@ export default function DespesasView() {
             <DialogTitle>Histórico da despesa</DialogTitle>
           </DialogHeader>
           {historyRows.length === 0 ? (
-            <p className="text-muted text-sm py-4 text-center">Sem registros.</p>
+            <p className="text-slate-500 text-sm py-4 text-center">Sem registros.</p>
           ) : (
             <ul className="space-y-2 py-2 text-sm">
               {historyRows.map((h) => (
                 <li key={h.id} className="border-b pb-2">
                   <span className="font-medium">{h.action}</span>
-                  {h.reason ? <span className="text-muted"> — {h.reason}</span> : null}
-                  <div className="text-xs text-muted">
+                  {h.reason ? <span className="text-slate-500"> — {h.reason}</span> : null}
+                  <div className="text-xs text-slate-500">
                     {h.createdAt ? new Date(h.createdAt).toLocaleString("pt-BR") : ""}
                   </div>
                 </li>
@@ -531,7 +531,7 @@ export default function DespesasView() {
             <DialogTitle>Cancelar despesa</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-2">
-            <p className="text-sm text-muted">
+            <p className="text-sm text-slate-500">
               O motivo fica registrado no histórico da despesa.
             </p>
             <div className="grid gap-2">

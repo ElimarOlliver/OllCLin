@@ -280,7 +280,7 @@ export default function PacientesView() {
   return (
     <div className="space-y-6">
       {/* Cabeçalho */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#075e63]">Núcleo clínico</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Pacientes</h1>
@@ -299,7 +299,7 @@ export default function PacientesView() {
       {/* Busca */}
       <div className="flex max-w-md">
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
           <Input
             placeholder="Buscar por nome, CPF ou telefone..."
             value={search}
@@ -327,7 +327,7 @@ export default function PacientesView() {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8">
-                  <div className="flex items-center justify-center gap-2 text-muted">
+                  <div className="flex items-center justify-center gap-2 text-slate-500">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Carregando pacientes...
                   </div>
@@ -335,7 +335,7 @@ export default function PacientesView() {
               </TableRow>
             ) : filteredPatients.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted">
+                <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                   Nenhum paciente encontrado.
                 </TableCell>
               </TableRow>
@@ -343,16 +343,16 @@ export default function PacientesView() {
               filteredPatients.map((patient) => (
                 <TableRow
                   key={patient.id}
-                  className="hover:bg-surface/50 transition-colors border-b border-line/50 last:border-0"
+                  className="hover:bg-slate-50 transition-colors border-b border-slate-200 last:border-0"
                 >
                   <TableCell className="font-medium text-foreground">
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-surface/50 flex items-center justify-center text-primary font-medium">
+                      <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-primary font-medium">
                         {patient.fullName.charAt(0).toUpperCase()}
                       </div>
                       <div>
                         <div className="text-sm font-medium">{patient.fullName}</div>
-                        <div className="text-xs text-muted">
+                        <div className="text-xs text-slate-500">
                           {patient.createdAt
                             ? `${format(new Date(patient.createdAt), "dd/MM/yyyy", { locale: ptBR })} • Cadastro`
                             : "—"}

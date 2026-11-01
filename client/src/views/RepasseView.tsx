@@ -314,13 +314,13 @@ export default function RepasseView() {
 
   return (
     <div className="p-2 space-y-4">
-      <div className="bg-white rounded-lg border border-line shadow-sm p-6">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
         <div className="mb-4">
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             <HandCoins className="h-5 w-5 text-primary" />
             Repasse
           </h1>
-          <p className="text-muted text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1">
             Apure os recebimentos por profissional e registre os repasses com
             retroativos automáticos.
           </p>
@@ -393,15 +393,15 @@ export default function RepasseView() {
             </div>
 
             {professionalNumber <= 0 ? (
-              <p className="text-muted text-sm py-8 text-center">
+              <p className="text-slate-500 text-sm py-8 text-center">
                 Selecione um profissional para listar os recebimentos elegíveis.
               </p>
             ) : loadingEligible ? (
-              <div className="flex items-center justify-center py-8 text-muted">
+              <div className="flex items-center justify-center py-8 text-slate-500">
                 <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando receitas...
               </div>
             ) : eligible.length === 0 ? (
-              <p className="text-muted text-sm py-8 text-center">
+              <p className="text-slate-500 text-sm py-8 text-center">
                 Nenhum recebimento recebido no período para este profissional/local.
               </p>
             ) : (
@@ -456,7 +456,7 @@ export default function RepasseView() {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="rounded-lg border border-line p-4 space-y-3">
+              <div className="rounded-lg border border-slate-200 p-4 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
                     <Label htmlFor="percentage">Percentual de repasse (%)</Label>
@@ -499,15 +499,15 @@ export default function RepasseView() {
 
               <div className="rounded-lg bg-surface/60 p-4 text-sm space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-muted">Base selecionada</span>
+                  <span className="text-slate-500">Base selecionada</span>
                   <span className="font-medium">{brl(base)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted">Valor esperado ({pct}%)</span>
+                  <span className="text-slate-500">Valor esperado ({pct}%)</span>
                   <span className="font-medium">{brl(expected)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted flex items-center gap-1">
+                  <span className="text-slate-500 flex items-center gap-1">
                     <RotateCcw className="h-3.5 w-3.5" /> Retroativo pendente
                   </span>
                   <span className="font-medium">{brl(carryover)}</span>
@@ -517,10 +517,10 @@ export default function RepasseView() {
                   <span className="text-lg font-bold text-primary">{brl(suggestedTotal)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted">Valor informado</span>
+                  <span className="text-slate-500">Valor informado</span>
                   <span className="font-semibold">{brl(amountToPay)}</span>
                 </div>
-                <p className="text-xs text-muted pt-2">
+                <p className="text-xs text-slate-500 pt-2">
                   Se o valor pago for menor que o total, a diferença fica como
                   retroativo no próximo repasse do mesmo profissional/local.
                 </p>
@@ -531,11 +531,11 @@ export default function RepasseView() {
           {/* ------------------------- Aba Repasses ------------------------- */}
           <TabsContent value="repasses" className="mt-4">
             {loadingPayouts ? (
-              <div className="flex items-center justify-center py-8 text-muted">
+              <div className="flex items-center justify-center py-8 text-slate-500">
                 <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando repasses...
               </div>
             ) : payouts.length === 0 ? (
-              <p className="text-muted text-sm py-8 text-center">
+              <p className="text-slate-500 text-sm py-8 text-center">
                 Nenhum repasse registrado.
               </p>
             ) : (
@@ -610,7 +610,7 @@ export default function RepasseView() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 text-sm">
               <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                <span className="text-muted">Confirmados:</span>
+                <span className="text-slate-500">Confirmados:</span>
                 <span className="font-bold text-emerald-700 ml-auto">
                   {brl(
                     payouts
@@ -621,7 +621,7 @@ export default function RepasseView() {
               </div>
               <div className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2">
                 <Clock className="h-4 w-4 text-primary" />
-                <span className="text-muted">Retroativos pagos:</span>
+                <span className="text-slate-500">Retroativos pagos:</span>
                 <span className="font-bold text-foreground ml-auto">
                   {brl(
                     payouts
@@ -632,7 +632,7 @@ export default function RepasseView() {
               </div>
               <div className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2">
                 <HandCoins className="h-4 w-4 text-primary" />
-                <span className="text-muted">Registros:</span>
+                <span className="text-slate-500">Registros:</span>
                 <span className="font-bold text-foreground ml-auto">{payouts.length}</span>
               </div>
             </div>
@@ -647,14 +647,14 @@ export default function RepasseView() {
             <DialogTitle>Histórico do repasse</DialogTitle>
           </DialogHeader>
           {historyRows.length === 0 ? (
-            <p className="text-muted text-sm py-4 text-center">Sem registros.</p>
+            <p className="text-slate-500 text-sm py-4 text-center">Sem registros.</p>
           ) : (
             <ul className="space-y-2 py-2 text-sm">
               {historyRows.map((h) => (
                 <li key={h.id} className="border-b pb-2">
                   <span className="font-medium">{h.action}</span>
-                  {h.reason ? <span className="text-muted"> — {h.reason}</span> : null}
-                  <div className="text-xs text-muted">
+                  {h.reason ? <span className="text-slate-500"> — {h.reason}</span> : null}
+                  <div className="text-xs text-slate-500">
                     {h.createdAt ? new Date(h.createdAt).toLocaleString("pt-BR") : ""}
                   </div>
                 </li>
@@ -671,7 +671,7 @@ export default function RepasseView() {
             <DialogTitle>Cancelar repasse</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-2">
-            <p className="text-sm text-muted">
+            <p className="text-sm text-slate-500">
               Ao cancelar, as receitas vinculadas voltam a ficar disponíveis para
               um novo repasse. O motivo fica no histórico.
             </p>

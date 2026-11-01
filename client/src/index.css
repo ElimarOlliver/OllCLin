@@ -2,20 +2,30 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--primary);
+  --color-muted-foreground: var(--muted);
+}
+
 :root {
   /* OllCLin Design System - Paleta de cores definida */
-  --background: #F8FAFC;
-  --surface: #D9E6F2;
-  --primary: #2F80ED;
-  --primary-hover: #256FE0;
-  --foreground: #111827;
-  --foreground-soft: #374151;
-  --muted: #6B7280;
-  --line: #E2E8F0;
-  --success: #10B981;
-  --success-hover: #059669;
+  --background: #F7F8F5;
+  --surface: #EAF2EF;
+  --primary: #075E63;
+  --primary-hover: #064F53;
+  --foreground: #172121;
+  --foreground-soft: #41504E;
+  --muted: #647471;
+  --line: #DCE5E2;
+  --success: #0E9F6E;
+  --success-hover: #087A55;
   --white: #FFFFFF;
-  --border: #E2E8F0;
+  --border: #DCE5E2;
   --radius: 8px;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
