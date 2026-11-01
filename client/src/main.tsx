@@ -1,4 +1,4 @@
-import { trpc } from "@/lib/trpc";
+import { getSupabaseAuthHeaders, trpc } from "@/lib/trpc";
 import { COOKIE_NAME, UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
@@ -45,7 +45,7 @@ const trpcClient = trpc.createClient({
     httpBatchLink({
       url: "/api/trpc",
       transformer: superjson,
-      headers() {
+      async headers() {
         // Preview auto-login fallback: when the browser blocks iframe cookies
         // (Safari ITP / private browsing / WebView), the runtime mirrors the
         // session into sessionStorage so we can forward it as a Bearer token.
@@ -63,7 +63,8 @@ const trpcClient = trpc.createClient({
         } catch {
           // sessionStorage unavailable
         }
-        return {};
+        // Sessão do Supabase Auth (email/senha ou magic link).
+        return getSupabaseAuthHeaders();
       },
       fetch(input, init) {
         return globalThis.fetch(input, {

@@ -18,7 +18,36 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    // Sessão persistida no localStorage do navegador; o token é enviado ao
+    // backend (tRPC) via header Authorization: Bearer, que o server valida.
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
+
+/** Sessão atual do Supabase Auth (null quando deslogado). */
+export async function getSupabaseSession() {
+  return supabase.auth.getSession();
+}
+
+/** Login com e-mail/senha (Supabase Auth). */
+export async function signInWithEmailPassword(params: {
+  email: string;
+  password: string;
+}): Promise<{
+  data: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["data"];
+  error: Awaited<ReturnType<typeof supabase.auth.signInWithPassword>>["error"];
+}> {
+  return supabase.auth.signInWithPassword(params);
+}
+
+/** Encerra a sessão do Supabase Auth. */
+export async function signOutSupabase(): Promise<void> {
+  await supabase.auth.signOut();
+}
 
 /**
  * Helper para executar queries com tratamento de erro padronizado

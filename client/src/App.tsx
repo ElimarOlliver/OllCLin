@@ -4,7 +4,6 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch, useLocation } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
-import { startLogin } from "@/const";
 import { useAuth } from "@/hooks/useAuth";
 
 // Importar Views (Camada Visão - MVC)
@@ -60,7 +59,7 @@ import {
   Scale,
   FileText,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import LoginView from "@/views/LoginView";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Início", path: "/" },
@@ -175,31 +174,7 @@ function DashboardShell() {
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen w-full">
-        <div className="flex flex-col items-center gap-6 p-8 max-w-md w-full">
-          <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-bold text-foreground text-center">
-              OllCLin
-            </h1>
-            <p className="text-muted text-sm text-center">
-              Acesso ao dashboard requer autenticação.
-            </p>
-          </div>
-          <Button
-            onClick={() => {
-              try {
-                startLogin();
-              } catch {
-                alert(
-                  "Login Manus não configurado. Defina ALLOW_DEV_AUTH=true no .env para usar o modo local.",
-                );
-              }
-            }}
-            size="lg"
-            className="w-full bg-primary text-white hover:bg-primary/90 shadow-lg"
-          >
-            Entrar no Sistema
-          </Button>
-        </div>
+        <LoginView />
       </div>
     );
   }
