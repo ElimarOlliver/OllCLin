@@ -38,7 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Search, Plus, Loader2, Pencil } from "lucide-react";
+import { User, Search, Plus, Loader2, Pencil, AlertCircle, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { format } from "date-fns";
@@ -124,6 +124,7 @@ export default function PacientesView() {
   const [saving, setSaving] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
 
   const utils = trpc.useUtils();
 
@@ -170,11 +171,13 @@ export default function PacientesView() {
   function openCreate() {
     setEditing(null);
     setForm(emptyForm);
+    setTouched({});
     setOpenDialog(true);
   }
 
   function openEdit(patient: Patient) {
     setEditing(patient);
+    setTouched({});
     setForm({
       fullName: patient.fullName ?? "",
       socialName: patient.socialName ?? "",
@@ -194,6 +197,32 @@ export default function PacientesView() {
       consentMarketing: patient.consentMarketing,
     });
     setOpenDialog(true);
+  }
+
+  const validationErrors = useMemo(() => {
+    const errors: Record<string, string> = {};
+    if (form.fullName.trim().length < 2) errors.fullName = "Informe o nome completo.";
+    Object.entries(requiredFields ?? {}).forEach(([field, required]) => {
+      if (!required || field === "fullName") return;
+      const value = form[field as keyof PatientForm];
+      if (typeof value === "string" && value.trim().length === 0) errors[field] = "Este campo é obrigatório.";
+    });
+    if (form.email.trim() && !/^\S+@\S+\.\S+$/.test(form.email.trim())) errors.email = "Informe um e-mail válido.";
+    return errors;
+  }, [form, requiredFields]);
+
+  function markTouched(field: string) {
+    setTouched((current) => ({ ...current, [field]: true }));
+  }
+
+  function fieldState(field: string) {
+    const hasError = Boolean(touched[field] && validationErrors[field]);
+    return { "aria-invalid": hasError, "aria-describedby": hasError ? `${field}-error` : undefined, className: hasError ? "border-red-400 focus-visible:ring-red-400" : "" };
+  }
+
+  function ErrorMessage({ field }: { field: string }) {
+    if (!touched[field] || !validationErrors[field]) return null;
+    return <p id={`${field}-error`} className="flex items-center gap-1 text-xs font-medium text-red-600"><AlertCircle className="h-3.5 w-3.5" />{validationErrors[field]}</p>;
   }
 
   function buildPayload() {
@@ -219,21 +248,9 @@ export default function PacientesView() {
   }
 
   async function handleSave() {
-    if (form.fullName.trim().length < 2) {
-      toast.error("Informe o nome completo do paciente");
-      return;
-    }
-
-    // Validação antecipada usando a configuração da clínica.
-    const missing = Object.entries(requiredFields ?? {})
-      .filter(([field, required]) => required && field !== "fullName")
-      .filter(([field]) => {
-        const value = form[field as keyof PatientForm];
-        return typeof value === "string" ? value.trim().length === 0 : value === null;
-      })
-      .map(([field]) => field);
-    if (missing.length > 0) {
-      toast.error("Preencha todos os campos obrigatórios (*)");
+    setTouched(Object.keys(validationErrors).reduce<Record<string, boolean>>((acc, field) => ({ ...acc, [field]: true }), {}));
+    if (Object.keys(validationErrors).length > 0) {
+      toast.error("Informe os campos obrigatórios antes de continuar");
       return;
     }
 
@@ -250,6 +267,7 @@ export default function PacientesView() {
       setOpenDialog(false);
       setEditing(null);
       setForm(emptyForm);
+      setTouched({});
       await loadPatients();
     } catch (error) {
       console.error(error);
@@ -264,8 +282,9 @@ export default function PacientesView() {
       {/* Cabeçalho */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Pacientes</h1>
-          <p className="text-muted text-sm">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#075e63]">Núcleo clínico</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Pacientes</h1>
+          <p className="mt-1 text-sm text-slate-500">
             Cadastre, busque e gerencie o histórico dos pacientes da clínica.
           </p>
         </div>
@@ -285,13 +304,13 @@ export default function PacientesView() {
             placeholder="Buscar por nome, CPF ou telefone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
+            className="h-11 border-slate-200 bg-white pl-10 shadow-sm"
           />
         </div>
       </div>
 
       {/* Tabela de pacientes */}
-      <div className="bg-white rounded-lg border border-line shadow-sm overflow-x-auto">
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
         <Table>
           <TableHeader>
             <TableRow>
@@ -377,12 +396,11 @@ export default function PacientesView() {
 
       {/* Dialog: Novo/Editar Paciente */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[92vh] overflow-y-auto border-slate-200 bg-[#fbfcfa] sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Paciente" : "Novo Paciente"}</DialogTitle>
             <DialogDescription>
-              Campos marcados com <span className="text-red-600">*</span> são
-              obrigatórios conforme a configuração da clínica.
+              Preencha os dados com atenção. Campos marcados com <span className="font-bold text-red-600">*</span> são obrigatórios.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -392,7 +410,9 @@ export default function PacientesView() {
               handleSave();
             }}
           >
-            <div className="space-y-2">
+            <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-[#075e63]">Identificação</p>
+              <div className="space-y-2">
               <Label htmlFor="fullName">
                 Nome Completo <span className="text-red-600">*</span>
               </Label>
@@ -401,11 +421,15 @@ export default function PacientesView() {
                 placeholder="Nome completo do paciente"
                 value={form.fullName}
                 onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+                onBlur={() => markTouched("fullName")}
+                {...fieldState("fullName")}
                 required
               />
+              <ErrorMessage field="fullName" />
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="socialName">Nome social</Label>
                 <Input
@@ -423,8 +447,11 @@ export default function PacientesView() {
                   placeholder="000.000.000-00"
                   value={form.cpf}
                   onChange={(e) => setForm({ ...form, cpf: e.target.value })}
+                  onBlur={() => markTouched("cpf")}
+                  {...fieldState("cpf")}
                   required={isRequired("cpf")}
                 />
+                <ErrorMessage field="cpf" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="rg">
@@ -434,8 +461,11 @@ export default function PacientesView() {
                   id="rg"
                   value={form.rg}
                   onChange={(e) => setForm({ ...form, rg: e.target.value })}
+                  onBlur={() => markTouched("rg")}
+                  {...fieldState("rg")}
                   required={isRequired("rg")}
                 />
+                <ErrorMessage field="rg" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="birthDate">
@@ -447,8 +477,11 @@ export default function PacientesView() {
                   type="date"
                   value={form.birthDate}
                   onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
+                  onBlur={() => markTouched("birthDate")}
+                  {...fieldState("birthDate")}
                   required={isRequired("birthDate")}
                 />
+                <ErrorMessage field="birthDate" />
               </div>
               <div className="space-y-2">
                 <Label>
@@ -477,8 +510,11 @@ export default function PacientesView() {
                   placeholder="(00) 00000-0000"
                   value={form.phone}
                   onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  onBlur={() => markTouched("phone")}
+                  {...fieldState("phone")}
                   required={isRequired("phone")}
                 />
+                <ErrorMessage field="phone" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">
@@ -490,8 +526,11 @@ export default function PacientesView() {
                   placeholder="email@exemplo.com"
                   value={form.email}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  onBlur={() => markTouched("email")}
+                  {...fieldState("email")}
                   required={isRequired("email")}
                 />
+                <ErrorMessage field="email" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="zipCode">CEP</Label>
@@ -503,6 +542,8 @@ export default function PacientesView() {
               </div>
             </div>
 
+            <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-[#075e63]">Endereço e contato</p>
             <div className="space-y-2">
               <Label htmlFor="address">
                 Endereço {isRequired("address") && <span className="text-red-600">*</span>}
@@ -512,8 +553,12 @@ export default function PacientesView() {
                 placeholder="Rua, número, complemento"
                 value={form.address}
                 onChange={(e) => setForm({ ...form, address: e.target.value })}
+                onBlur={() => markTouched("address")}
+                {...fieldState("address")}
                 required={isRequired("address")}
               />
+              <ErrorMessage field="address" />
+            </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -543,8 +588,11 @@ export default function PacientesView() {
                   id="emergencyContact"
                   value={form.emergencyContact}
                   onChange={(e) => setForm({ ...form, emergencyContact: e.target.value })}
+                  onBlur={() => markTouched("emergencyContact")}
+                  {...fieldState("emergencyContact")}
                   required={isRequired("emergencyContact")}
                 />
+                <ErrorMessage field="emergencyContact" />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="emergencyPhone">Telefone de emergência</Label>
@@ -556,7 +604,7 @@ export default function PacientesView() {
               </div>
             </div>
 
-            <div className="space-y-3 rounded-lg border border-line bg-surface/40 p-3">
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
               <p className="text-xs font-medium text-foreground/70">Consentimentos (LGPD)</p>
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -584,7 +632,8 @@ export default function PacientesView() {
               </div>
             </div>
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="sticky bottom-0 -mx-1 gap-2 border-t border-slate-200 bg-[#fbfcfa]/95 pt-4 backdrop-blur sm:justify-between">
+              <p className="hidden items-center gap-1 text-xs text-slate-500 sm:flex"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Seus dados ficam protegidos</p>
               <Button
                 type="button"
                 variant="outline"
