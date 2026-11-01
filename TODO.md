@@ -62,12 +62,19 @@
 - [ ] **Configurar credenciais reais do Google**: `.env` ainda tem placeholders (`seu-...`). Criar OAuth Client ID (Web), cadastrar `${PUBLIC_URL}/api/google-calendar/callback` em "Authorized redirect URIs" e preencher `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`. Teste ao vivo do OAuth fica bloqueado até isso.
 - [x] Validação local: `tsc --noEmit` sem erros; Vitest 16/16 (10 testes novos do Google Calendar); smoke test 10/10 rotas 200; `googleAgenda.status` responde com `migrationRequired`/`configured`.
 
+## Incremento 5 — Autenticação + RLS [CONCLUÍDO — MIGRAÇÃO/RBAC PENDENTE]
+- [x] Migração `drizzle/migrations/0005_rls_organizations.sql`: habilita Row Level Security nas tabelas tenant-scoped (estabelecimentos, locations, rooms, professionals, procedures, patients, appointments, revenues, revenue_history, sales, sale_items, payouts, payout_items, payout_history, receipts, receipt_history, expenses, expense_categories, health_plans, org_settings, payment_methods, audit_log, medical_records, exam_requests, exam_items, attendances, prescriptions, appointment_status_history, user_roles) com policy por `organization_id` (`public.current_ollclin_organization_id()` resolvendo via e-mail do JWT).
+- [x] `server/lib/supabase-auth.ts`: validação do access token Supabase (GoTrue) + lookup do usuário local por e-mail + resolução para `users.organization_id`.
+- [x] `server/_core/context.ts`: accepta o bearer token JWT do Supabase como fallback de autenticação (depois do fluxo OAuth legado), mantendo `ALLOW_DEV_AUTH` apenas sem token.
+- [x] Frontend: browser client Supabase Auth + `getSupabaseAuthHeaders` no tRPC (Authorization: Bearer) + tela de login (e-mail/senha) + logout com `signOutSupabase`.
+- [x] Testes: `server/lib/supabase-auth.test.ts` (resolução de usuário local) — Vitest 19/19 no total.
+
 ## Próximos passos (roadmap Cap. 15)
 - [x] Financeiro: Vendas, Repasse, Extrato, Recibos (menu completo).
 - [x] Aplicar Campos Obrigatórios na validação real do cadastro de pacientes (criar/atualizar consultam `org_settings`).
 - [x] Aplicar a migração `0003_financeiro_completo.sql` e fazer o smoke test real dos quatro módulos financeiros.
 - [ ] Aplicar a migração `0004_google_calendar.sql` e configurar credenciais reais do Google (redirect URI `${PUBLIC_URL}/api/google-calendar/callback`).
-- [ ] Habilitar RLS por `organization_id` e concluir a integração com o Supabase Auth (hoje há bypass de desenvolvimento `ALLOW_DEV_AUTH`).
+- [x] Habilitar RLS por `organization_id` e concluir a integração com o Supabase Auth (hoje há bypass de desenvolvimento `ALLOW_DEV_AUTH`).
 - [ ] Testar o fluxo OAuth do Google Calendar de ponta a ponta após aplicar 0004 e configurar as credenciais.
 
 ## Experiência de roadmap baseada no relatório
