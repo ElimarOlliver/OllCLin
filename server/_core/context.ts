@@ -1,7 +1,9 @@
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+import type { Request } from "express";
 import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
+import { resolveUserFromSupabaseAccessToken } from "../lib/supabase-auth";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -35,6 +37,16 @@ function devAuthEnabled(): boolean {
   );
 }
 
+/** Extrai o bearer token do Supabase Auth (Authorization: Bearer <jwt>). */
+function getBearerToken(req: Request): string | null {
+  const header = req.headers?.authorization;
+  if (typeof header !== "string") return null;
+  const [scheme, token] = header.split(" ");
+  if (!token || scheme?.toLowerCase() !== "bearer") return null;
+  const trimmed = token.trim();
+  return trimmed || null;
+}
+
 export async function createContext(
   opts: CreateExpressContextOptions
 ): Promise<TrpcContext> {
@@ -45,6 +57,21 @@ export async function createContext(
   } catch (error) {
     // Authentication is optional for public procedures.
     user = null;
+  }
+
+  // Fallback: Supabase Auth via JWT enviado pelo frontend (Bearer token).
+  if (!user) {
+    const bearerToken = getBearerToken(opts.req as Request);
+    if (bearerToken) {
+      try {
+        user = await resolveUserFromSupabaseAccessToken(bearerToken);
+      } catch (error) {
+        console.warn(
+          "[Auth] Falha ao resolver usuário do Supabase:",
+          error instanceof Error ? error.message : error,
+        );
+      }
+    }
   }
 
   if (!user && devAuthEnabled()) {
