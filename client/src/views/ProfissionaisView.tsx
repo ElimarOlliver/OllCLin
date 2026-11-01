@@ -330,7 +330,7 @@ export default function ProfissionaisView() {
 
       {/* Dialog: Novo/Editar Profissional */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="relative isolate max-h-[92vh] overflow-y-auto bg-[#fbfcfa] text-slate-900 sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Profissional" : "Novo Profissional"}</DialogTitle>
             <DialogDescription>
