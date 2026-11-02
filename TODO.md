@@ -69,6 +69,14 @@
 - [x] Frontend: browser client Supabase Auth + `getSupabaseAuthHeaders` no tRPC (Authorization: Bearer) + tela de login (e-mail/senha) + logout com `signOutSupabase`.
 - [x] Testes: `server/lib/supabase-auth.test.ts` (resolução de usuário local) — Vitest 19/19 no total.
 
+## Incremento 6 — Arquitetura SaaS (Fase 1 — Segurança e Multi-tenant) [CÓDIGO CONCLUÍDO — APLICAÇÃO/EXPANSÃO PENDENTE]
+- [x] Migração `drizzle/migrations/0006_organization_members.sql`: tabela `organization_members` (organization_id, user_id, role, status, invited_by, created_at, last_access_at) com RLS por tenant.
+- [x] `server/lib/tenant-access.ts`: resolução do tenant ativo (organization_members status=active, com fallback em users.organization_id).
+- [x] `server/_core/context.ts`: sessão passa a carregar organizationId/role do tenant resolvido.
+- [x] `server/_core/trpc.ts`: camada centralizada de autorização RBAC (`protectedWith(permission)`, mapa owner/admin/doctor/receptionist/financial/assistant/readonly).
+- [x] Aplicações críticas: agendamentos (`appointments.write`), vendas financeiras (`finance.write`) e Google Calendar (`google_calendar.connect`).
+- [x] Testes: `server/_core/trpc.test.ts` (RBAC) — Vitest 25/25 no total.
+
 ## Próximos passos (roadmap Cap. 15)
 - [x] Financeiro: Vendas, Repasse, Extrato, Recibos (menu completo).
 - [x] Aplicar Campos Obrigatórios na validação real do cadastro de pacientes (criar/atualizar consultam `org_settings`).
@@ -76,6 +84,7 @@
 - [ ] Aplicar a migração `0004_google_calendar.sql` e configurar credenciais reais do Google (redirect URI `${PUBLIC_URL}/api/google-calendar/callback`).
 - [x] Habilitar RLS por `organization_id` e concluir a integração com o Supabase Auth (hoje há bypass de desenvolvimento `ALLOW_DEV_AUTH`).
 - [ ] Testar o fluxo OAuth do Google Calendar de ponta a ponta após aplicar 0004 e configurar as credenciais.
+- [ ] Fase 1 (SaaS): aplicar migrações 0005/0006 no Supabase; configurar usuários/vínculos reais; ativar sessão multi-tenant.
 
 ## Experiência de roadmap baseada no relatório
 - [x] Entregar uma página inicial em português do Brasil que explique a tese do produto: construir um núcleo clínico transacional confiável antes de expandir para financeiro, TISS, integrações, telessaúde, marketing e analítica.
