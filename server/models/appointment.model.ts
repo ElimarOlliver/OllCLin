@@ -31,6 +31,7 @@ export type Appointment = {
   googleCalendarEventId: string | null;
   notes: string | null;
   createdAt: string | null;
+  updatedAt: string | null;
   patient?: {
     id: number;
     fullName: string;
@@ -103,10 +104,11 @@ type AppointmentRow = {
   google_calendar_event_id: string | null;
   notes: string | null;
   created_at: string | null;
+  updated_at: string | null;
 };
 
 const APPOINTMENT_COLUMNS =
-  "id, organization_id, patient_id, professional_id, procedure_id, establishment_id, location_id, room_id, starts_at, ends_at, status, google_calendar_event_id, notes, created_at";
+  "id, organization_id, patient_id, professional_id, procedure_id, establishment_id, location_id, room_id, starts_at, ends_at, status, google_calendar_event_id, notes, created_at, updated_at";
 
 const CONFLICT_STATUSES: AppointmentStatus[] = [
   "solicitado",
@@ -131,6 +133,7 @@ function toAppointment(row: AppointmentRow): Appointment {
     googleCalendarEventId: row.google_calendar_event_id,
     notes: row.notes,
     createdAt: row.created_at,
+    updatedAt: row.updated_at,
   };
 }
 

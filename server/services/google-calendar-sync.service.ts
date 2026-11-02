@@ -10,13 +10,26 @@ import {
   type GoogleEventInput,
 } from "../lib/google-calendar";
 import { googleCalendarModel } from "../models/google-calendar.model";
+import {
+  googleCalendarSyncModel,
+  type CalendarSyncJob,
+  type SyncOperation,
+} from "../models/google-calendar-sync.model";
 import { appointmentModel, type Appointment } from "../models/appointment.model";
 
 export type GoogleSyncResult =
   | { status: "created" | "updated"; eventId: string; htmlLink?: string }
   | { status: "removed" }
   | { status: "not_connected" }
+  | { status: "skipped" }
   | { status: "conflict"; message: string };
+
+/** Resultado da operação de pull/reconcile (Google → OllCLin). */
+export type PullSyncResult = {
+  status: "updated" | "not_connected";
+  updated: number;
+  conflicts: string[];
+};
 
 export class GoogleCalendarConflictError extends Error {
   constructor(message: string) {
@@ -141,14 +154,68 @@ export async function syncAfterAppointmentMutation(appointment: Appointment, use
   }
 }
 
+// ---------------------------------------------------------------------------
+// Fase 2 (SaaS) — Fila de sincronização (`calendar_sync_jobs`)
+// ---------------------------------------------------------------------------
+
+/**
+ * Chave idempotente por operação de agendamento:
+ * appointment:{id}:user:{userId}:version:{version}
+ */
+export function buildAppointmentSyncIdempotencyKey(
+  appointmentId: number,
+  userId: number,
+  version: string,
+): string {
+  return `appointment:${appointmentId}:user:${userId}:version:${version}`;
+}
+
+/**
+ * Enfileira uma operação de sincronização no OllCLin → Google Calendar.
+ * A operação é persistida na fila com idempotência; o worker processa assíncrono.
+ */
+export async function enqueueAppointmentSync(input: {
+  organizationId: number;
+  appointmentId: number;
+  userId: number;
+  operation: SyncOperation;
+  version: string;
+}): Promise<CalendarSyncJob> {
+  const job = await googleCalendarSyncModel.insertJob({
+    organizationId: input.organizationId,
+    appointmentId: input.appointmentId,
+    userId: input.userId,
+    operation: input.operation,
+    idempotencyKey: buildAppointmentSyncIdempotencyKey(
+      input.appointmentId,
+      input.userId,
+      input.version,
+    ),
+    payload: {
+      appointmentId: input.appointmentId,
+      version: input.version,
+    },
+  });
+
+  if (!job) {
+    // Idempotência: job já registrado e concluído — não duplica.
+    const existing = await googleCalendarSyncModel.findByIdempotencyKey(
+      buildAppointmentSyncIdempotencyKey(input.appointmentId, input.userId, input.version),
+    );
+    if (!existing) throw new Error("[google_sync] Falha ao enfileirar job de sincronização");
+    return existing;
+  }
+  return job;
+}
+
 export async function pullGoogleRangeForUser(input: {
   organizationId: number;
   userId: number;
   from: string;
   to: string;
-}) {
+}): Promise<PullSyncResult> {
   const auth = await googleCalendarModel.getAccessToken(input.organizationId, input.userId);
-  if (!auth) return { status: "not_connected" as const, updated: 0, conflicts: [] as string[] };
+  if (!auth) return { status: "not_connected", updated: 0, conflicts: [] };
   const events = await listEvents(auth.accessToken, {
     calendarId: auth.calendarId,
     timeMin: new Date(input.from).toISOString(),
