@@ -40,6 +40,7 @@ export type GoogleCalendarEvent = {
   htmlLink?: string;
   start: GoogleCalendarEventTime;
   end: GoogleCalendarEventTime;
+  extendedProperties?: { private?: Record<string, string> };
 };
 
 export type GoogleEventInput = {

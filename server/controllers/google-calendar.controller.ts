@@ -31,6 +31,7 @@ import {
   getSchemaCapabilities,
   MIGRATION_0004_HINT,
 } from "../lib/schema-capabilities";
+import { pullGoogleRangeForUser } from "../services/google-calendar-sync.service";
 
 /** Margem máxima de agendamentos sincronizados por chamada. */
 const MAX_SYNC_BATCH = 300;
@@ -523,6 +524,36 @@ export const googleAgendaRouter = router({
         };
       } catch (error) {
         throw asTrpcError(error, "Falha ao sincronizar o período");
+      }
+    }),
+  /** Reconcile alterações feitas diretamente no Google Calendar → OllCLin. */
+  pullRange: protectedProcedure
+    .input(z.object({
+      organizationId: z.number().int().positive(),
+      from: z.string().min(10),
+      to: z.string().min(10),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      assertOrganization(ctx.user.organizationId, input.organizationId);
+      parseRange(input.from, input.to);
+      try {
+        const result = await pullGoogleRangeForUser({
+          organizationId: input.organizationId,
+          userId: ctx.user.id,
+          from: input.from,
+          to: input.to,
+        });
+        await writeAuditLog({
+          organizationId: input.organizationId,
+          userId: ctx.user.id,
+          action: "UPDATE",
+          entity: "appointment",
+          newValues: { googlePullRange: input, result },
+          request: ctx.req,
+        });
+        return result;
+      } catch (error) {
+        throw asTrpcError(error, "Falha ao importar alterações do Google Calendar");
       }
     }),
 });

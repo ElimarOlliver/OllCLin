@@ -8,6 +8,7 @@ import { TRPCError } from "@trpc/server";
 import { appointmentModel } from "../models/appointment.model";
 import { protectedProcedure, router } from "../_core/trpc";
 import { writeAuditLog } from "../lib/audit";
+import { syncAfterAppointmentMutation } from "../services/google-calendar-sync.service";
 
 const statusSchema = z.enum([
   "solicitado",
@@ -25,6 +26,23 @@ const isoDate = z
   .refine((value) => !Number.isNaN(new Date(value).getTime()), {
     message: "Data inválida",
   });
+
+async function syncSafely(
+  appointment: Awaited<ReturnType<typeof appointmentModel.findById>>,
+  userId: number,
+) {
+  if (!appointment) {
+    return { status: "error" as const, message: "Agendamento não encontrado após salvar" };
+  }
+  try {
+    return await syncAfterAppointmentMutation(appointment, userId);
+  } catch (error) {
+    return {
+      status: "error" as const,
+      message: error instanceof Error ? error.message : "Falha ao sincronizar com o Google Calendar",
+    };
+  }
+}
 
 export const createAppointmentSchema = z.object({
   organizationId: z.number().int().positive(),
@@ -146,7 +164,10 @@ export const appointmentRouter = router({
         request: ctx.req,
       });
 
-      return appointment;
+      return {
+        appointment,
+        googleSync: await syncSafely(appointment, ctx.user.id),
+      };
     }),
 
   update: protectedProcedure
@@ -216,7 +237,10 @@ export const appointmentRouter = router({
         request: ctx.req,
       });
 
-      return appointment;
+      return {
+        appointment,
+        googleSync: await syncSafely(appointment, ctx.user.id),
+      };
     }),
 
   delete: protectedProcedure
@@ -243,7 +267,10 @@ export const appointmentRouter = router({
         request: ctx.req,
       });
 
-      return { success: true };
+      return {
+        success: true,
+        googleSync: await syncSafely(appointment, ctx.user.id),
+      };
     }),
 
   checkConflict: protectedProcedure

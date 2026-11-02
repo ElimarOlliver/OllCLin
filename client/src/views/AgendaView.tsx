@@ -347,8 +347,9 @@ export default function AgendaView() {
   }) {
     setSavingAppointment(true);
     try {
+      let googleSync: { status: string; message?: string } | undefined;
       if (editingAppointment) {
-        await utils.client.agendamentos.update.mutate({
+        const result = await utils.client.agendamentos.update.mutate({
           id: editingAppointment.id,
           organizationId: 1,
           patientId: formData.patientId,
@@ -359,8 +360,9 @@ export default function AgendaView() {
           status: formData.status,
           notes: formData.notes,
         });
+        googleSync = result.googleSync;
       } else {
-        await utils.client.agendamentos.create.mutate({
+        const result = await utils.client.agendamentos.create.mutate({
           organizationId: 1,
           patientId: formData.patientId,
           professionalId: formData.professionalId,
@@ -370,6 +372,7 @@ export default function AgendaView() {
           status: formData.status,
           notes: formData.notes,
         });
+        googleSync = result.googleSync;
       }
 
       // Invalidar queries para recarregar
@@ -377,6 +380,11 @@ export default function AgendaView() {
       setOpenDialog(false);
       setEditingAppointment(null);
       toast.success(editingAppointment ? "Agendamento atualizado" : "Agendamento criado");
+      if (googleSync?.status === "conflict") {
+        toast.warning(googleSync.message ?? "Conflito encontrado no Google Calendar");
+      } else if (googleSync?.status === "error") {
+        toast.error(googleSync.message ?? "Não foi possível sincronizar com o Google Calendar");
+      }
       await loadData();
     } catch (error: any) {
       console.error("Erro ao salvar agendamento:", error);
@@ -426,6 +434,11 @@ export default function AgendaView() {
       const from = start.toISOString();
       const to = end.toISOString();
 
+      const pulled = await utils.client.googleAgenda.pullRange.mutate({
+        organizationId,
+        from,
+        to,
+      });
       const result = await utils.client.googleAgenda.syncRange.mutate({
         organizationId,
         from,
@@ -454,9 +467,11 @@ export default function AgendaView() {
       if (result.requested > 0) {
         parts.push(`${googleEvents.length} evento(s) na agenda do Google hoje`);
       }
+      if (pulled.updated > 0) parts.push(`${pulled.updated} alteração(ões) importada(s) do Google`);
+      if (pulled.conflicts.length > 0) parts.push(`${pulled.conflicts.length} conflito(s) mantido(s) para revisão`);
 
       setGoogleNotice({
-        type: result.failed > 0 ? "error" : "success",
+        type: result.failed > 0 || pulled.conflicts.length > 0 ? "error" : "success",
         message: `${parts.join(". ")}.`,
       });
 
