@@ -183,6 +183,16 @@ export default function AgendaView() {
     trpc.googleAgenda.status.useQuery({ organizationId });
   const googleConnected = Boolean(googleStatus?.connected);
 
+  // Fila de sincronização Google Calendar (Fase 2): estados por agendamento.
+  const { data: syncJobs } = trpc.googleAgenda.syncJobs.useQuery(
+    { organizationId },
+    { refetchInterval: googleConnected ? 20_000 : false },
+  );
+  const syncJobStates = new Map<number, { status: string; lastError: string | null }>();
+  for (const job of syncJobs ?? []) {
+    syncJobStates.set(job.appointmentId, { status: job.status, lastError: job.lastError });
+  }
+
   // Eventos do Google para o dia selecionado (somente leitura).
   const { data: googleEventsData } = trpc.googleAgenda.listEvents.useQuery(
     {
@@ -384,6 +394,9 @@ export default function AgendaView() {
         toast.warning(googleSync.message ?? "Conflito encontrado no Google Calendar");
       } else if (googleSync?.status === "error") {
         toast.error(googleSync.message ?? "Não foi possível sincronizar com o Google Calendar");
+      } else if (googleSync?.status === "pending") {
+        // Fase 2: job enfileirado na fila — worker reflete no Google em background.
+        toast.info("Agendamento salvo. Sincronização com o Google Calendar enfileirada.");
       }
       await loadData();
     } catch (error: any) {
@@ -460,22 +473,18 @@ export default function AgendaView() {
       const parts = [
         result.requested === 0
           ? "Nenhum agendamento neste dia para sincronizar."
-          : `${result.synced} agendamento(s) enviado(s) ao Google`,
+          : `${result.queued} agendamento(s) enfileirado(s) para sincronização com o Google Calendar`,
       ];
-      if (result.skipped > 0) parts.push(`${result.skipped} desmarcado(s) removido(s)`);
-      if (result.failed > 0) parts.push(`${result.failed} falha(s)`);
-      if (result.requested > 0) {
-        parts.push(`${googleEvents.length} evento(s) na agenda do Google hoje`);
-      }
+      if (result.skipped > 0) parts.push(`${result.skipped} desmarcado(s) remover(s)`);
       if (pulled.updated > 0) parts.push(`${pulled.updated} alteração(ões) importada(s) do Google`);
       if (pulled.conflicts.length > 0) parts.push(`${pulled.conflicts.length} conflito(s) mantido(s) para revisão`);
 
       setGoogleNotice({
-        type: result.failed > 0 || pulled.conflicts.length > 0 ? "error" : "success",
+        type: pulled.conflicts.length > 0 ? "error" : "success",
         message: `${parts.join(". ")}.`,
       });
 
-      if (result.synced > 0 || result.skipped > 0) await loadData();
+      if (result.queued > 0) await loadData();
       await utils.googleAgenda.listEvents.invalidate();
     } catch (error: any) {
       setGoogleNotice({
@@ -494,7 +503,7 @@ export default function AgendaView() {
       });
       setGoogleNotice({
         type: "success",
-        message: `Agendamento de ${appt.patient.fullName} sincronizado com o Google Calendar.`,
+        message: `Sincronização com o Google Calendar enfileirada para ${appt.patient.fullName}.`,
       });
       await loadData();
       await utils.googleAgenda.listEvents.invalidate();
@@ -866,27 +875,59 @@ export default function AgendaView() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            {appt.googleCalendarEventId ? (
-                              <div className="flex items-center gap-2">
-                                <Badge variant="success">Sincronizado</Badge>
+                            {(() => {
+                              const syncState = syncJobStates.get(appt.id);
+                              const syncStatus = syncState?.status;
+                              if (syncStatus === "failed") {
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="destructive">Falha</Badge>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={!googleConnected}
+                                      onClick={() => handleSyncAppointment(appt)}
+                                    >
+                                      Tentar novamente
+                                    </Button>
+                                  </div>
+                                );
+                              }
+                              if (syncStatus === "pending") {
+                                return (
+                                  <Badge variant="secondary">Pendente</Badge>
+                                );
+                              }
+                              if (syncStatus === "processing") {
+                                return (
+                                  <Badge variant="warning">Sincronizando</Badge>
+                                );
+                              }
+                              if (appt.googleCalendarEventId) {
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <Badge variant="success">Sincronizado</Badge>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleUnlinkAppointment(appt)}
+                                    >
+                                      Desvincular
+                                    </Button>
+                                  </div>
+                                );
+                              }
+                              return (
                                 <Button
-                                  variant="ghost"
+                                  variant="outline"
                                   size="sm"
-                                  onClick={() => handleUnlinkAppointment(appt)}
+                                  disabled={!googleConnected}
+                                  onClick={() => handleSyncAppointment(appt)}
                                 >
-                                  Desvincular
+                                  Sincronizar
                                 </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                disabled={!googleConnected}
-                                onClick={() => handleSyncAppointment(appt)}
-                              >
-                                Sincronizar
-                              </Button>
-                            )}
+                              );
+                            })()}
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
