@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OllCLin · Plano de Arquitetura SaaS — 12 Slides</title>
+<style>
+  :root {
+    --off-white: #f7f8f5;
+    --paper: #ffffff;
+    --teal: #075e63;
+    --teal-strong: #064f53;
+    --ink: #172022;
+    --muted: #647276;
+    --border: #d9e0df;
+    --danger: #b42318;
+    --warning: #b54708;
+    --radius-card: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--off-white); color: var(--ink); font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif; }
+  .deck { max-width: 1180px; margin: 0 auto; padding: 48px 24px 96px; }
+  .slide { min-height: 100vh; display: flex; flex-direction: column; justify-content: space-between; padding: 64px 0; border-bottom: 1px solid var(--border); }
+  .slide:last-child { border-bottom: 0; }
+  .slide-head { display: flex; align-items: baseline; gap: 16px; border-bottom: 2px solid var(--ink); padding-bottom: 18px; margin-bottom: 40px; }
+  .slide-head .no { font-size: 15px; letter-spacing: 0.18em; color: var(--teal); font-weight: 700; }
+  .slide-head h2 { font-size: clamp(30px, 4.6vw, 52px); line-height: 1.05; font-weight: 800; letter-spacing: -0.02em; }
+  .slide-body { flex: 1; display: grid; gap: 28px; align-content: center; }
+  .eyebrow { font-size: 13px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--teal); font-weight: 700; }
+  h1.title { font-size: clamp(52px, 9vw, 118px); line-height: 0.95; font-weight: 800; letter-spacing: -0.03em; }
+  h1.title em { font-style: normal; color: var(--teal); }
+  .lead { font-size: clamp(20px, 2.6vw, 30px); line-height: 1.35; font-weight: 500; max-width: 900px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  @media (max-width: 900px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+  .card { background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius-card); padding: 28px; box-shadow: 0 1px 2px rgba(23,32,34,0.04); }
+  .card h3 { font-size: 22px; margin-bottom: 12px; letter-spacing: -0.01em; }
+  .card p { color: var(--muted); line-height: 1.6; font-size: 16px; }
+  .card.accent { border-top: 4px solid var(--teal); }
+  .numeral { font-size: clamp(64px, 10vw, 120px); font-weight: 800; color: var(--teal); line-height: 0.9; letter-spacing: -0.04em; }
+  .tag { display: inline-block; border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 600; margin: 4px 6px 4px 0; background: var(--paper); }
+  ul.checks { list-style: none; display: grid; gap: 14px; }
+  ul.checks li { display: flex; gap: 12px; align-items: flex-start; font-size: 17px; line-height: 1.5; }
+  ul.checks li::before { content: "✓"; color: var(--teal); font-weight: 700; }
+  pre.code { background: #10181a; color: #d7e6e8; border-radius: 12px; padding: 22px; font-size: 13.5px; line-height: 1.6; overflow-x: auto; font-family: "JetBrains Mono", "SFMono-Regular", Consolas, monospace; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+  .flow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .flow .step { background: var(--paper); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; font-size: 14px; font-weight: 600; }
+  .flow .arrow { color: var(--teal); font-weight: 700; }
+  .phase { display: flex; gap: 18px; align-items: flex-start; padding: 22px; background: var(--paper); border: 1px solid var(--border); border-radius: var(--radius-card); }
+  .phase .pnum { font-size: 44px; font-weight: 800; color: var(--teal); line-height: 1; }
+  footer.deck-foot { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 48px; }
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+  <!-- Slide 1 — Capa -->
+  <section class="slide" id="s1">
+    <div class="slide-head"><span class="no">SLIDE 01</span><h2>Plano de Arquitetura SaaS</h2></div>
+    <div class="slide-body">
+      <div class="eyebrow">Estratégia · OllCLin · 2026</div>
+      <h1 class="title">Construir o <em>núcleo</em> clínico<br />antes de escalar.</h1>
+      <p class="lead">Plano completo de implementação para o modelo SaaS: multi-tenant, sincronização confiável com Google Agenda, dados, chat corporativo, landing page e governança.</p>
+    </div>
+    <footer class="deck-foot"><span>OllCLin</span><span>Baseado no manual Ti.Clinic v2.0</span><span>Estratégia do Novo Sistema Clínico</span></footer>
+  </section>
+
+  <!-- Slide 2 — Decisão arquitetural -->
+  <section class="slide" id="s2">
+    <div class="slide-head"><span class="no">SLIDE 02</span><h2>Decisão Arquitetural</h2></div>
+    <div class="slide-body">
+      <p class="lead">Migrar para Vue.js ou Svelte não agrega valor proporcional ao risco e prazo.</p>
+      <div class="card accent">
+        <h3>Mantemos a stack atual</h3>
+        <p>React + TypeScript, Vite, Tailwind, Radix UI, tRPC/TanStack Query, React Hook Form + Zod. A migração para outro framework exigiria reescrita de todo o front-end.</p>
+      </div>
+      <div class="grid-2">
+        <div class="card"><h3>Front-end</h3><p>React 19 + TypeScript · Vite · Tailwind CSS · Radix UI · TanStack Query via tRPC · RHF + Zod · Framer Motion pontual · Recharts · Vitest · Playwright.</p></div>
+        <div class="card"><h3>Back-end</h3><p>Node.js + TypeScript · Express · tRPC · Supabase/PostgreSQL · RLS · Fila (Postgres) · Google Calendar API v3 · AES-256-GCM · Zod · OpenAPI.</p></div>
+      </div>
+    </div>
+    <footer class="deck-foot"><span>OllCLin</span><span>Arquitetura recomendada</span><span>2026</span></footer>
+  </section>
+
+  <!-- Slide 3 — Stack front-end -->
+  <section class="slide" id="s3">
+    <div class="slide-head"><span class="no">SLIDE 03</span><h2>Stack Front-end</h2></div>
+    <div class="slide-body">
+      <div class="grid-4">
+        <div class="card"><h3>React 19</h3><p>Composição e actions.</p></div>
+        <div class="card"><h3>Vite</h3><p>Build e dev rápido.</p></div>
+        <div class="card"><h3>Tailwind</h3><p>Design system responsivo.</p></div>
+        <div class="card"><h3>Radix</h3><p>Componentes acessíveis.</p></div>
+      </div>
+      <div class="grid-2">
+        <div class="card"><h3>Estado e dados</h3><p>TanStack Query via tRPC · React Hook Form + Zod para formulários · Framer Motion apenas animações pontuais · Recharts para dashboards.</p></div>
+        <div class="card"><h3>Testes</h3><p>Vitest para unidade · Playwright para interface e responsividade.</p></div>
+      </div>
+    </div>
+    <footer class="deck-foot"><span>OllCLin</span><span>Front-end</span><span>2026</span></footer>
+  </section>
+
+  <!-- Slide 4 — Stack back-end -->
+  <section class="slide" id="s4">
+    <div class="slide-head"><span class="no">SLIDE 04</span><h2>Stack Back-end</h2></div>
+    <div class="slide-body">
+      <pre class="code">// OllCLin — back-end atual recomendado
+Node.js + TypeScript
+Express + tRPC
+Supabase / PostgreSQL
+Row Level Security (RLS)
+Fila baseada em PostgreSQL
+Google Calendar API v3
+AES-256-GCM para tokens OAuth
+Zod para validação
+OpenAPI para integrações futuras (pagamentos)</pre>
+      <div class="cols">
+        <div class="card"><h3>Integrações</h3><p>Google Calendar v3 para agenda; AES-256-GCM para tokens OAuth; OpenAPI para maquininhas de cartão e futuras integrações.</p></div>
+        <div class="card"><h3>Validação</h3><p>Zod para toda entrada; auditoria via audit_log; isolamento por organization_id.</p></div>
+      </div>
+    </div>
+    <footer class="deck-foot"><span>OllCLin</span><span>Back-end</span><span>2026</span></footer>
+  </section>
+
+  <!-- Slide 5 — Microsserviços -->
+  <section class="slide" id="s5">
+    <div class="slide-head"><span class="no">SLIDE 05</span><h2>Monolito Modular</h2></div>
+    <div class="slide-body">
+      <p class="lead">Inicialmente um monólito modular com limites claros, sem processos independentes.</p>
+      <div class="grid-2">
+        <div class="card accent"><h3>Estrutura</h3><p>Core SaaS · Identity &amp; Access · Scheduling · Google Calendar Sync · Internal Chat · Data Import/Export · Finance Integration · Audit &amp; Compliance.</p></div>
+        <div class="card"><h3>Evolução</h3><p>O módulo Google Calendar Sync pode ser extraído depois sem alterar o contrato público.</p></div>
+      </div>
+      <div class="flow">
+        <span class="step">Agendamento</span><span class="arrow">→</span><span class="step">Google Sync</span><span class="arrow">→</span><span class="step">Eventos</span>
+      </div>
+    </div>
+    <footer class="deck-foot"><span>OllCLin</span><span>Arquitetura</span><span>2026</span></footer>
+  </section>
+
+  <!-- Slide 6 — Modelo multi-tenant -->
+  <section class="slide" id="s6">
+    <div class="slide-head"><span class="no">SLIDE 06</span><h2>Modelo Multi-tenant</h2></div>
+    <div class="slide-body">
+      <p class="lead">A clínica é o tenant principal. O CNPJ identifica o tenant no cadastro, mas não é a chave de relacionamento.</p>
+      <pre class="code">organizations
+├── id
+├── legal_name
+├── trade_name
+├── cnpj_hash
+├── cnpj_last_four
+├── status
+├── plan
+├── created_at
+└── updated_at</pre>
+      <ul class="checks">
+        <li>CNPJ normalizado (sem pontuação), validado pelo algoritmo oficial, com busca restrita e hash.</li>
+        <li>Tabela <strong>organizations</strong> com <strong>organization_id</strong> em todas as tabelas de negócio.</li>
+        <li>Regra fundamental: nenhuma consulta de negócio sem filtro por organization_id.</li>
+      </ul>
+    </div>
+    <footer class="deck-foot"><span>OllCLin</span><span>Tenant</span><span>2026</span></footer>
+  </section>
+
+  <!-- Slide 7 — Usuário e vínculo -->
+  <section class="slide" id="s7">
+    <div class="slide-head"><span class="no">SLIDE 07</span><h2>Vínculo Usuário · Clínica</h2></div>
+    <div class="slide-body">
+      <pre class="code">organization_members
+├── id
+├── organization_id
+├── user_id
+├── role
+├── status
+├── invited_by
+├── created_at
+└── last_access_at</pre>
+      <div class="grid-2">
+        <div class="card accent"><h3>Papéis</h3><p>owner · admin · doctor · receptionist · financial · assistant · readonly.</p></div>
+        <div class="card"><h3>Sessão</h3><p>Com um vínculo → tenant ativo automático; com vários → seletor de clínica; auditoria da troca.</p></div>
+      </div>
+    </div>
+    <footer class="deck-foot"><span>OllCLin</span><span>Identity</span><span>2026</span></footer>
+  </section>
+
+  <!-- Slide 8 — Segurança -->
+  <section class="slide" id="s8">
+    <div class="slide-head"><span class="no">SLIDE 08</span><h2>Segurança no Banco</h2></div>
+    <div class="slide-body">
+      <pre class="code">create policy "tenant_isolation"
+on public.appointments
+for all
+using (
+  organization_id = public.current_ollclin_organization_id()
+)
+with check (
+  organization_id = public.current_ollclin_organization_id()
+);</pre>
+      <ul class="checks">
+        <li>Guard: <code>assertTenantAccess(sessionOrganizationId, requestedOrganizationId)</code> → FORBIDDEN.</li>
+        <li>Três camadas: rota/procedure → serviço de domínio → banco/RLS.</li>
+        <li>A função obtém o tenant da sessão autenticada, nunca de valor livre do navegador.</li>
+      </ul>
+    </div>
+    <footer class="deck-foot"><span>OllCLin</span><span>Segurança</span><span>2026</span></footer>
+  </section>
+
+  <!-- Slide 9 — Permissões -->
+  <section class="slide" id="s9">
+    <div class="slide-head"><span class="no">SLIDE 09</span><h2>Permissões Hierárquicas</h2></div>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="card accent"><h3>Permissões</h3><p><code>patients.read</code> · <code>patients.write</code> · <code>appointments.read/write</code> · <code>professionals.manage</code> · <code>finance.read/write</code> · <code>reports.export</code> · <code>organization.manage</code> · <code>chat.use</code> · <code>google_calendar.connect</code>.</p></div>
+        <div class="card"><h3>Autorização</h3><p>Rota/procedure · serviço de domínio · RLS. Papéis: owner <code>(*)</code>; admin; doctor; receptionist; financial; assistant; readonly.</p></div>
+      </div>
+    </div>
+    <footer class="deck-foot"><span>OllCLin</span><span>RBAC</span><span>2026</span></footer>
+  </section>
+
+  <!-- Slide 10 — Google Agenda -->
+  <section class="slide" id="s10">
+    <div class="slide-head"><span class="no">SLIDE 10</span><h2>Google Agenda — Evolução</h2></div>
+    <div class="slide-body">
+      <pre class="code">calendar_sync_jobs
+├── id
+├── organization_id
+├── appointment_id
+├── user_id
+├── operation   // create | update | delete | pull | reconcile
+├── payload
+├── idempotency_key
+├── attempts
+├── status
+├── next_attempt_at
+└── last_error</pre>
+      <div class="grid-2">
+        <div class="card"><h3>Confiabilidade</h3><p>Idempotência por chave <code>appointment:{id}:user:{userId}:version:{updatedAt}</code>; lock via <code>pg_advisory_xact_lock</code>; retry com backoff; persistir ETag.</p></div>
+        <div class="card"><h3>Conflitos</h3><p>Antes de criar/mover: consultar sobreposições no Google; não sobrescrever evento externo; informar conflito ao usuário.</p></div>
+      </div>
+      <div class="grid-4">
+        <div class="card"><h3>Sincronizado</h3></div>
+        <div class="card"><h3>Sincronizando</h3></div>
+        <div class="card"><h3>Pendente</h3></div>
+        <div class="card"><h3>Falha</h3></div>
+      </div>
+    </div>
+    <footer class="deck-foot"><span>OllCLin</span><span>Google Calendar</span><span>2026</span></footer>
+  </section>
+
+  <!-- Slide 11 — Dados, Import/Export e Financeiro -->
+  <section class="slide" id="s11">
+    <div class="slide-head"><span class="no">SLIDE 11</span><h2>Dados, Importação, Exportação e Financeiro</h2></div>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="card accent"><h3>Importação</h3><p>Upload → storage privado → detecção → leitura (xlsx/mammoth/csv) → mapeamento → preview → validação → importação. Relatório: total/imported/updated/rejected.</p></div>
+        <div class="card"><h3>Exportação</h3><p>CSV no servidor: <code>GET /api/reports/appointments.csv</code> com filtros, UTF-8 BOM, permissão <code>reports.export</code>, auditoria.</p></div>
+      </div>
+      <pre class="code">interface PaymentProvider {
+  createPayment(input: CreatePaymentInput): Promise<PaymentResult>;
+  getPayment(id: string): Promise<PaymentStatus>;
+  cancelPayment(id: string): Promise<void>;
+  refundPayment(id: string, amount?: number): Promise<void>;
+  handleWebhook(payload: unknown, signature: string): Promise<void>;
+}</pre>
+      <p class="lead">Segurança financeira: nunca armazenar número completo do cartão; tokenização; idempotência; moeda em centavos; estados created/pending/authorized/captured/failed/cancelled/refunded.</p>
+    </div>
+    <footer class="deck-foot"><span>OllCLin</span><span>Financeiro</span><span>2026</span></footer>
+  </section>
+
+  <!-- Slide 12 — Chat, Landing, Roadmap -->
+  <section class="slide" id="s12">
+    <div class="slide-head"><span class="no">SLIDE 12</span><h2>Chat, Landing Page e Roadmap</h2></div>
+    <div class="slide-body">
+      <div class="grid-2">
+        <div class="card accent"><h3>Chat corporativo</h3><p><code>chat_messages</code> com retenção de 48h (<code>expires_at</code>) e limpeza periódica; leitura com filtro <code>expires_at > now()</code>; widget fixo bottom-right; polling 30/15/10s → Realtime futuro.</p></div>
+        <div class="card"><h3>Landing page</h3><p>Hero com carrossel (2s, pause on hover/focus, reduced motion, aria-live); seção de contato; botão de login; glassmorphism restrito a cards decorativos.</p></div>
+      </div>
+      <div class="phase"><div class="pnum">06</div><div><h3>Resultado esperado</h3><p>Isolamento real por clínica · permissões hierárquicas · sessões no tenant correto · sincronização confiável com Google · importação/exportação · base para pagamentos · chat corporativo · landing page responsiva · auditoria · arquitetura pronta para SaaS.</p></div></div>
+    </div>
+    <footer class="deck-foot"><span>OllCLin</span><span>Plano SaaS</span><span>2026</span></footer>
+  </section>
+
+</div>
+</body>
+</html>
