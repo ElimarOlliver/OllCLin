@@ -22,6 +22,19 @@ create index if not exists chat_messages_conversation_idx
 
 alter table public.chat_messages enable row level security;
 
+-- A função usada pela política RLS é repetida aqui para tornar esta migração
+-- autocontida, inclusive quando a 0005 ainda não foi aplicada.
+create or replace function public.current_ollclin_organization_id()
+returns integer
+language sql
+stable
+as $$
+  select organization_id
+  from public.users
+  where lower(email) = lower(auth.jwt() ->> 'email')
+  limit 1;
+$$;
+
 drop policy if exists "ollclin_chat_isolation" on public.chat_messages;
 create policy "ollclin_chat_isolation"
   on public.chat_messages
