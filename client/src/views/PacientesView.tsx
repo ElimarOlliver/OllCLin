@@ -38,7 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Search, Plus, Loader2, Pencil, AlertCircle, CheckCircle2 } from "lucide-react";
+import { User, Search, Plus, Loader2, Pencil, AlertCircle, CheckCircle2, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { format } from "date-fns";
@@ -87,6 +87,45 @@ type PatientForm = {
   consentMarketing: boolean;
 };
 
+type ImportRowError = { row: number; field?: string; message: string };
+
+type ImportPatientRow = {
+  fullName: string;
+  socialName: string | null;
+  cpf: string | null;
+  rg: string | null;
+  birthDate: string | null;
+  gender: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  emergencyContact: string | null;
+  emergencyPhone: string | null;
+  consentDataSharing: boolean;
+  consentMarketing: boolean;
+  isMinor: boolean;
+  guardianPatientId: number | null;
+  guardianName: string | null;
+  guardianDocument: string | null;
+  consentStatus: string;
+};
+
+type ImportPreview = {
+  batchId: number | null;
+  fileName: string;
+  fileType: string;
+  status: string;
+  columns: string[];
+  rows: ImportPatientRow[];
+  errors: ImportRowError[];
+  totalRows: number;
+  validRows: number;
+  rejectedRows: number;
+};
+
 const emptyForm: PatientForm = {
   fullName: "",
   socialName: "",
@@ -125,8 +164,42 @@ export default function PacientesView() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [importOpen, setImportOpen] = useState(false);
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const utils = trpc.useUtils();
+
+  const createImportBatchMutation = trpc.imports.createBatch.useMutation({
+    onSuccess: (preview) => setImportPreview(preview),
+  });
+
+  const confirmImportMutation = trpc.imports.confirm.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Importação concluída: ${result.importedRows} paciente(s) importado(s) e ${result.rejectedRows} rejeitado(s).`);
+      setImportOpen(false);
+      setImportPreview(null);
+      void loadPatients();
+    },
+  });
+
+  const exportAppointmentsCsvMutation = trpc.relatorios.appointmentsCsv.useMutation({
+    onSuccess: (result) => {
+      const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `ollclin_consultas_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Exportação CSV gerada com sucesso.");
+    },
+    onError: (error) => {
+      toast.error(String(error?.message) || "Falha ao exportar CSV");
+    },
+  });
 
   /** Configuração real da clínica: quais campos são obrigatórios. */
   const { data: requiredFields } = trpc.pacientes.requiredFields.useQuery({
@@ -274,6 +347,62 @@ export default function PacientesView() {
       toast.error((error as Error).message || "Falha ao salvar o paciente");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleExportCsv() {
+    setExporting(true);
+    try {
+      const result = await exportAppointmentsCsvMutation.mutateAsync({ organizationId: ORGANIZATION_ID });
+      const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `ollclin_consultas_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Exportação CSV gerada com sucesso.");
+    } catch (error) {
+      console.error(error);
+      toast.error((error as Error).message || "Falha ao exportar CSV");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleImportFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const base64 = String(reader.result).split(",")[1] ?? "";
+      const preview = await createImportBatchMutation.mutateAsync({
+        organizationId: ORGANIZATION_ID,
+        fileName: file.name,
+        fileType: (file.name.split(".").pop() ?? "csv").toLowerCase(),
+        contentBase64: base64,
+      });
+      setImportPreview(preview);
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleConfirmImport() {
+    if (!importPreview?.batchId) return;
+    try {
+      const result = await confirmImportMutation.mutateAsync({
+        batchId: importPreview.batchId,
+        organizationId: ORGANIZATION_ID,
+      });
+      toast.success(`Importação concluída: ${result.importedRows} paciente(s) importado(s) e ${result.rejectedRows} rejeitado(s).`);
+      setImportOpen(false);
+      setImportPreview(null);
+      await loadPatients();
+    } catch (error) {
+      console.error(error);
+      toast.error((error as Error).message || "Falha ao confirmar importação");
     }
   }
 

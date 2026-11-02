@@ -25,6 +25,11 @@ export type Patient = {
   emergencyPhone: string | null;
   consentDataSharing: boolean;
   consentMarketing: boolean;
+  isMinor: boolean;
+  guardianPatientId: number | null;
+  guardianName: string | null;
+  guardianDocument: string | null;
+  consentStatus: string;
   isActive: boolean;
   createdAt: string | null;
   updatedAt: string | null;
@@ -48,6 +53,11 @@ export type CreatePatientInput = {
   emergencyPhone?: string;
   consentDataSharing?: boolean;
   consentMarketing?: boolean;
+  isMinor?: boolean;
+  guardianPatientId?: number;
+  guardianName?: string;
+  guardianDocument?: string;
+  consentStatus?: string;
 };
 
 export type UpdatePatientInput = Partial<
@@ -82,13 +92,18 @@ type PatientRow = {
   emergency_phone: string | null;
   consent_data_sharing: boolean | null;
   consent_marketing: boolean | null;
+  is_minor: boolean | null;
+  guardian_patient_id: number | null;
+  guardian_name: string | null;
+  guardian_document: string | null;
+  consent_status: string | null;
   is_active: boolean | null;
   created_at: string | null;
   updated_at: string | null;
 };
 
 const PATIENT_COLUMNS =
-  "id, organization_id, full_name, social_name, cpf, rg, birth_date, gender, phone, email, address, city, state, zip_code, emergency_contact, emergency_phone, consent_data_sharing, consent_marketing, is_active, created_at, updated_at";
+  "id, organization_id, full_name, social_name, cpf, rg, birth_date, gender, phone, email, address, city, state, zip_code, emergency_contact, emergency_phone, consent_data_sharing, consent_marketing, is_minor, guardian_patient_id, guardian_name, guardian_document, consent_status, is_active, created_at, updated_at";
 
 function toPatient(row: PatientRow): Patient {
   return {
@@ -110,6 +125,11 @@ function toPatient(row: PatientRow): Patient {
     emergencyPhone: row.emergency_phone,
     consentDataSharing: row.consent_data_sharing ?? false,
     consentMarketing: row.consent_marketing ?? false,
+    isMinor: row.is_minor ?? false,
+    guardianPatientId: row.guardian_patient_id ?? null,
+    guardianName: row.guardian_name ?? null,
+    guardianDocument: row.guardian_document ?? null,
+    consentStatus: row.consent_status ?? "pending",
     isActive: row.is_active ?? true,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -139,6 +159,14 @@ function toRow(data: Partial<CreatePatientInput>) {
     row.consent_data_sharing = data.consentDataSharing;
   if (data.consentMarketing !== undefined)
     row.consent_marketing = data.consentMarketing;
+  if (data.isMinor !== undefined) row.is_minor = data.isMinor;
+  if (data.guardianPatientId !== undefined)
+    row.guardian_patient_id = data.guardianPatientId ?? null;
+  if (data.guardianName !== undefined) row.guardian_name = data.guardianName ?? null;
+  if (data.guardianDocument !== undefined)
+    row.guardian_document = data.guardianDocument ?? null;
+  if (data.consentStatus !== undefined)
+    row.consent_status = data.consentStatus;
   return row;
 }
 

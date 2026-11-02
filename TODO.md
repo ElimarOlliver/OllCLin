@@ -77,6 +77,55 @@
 - [x] Aplicações críticas: agendamentos (`appointments.write`), vendas financeiras (`finance.write`) e Google Calendar (`google_calendar.connect`).
 - [x] Testes: `server/_core/trpc.test.ts` (RBAC) — Vitest 25/25 no total.
 
+## Fase 3 — Importação/Exportação [CONCLUÍDA NESTA RODADA]
+- [x] Backend: `server/services/import-export.service.ts` + `server/controllers/import.controller.ts` (`imports.createBatch/confirm/list`) + `server/controllers/report.controller.ts` (`relatorios.appointmentsCsv`), ambos isolados por `organization_id` com RBAC (`patients.write`/`reports.export`) e auditoria; registrados em `server/routers.ts` como `imports` e `relatorios`.
+- [x] Migração/tabela `import_batches` criada (`server/models/import.model.ts`) com retorno de erros por linha.
+- [x] Frontend: `PacientesView.tsx` com fluxo completo de importação (upload CSV/TSV → preview com validação → confirmação) e botão "Exportar CSV" para histórico de consultas (UTF-8 com BOM).
+- [x] Testes: `server/services/import-export.service.test.ts` (4 casos) — Vitest 32/32; `tsc --noEmit` sem erros.
+- [x] Corrigido erro TS em `PacientesView.tsx` (onError tipado corretamente para tRPC).
+
+## Fase 4 — Chat corporativo [VERIFICADA NESTA RODADA — CÓDIGO 100% CONCLUÍDO, MIGRAÇÃO 0006 PENDENTE NO SUPABASE]
+- [x] Migração `drizzle/migrations/0006_internal_chat.sql`: `chat_messages` com RLS por tenant, constraint `sender ≠ recipient`, `expires_at` default 48h, função `cleanup_expired_chat_messages()` pronta para pg_cron.
+- [x] Backend: `chat.model.ts` + `chat.controller.ts` — contatos da mesma organização, threads com unreadCount, mensagens sempre filtradas por `expires_at > now()`, limpeza física a cada operação, validação de destinatário no mesmo tenant, marcação de leitura.
+- [x] Frontend: `CorporateChatWidget.tsx` fixo no canto inferior direito, polling (30s/15s/10s), badge pulsante quando há não lidas, busca de contatos, erro/retry, responsivo.
+- [x] Validado nesta rodada: `tsc --noEmit` 0 erros; Vitest 32/32.
+- [x] Aplicar migração `0006_internal_chat.sql` no Supabase (pg-client ou SQL Editor) — aplicada pelo usuário, sucesso confirmado.
+- [ ] (Opcional/evolução) Substituir polling por Supabase Realtime; agendar pg_cron para limpeza física.
+
+## Google Agenda (módulo de sincronização) [AUDITADO E VALIDADO NESTA RODADA — MIGRAÇÕES 0004/0007 APLICADAS]
+- [x] Migração `0004_google_calendar.sql` aplicada (sucesso, sem retornos) — tabela `google_calendar_accounts` + coluna `appointments.google_calendar_event_id`.
+- [x] Migração `0007_google_sync_queue.sql` (`appointment_google_events`, `calendar_sync_jobs` com idempotência) e `0007_google_appointment_links.sql` (RLS por tenant) presentes no repositório.
+- [x] Serviço completo: fila com backoff exponencial (30s → 24h), retries, chave de idempotência (`appointment:{id}:user:{userId}:version`), reconciliação bidirecional (`pullRange`/`syncRange`), detecção de conflitos no Google (`assertNoGoogleConflict`) e vínculo por etag.
+- [x] Worker `startGoogleSyncWorker()` iniciado no boot (`server/_core/index.ts`, polling de 15s) processando a fila `calendar_sync_jobs`.
+- [x] Controllers: `googleAgenda.status/connectUrl/disconnect/listEvents/syncAppointment/removeAppointment/syncRange/syncJobs/pullRange` — todos com isolamento de tenant e auditoria; nenhum token exposto ao cliente.
+- [x] Validação desta rodada: `tsc --noEmit` 0 erros; Vitest 32/32 (incluindo 10 do Google Calendar).
+- [ ] Configurar credenciais reais (`GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`) e redirect URI `${PUBLIC_URL}/api/google-calendar/callback` no Google Cloud Console para habilitar o OAuth real.
+
+## Migrações SaaS [CONCLUÍDAS — TODAS APLICADAS NO SUPABASE]
+- [x] `DATABASE_URL` preenchida no `.env` (pooler aws-1-sa-east-1, senha URL-encoded).
+- [x] Aplicadas via `pg-client.mjs`: 0005_rls_organizations, 0006_organization_members, 0007_google_sync_queue, 0007_google_appointment_links, 0008_data_import_export.
+- [x] Validação PostgREST: `organization_members`, `calendar_sync_jobs`, `appointment_google_events`, `import_batches`, `chat_messages`, `google_calendar_accounts` — todas OK (HTTP 200).
+
+- [x] Seed multi-tenant: vínculo `organization_members` criado para o usuário dev (org 1, papel admin, status active).
+- [x] Ferramenta `scripts/db-select.mjs` para consultas SELECT rápidas com saída tabular.
+
+## Fase 5 — Pagamentos / Maquininhas [CONCLUÍDA NESTA RODADA — CÓDIGO + MIGRAÇÃO 0009]
+- [x] Contrato: `server/lib/payment-provider.ts` — interface `PaymentProvider` (create/get/cancel/refund/verifyWebhookSignature), valores sempre em centavos, tokenização obrigatória (nunca PAN).
+- [x] Provider mock: `server/lib/payment-mock.ts` — fluxo completo create→captured/authorized, cancel, refund total/parcial, idempotência, assinatura HMAC de webhook.
+- [x] Migração `0009_payments.sql` **aplicada no Supabase**: `payment_intents` (unique idempotency_key), `payment_transactions` (transições auditadas), `payment_webhook_events` (dedupe por provider+event_id), todas com RLS por tenant.
+- [x] Model: `server/models/payment.model.ts` — CRUD de intents, histórico de transações, registro idempotente de webhooks.
+- [x] Controller: `server/controllers/payment.controller.ts` — router tRPC `pagamentos` (create/get/list/cancel/refund/transactions/methods) com RBAC `finance.read`/`finance.write` e auditoria; registrado em `routers.ts`.
+- [x] HTTP: `server/routes/payments.ts` — `GET /api/payments/openapi.json` (spec OpenAPI 3.1 completa), `GET /api/payments/docs` (página HTML de documentação) e `POST /api/payments/webhooks/:provider` (assinatura + dedupe); registrado no boot (`server/_core/index.ts`).
+- [x] Testes: 6 novos casos em `payment-mock.test.ts` — Vitest **38/38**; `tsc --noEmit` 0 erros.
+- [ ] Evolução: substituir o mock por provider real (Stone/Cielo/PagSeguro) implementando a mesma interface.
+
+## Fase 6 — Landing Page comercial [CONCLUÍDA NESTA RODADA]
+- [x] `client/src/views/LandingPageView.tsx`: header fixo com logo/benefícios/segurança/contato/botão Entrar; hero com headline + carrossel de 4 slides alternando a cada 2s (pausa em hover/foco, navegação por teclado, indicadores clicáveis, `aria-live="polite"`, respeito a `prefers-reduced-motion`); seção de benefícios (6 cards), segurança/LGPD, formulário de contato e footer.
+- [x] UX/acessibilidade: glassmorphism apenas em superfícies decorativas (inputs e textos de formulário sempre opacos, contraste AA), botões ≥ 44px, foco visível, responsivo de 320px a 1440px.
+- [x] Roteamento: `/landing` e `/entrar` são rotas públicas em tela cheia (sem sidebar/chat — verificado por screenshot: shell não envolve a landing); usuário autenticado não autenticado em rota privada vê a landing com Entrar → `/entrar` (LoginView).
+- [x] QA Playwright (`scripts/qa-landing.mjs`): header/hero/carrossel/contato/Entrar visíveis; carrossel avança automaticamente em 2s (`advanced: true`); sem overflow horizontal em 390px; Entrar → `/entrar` com formulário visível. Zero erros de console, zero requests falhos.
+- [x] Validação: `tsc --noEmit` 0 erros; Vitest 38/38; `vite build` produção OK.
+
 ## Próximos passos (roadmap Cap. 15)
 - [x] Financeiro: Vendas, Repasse, Extrato, Recibos (menu completo).
 - [x] Aplicar Campos Obrigatórios na validação real do cadastro de pacientes (criar/atualizar consultam `org_settings`).

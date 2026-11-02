@@ -26,6 +26,9 @@ import { statementRouter } from "./controllers/statement.controller";
 import { receiptRouter } from "./controllers/receipt.controller";
 import { googleAgendaRouter } from "./controllers/google-calendar.controller";
 import { chatRouter } from "./controllers/chat.controller";
+import { importRouter } from "./controllers/import.controller";
+import { reportRouter } from "./controllers/report.controller";
+import { paymentRouter } from "./controllers/payment.controller";
 
 export const appRouter = router({
   // Sistema / Saúde
@@ -84,6 +87,13 @@ export const appRouter = router({
 
   // Comunicação interna temporária entre usuários da mesma organização
   chat: chatRouter,
+
+  // Dados — Importação (lotes/preview/validação/confirm) e Exportação (CSV)
+  imports: importRouter,
+  relatorios: reportRouter,
+
+  // Fase 5 (SaaS) — Pagamentos (maquininhas de cartão via PaymentProvider)
+  pagamentos: paymentRouter,
 
   // TODO: Prontuário, Exames, Cirurgias, Despesas, Repasse, TISS, Telessaúde, Marketing, Relatórios
   // exemplo:
