@@ -4,6 +4,7 @@ import type { User } from "../../drizzle/schema";
 import { sdk } from "./sdk";
 import { ENV } from "./env";
 import { resolveUserFromSupabaseAccessToken } from "../lib/supabase-auth";
+import { resolveTenantAccessByEmail } from "../lib/tenant-access";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
@@ -76,6 +77,22 @@ export async function createContext(
 
   if (!user && devAuthEnabled()) {
     user = DEV_USER;
+  }
+
+  // Fase 1 (SaaS): resolve o tenant ativo a partir do vínculo
+  // organization_members (com fallback no vínculo legado users.organization_id).
+  if (user) {
+    const tenant =
+      user.openId === DEV_USER.openId
+        ? { organizationId: DEV_USER.organizationId, role: DEV_USER.role }
+        : await resolveTenantAccessByEmail(user.email);
+    if (tenant) {
+      user = {
+        ...user,
+        organizationId: tenant.organizationId,
+        role: tenant.role,
+      } as User;
+    }
   }
 
   return {
