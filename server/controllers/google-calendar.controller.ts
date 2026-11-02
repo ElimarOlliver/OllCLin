@@ -2,6 +2,11 @@
  * OllCLin - Camada Controller
  * Controlador da integração com o Google Calendar
  *
+ * Fase 2 (SaaS): as mutações de agendamento passam a ENFILEIRAR jobs na fila
+ * (`calendar_sync_jobs`) em vez de chamar o Google Calendar síncronamente.
+ * O worker (`server/services/google-sync.worker.ts`) executa a operação com
+ * idempotência, retry e backoff.
+ *
  * O navegador nunca recebe tokens do Google: o fluxo OAuth acontece no
  * servidor (rota /api/google-calendar/callback) e estas procedures apenas
  * disparam ações em nome do usuário autenticado.
@@ -12,26 +17,18 @@ import { TRPCError } from "@trpc/server";
 import { protectedProcedure, protectedWith, router } from "../_core/trpc";
 import { appointmentModel, type Appointment } from "../models/appointment.model";
 import { googleCalendarModel } from "../models/google-calendar.model";
+import { googleCalendarSyncModel } from "../models/google-calendar-sync.model";
+import { enqueueAppointmentSync, pullGoogleRangeForUser } from "../services/google-calendar-sync.service";
 import { writeAuditLog } from "../lib/audit";
 import {
   GoogleCalendarError,
   buildAuthUrl,
-  createEvent,
   createOAuthState,
-  deleteEvent,
   getGoogleConfig,
-  googleTimeZone,
   isGoogleCalendarConfigured,
   listEvents,
-  toGoogleDateTime,
-  updateEvent,
-  type GoogleEventInput,
 } from "../lib/google-calendar";
-import {
-  getSchemaCapabilities,
-  MIGRATION_0004_HINT,
-} from "../lib/schema-capabilities";
-import { pullGoogleRangeForUser } from "../services/google-calendar-sync.service";
+import { getSchemaCapabilities, MIGRATION_0004_HINT } from "../lib/schema-capabilities";
 
 /** Margem máxima de agendamentos sincronizados por chamada. */
 const MAX_SYNC_BATCH = 300;
@@ -74,113 +71,16 @@ function parseRange(from: string, to: string): { timeMin: string; timeMax: strin
   return { timeMin: start.toISOString(), timeMax: end.toISOString() };
 }
 
-/**
- * Monta o evento do Google a partir do agendamento.
- *
- * LGPD: enviamos apenas o necessário para a agenda do próprio profissional
- * (nome do paciente, procedimento e observações já cadastradas). Nenhum dado
- * clínico adicional é incluído.
- */
-function buildEventPayload(
-  appointment: Appointment,
-  timeZone: string,
-): GoogleEventInput {
-  const patientName = appointment.patient?.fullName ?? `Paciente #${appointment.patientId}`;
-  const procedureName = appointment.procedure?.name ?? "Atendimento";
-  const description = [
-    appointment.professional?.fullName
-      ? `Profissional: ${appointment.professional.fullName}`
-      : null,
-    appointment.notes ? `Observações: ${appointment.notes}` : null,
-    `OllCLin • Agendamento #${appointment.id}`,
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  return {
-    summary: `${procedureName} — ${patientName}`.slice(0, 250),
-    description: description.slice(0, 2000),
-    start: {
-      dateTime: toGoogleDateTime(appointment.startsAt),
-      timeZone,
-    },
-    end: {
-      dateTime: toGoogleDateTime(appointment.endsAt),
-      timeZone,
-    },
-    extendedProperties: {
-      private: {
-        ollclin_appointment_id: String(appointment.id),
-        ollclin_organization_id: String(appointment.organizationId),
-      },
-    },
-  };
-}
-
-type GoogleAuth = { accessToken: string; calendarId: string };
-
-type SyncResult = {
-  appointmentId: number;
-  eventId: string;
-  action: "created" | "updated";
-  htmlLink?: string;
-};
-
-/**
- * Cria ou atualiza o evento do agendamento no Google.
- * Se o evento tiver sido apagado manualmente no Google (404/410), recria.
- */
-async function syncAppointmentWithAuth(
-  auth: GoogleAuth,
-  appointment: Appointment,
-): Promise<SyncResult> {
-  const payload = buildEventPayload(appointment, googleTimeZone());
-  const existingId = appointment.googleCalendarEventId;
-
-  if (existingId) {
-    try {
-      const updated = await updateEvent(
-        auth.accessToken,
-        existingId,
-        payload,
-        auth.calendarId,
-      );
-      return {
-        appointmentId: appointment.id,
-        eventId: updated.id,
-        action: "updated",
-        htmlLink: updated.htmlLink,
-      };
-    } catch (error) {
-      if (
-        error instanceof GoogleCalendarError &&
-        (error.status === 404 || error.status === 410)
-      ) {
-        // Evento removido fora do OllCLin: cria um novo e atualiza o vínculo.
-      } else {
-        throw error;
-      }
-    }
-  }
-
-  const created = await createEvent(auth.accessToken, payload, auth.calendarId);
-  await googleCalendarModel.setEventId(
-    appointment.organizationId,
-    appointment.id,
-    created.id,
-  );
-  return {
-    appointmentId: appointment.id,
-    eventId: created.id,
-    action: "created",
-    htmlLink: created.htmlLink,
-  };
+/** Versão do agendamento usada na chave de idempotência da fila. */
+function syncVersion(appointment: Appointment): string {
+  const updatedAt = appointment.updatedAt ?? appointment.createdAt;
+  return updatedAt ? String(updatedAt) : `${appointment.startsAt}|${appointment.endsAt}|${appointment.status}`;
 }
 
 async function requireAuth(
   organizationId: number,
   userId: number,
-): Promise<GoogleAuth> {
+): Promise<{ accessToken: string; calendarId: string }> {
   const auth = await googleCalendarModel.getAccessToken(organizationId, userId);
   if (!auth) {
     throw new TRPCError({
@@ -293,7 +193,7 @@ export const googleAgendaRouter = router({
         organizationId: z.number().int().positive(),
         from: z.string().min(10, "Informe a data inicial"),
         to: z.string().min(10, "Informe a data final"),
-        maxResults: z.number().int().min(1).max(2500).optional(),
+        max_results: z.number().int().min(1).max(2500).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -306,7 +206,7 @@ export const googleAgendaRouter = router({
           timeMin,
           timeMax,
           calendarId: auth.calendarId,
-          maxResults: input.maxResults,
+          maxResults: input.max_results,
         });
         return events.map((event) => ({
           id: event.id,
@@ -323,7 +223,10 @@ export const googleAgendaRouter = router({
       }
     }),
 
-  /** Sincroniza um agendamento com o Google (cria ou atualiza o evento). */
+  /**
+   * Enfileira sincronização de um agendamento no Google Calendar (Fase 2).
+   * A operação (create/update/delete) é derivada do estado do agendamento.
+   */
   syncAppointment: protectedWith("google_calendar.connect")
     .input(
       z.object({
@@ -352,8 +255,15 @@ export const googleAgendaRouter = router({
           });
         }
 
-        const auth = await requireAuth(input.organizationId, ctx.user.id);
-        const result = await syncAppointmentWithAuth(auth, appointment);
+        const operation =
+          appointment.googleCalendarEventId === null ? "create" : "update";
+        const job = await enqueueAppointmentSync({
+          organizationId: input.organizationId,
+          appointmentId: appointment.id,
+          userId: ctx.user.id,
+          operation,
+          version: syncVersion(appointment),
+        });
 
         await writeAuditLog({
           organizationId: input.organizationId,
@@ -362,19 +272,29 @@ export const googleAgendaRouter = router({
           entity: "appointment",
           entityId: appointment.id,
           newValues: {
-            googleCalendarEventId: result.eventId,
-            googleAction: result.action,
+            googleSyncOperation: job.operation,
+            googleSyncStatus: job.status,
           },
           request: ctx.req,
         });
 
-        return result;
+        return {
+          appointmentId: appointment.id,
+          queued: true,
+          job: {
+            id: job.id,
+            status: job.status,
+            operation: job.operation,
+            idempotencyKey: job.idempotencyKey,
+            attempts: job.attempts,
+          },
+        };
       } catch (error) {
-        throw asTrpcError(error, "Falha ao sincronizar o agendamento");
+        throw asTrpcError(error, "Falha ao enfileirar sincronização com o Google Calendar");
       }
     }),
 
-  /** Remove o evento do Google e desfaz o vínculo com o agendamento. */
+  /** Remove o evento do Google e desfaz o vínculo com o agendamento (via fila). */
   removeAppointment: protectedProcedure
     .input(
       z.object({
@@ -397,20 +317,13 @@ export const googleAgendaRouter = router({
           });
         }
 
-        if (appointment.googleCalendarEventId) {
-          const auth = await requireAuth(input.organizationId, ctx.user.id);
-          await deleteEvent(
-            auth.accessToken,
-            appointment.googleCalendarEventId,
-            auth.calendarId,
-          );
-        }
-
-        await googleCalendarModel.setEventId(
-          input.organizationId,
-          appointment.id,
-          null,
-        );
+        const job = await enqueueAppointmentSync({
+          organizationId: input.organizationId,
+          appointmentId: appointment.id,
+          userId: ctx.user.id,
+          operation: "delete",
+          version: syncVersion(appointment),
+        });
 
         await writeAuditLog({
           organizationId: input.organizationId,
@@ -418,17 +331,20 @@ export const googleAgendaRouter = router({
           action: "UPDATE",
           entity: "appointment",
           entityId: appointment.id,
-          newValues: { googleCalendarEventId: null },
+          newValues: { googleCalendarEventId: null, googleSyncOperation: "delete" },
           request: ctx.req,
         });
 
-        return { appointmentId: appointment.id, removed: true };
+        return { appointmentId: appointment.id, queued: true, job };
       } catch (error) {
-        throw asTrpcError(error, "Falha ao remover o evento do Google");
+        throw asTrpcError(error, "Falha ao enfileirar remoção do Google Calendar");
       }
     }),
 
-  /** Sincroniza todos os agendamentos do período (OllCLin → Google). */
+  /**
+   * Enfileira sincronização em lote de um período (OllCLin → Google).
+   * Agendamentos desmarcadados geram job de remoção (delete).
+   */
   syncRange: protectedWith("google_calendar.connect")
     .input(
       z.object({
@@ -442,7 +358,6 @@ export const googleAgendaRouter = router({
       parseRange(input.from, input.to); // valida o período
 
       try {
-        const auth = await requireAuth(input.organizationId, ctx.user.id);
         const appointments = await appointmentModel.findByPeriod(
           input.organizationId,
           input.from,
@@ -450,52 +365,19 @@ export const googleAgendaRouter = router({
         );
         const batch = appointments.slice(0, MAX_SYNC_BATCH);
 
-        let synced = 0;
+        let queued = 0;
         let skipped = 0;
-        let failed = 0;
-        const errors: Array<{ appointmentId: number; message: string }> = [];
-        const results: SyncResult[] = [];
-
         for (const appointment of batch) {
-          if (appointment.status === "desmarcado") {
-            if (appointment.googleCalendarEventId) {
-              try {
-                await deleteEvent(
-                  auth.accessToken,
-                  appointment.googleCalendarEventId,
-                  auth.calendarId,
-                );
-              } catch (error) {
-                // O evento pode já ter sido removido no Google: segue em frente.
-                if (!(error instanceof GoogleCalendarError && error.status === 404)) {
-                  errors.push({
-                    appointmentId: appointment.id,
-                    message:
-                      error instanceof Error ? error.message : "Erro desconhecido",
-                  });
-                }
-              }
-            }
-            await googleCalendarModel.setEventId(
-              input.organizationId,
-              appointment.id,
-              null,
-            );
-            skipped += 1;
-            continue;
-          }
-
-          try {
-            const result = await syncAppointmentWithAuth(auth, appointment);
-            results.push(result);
-            synced += 1;
-          } catch (error) {
-            failed += 1;
-            errors.push({
-              appointmentId: appointment.id,
-              message: error instanceof Error ? error.message : "Erro desconhecido",
-            });
-          }
+          const operation = appointment.status === "desmarcado" ? "delete" : appointment.googleCalendarEventId === null ? "create" : "update";
+          const job = await enqueueAppointmentSync({
+            organizationId: input.organizationId,
+            appointmentId: appointment.id,
+            userId: ctx.user.id,
+            operation,
+            version: syncVersion(appointment),
+          });
+          queued += 1;
+          if (operation === "delete") skipped += 1;
         }
 
         await writeAuditLog({
@@ -505,34 +387,57 @@ export const googleAgendaRouter = router({
           entity: "appointment",
           newValues: {
             googleSyncRange: { from: input.from, to: input.to },
-            synced,
+            queued,
             skipped,
-            failed,
           },
           request: ctx.req,
         });
 
-        return {
-          requested: appointments.length,
-          processed: batch.length,
-          synced,
-          skipped,
-          failed,
-          truncated: appointments.length > batch.length,
-          errors,
-          results,
-        };
+        return { requested: appointments.length, queued, skipped };
       } catch (error) {
-        throw asTrpcError(error, "Falha ao sincronizar o período");
+        throw asTrpcError(error, "Falha ao enfileirar sincronização do período");
       }
     }),
+
+  /** Histórico recente de jobs de sincronização (estados: pending/processing/done/failed). */
+  syncJobs: protectedWith("google_calendar.connect")
+    .input(
+      z.object({
+        organizationId: z.number().int().positive(),
+        limit: z.number().int().min(1).max(100).default(50),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      assertOrganization(ctx.user.organizationId, input.organizationId);
+      const jobs = await googleCalendarSyncModel.findByOrganization(
+        input.organizationId,
+        input.limit,
+      );
+      return jobs.map((job) => ({
+        id: job.id,
+        organizationId: job.organizationId,
+        appointmentId: job.appointmentId,
+        userId: job.userId,
+        operation: job.operation,
+        idempotencyKey: job.idempotencyKey,
+        attempts: job.attempts,
+        status: job.status,
+        nextAttemptAt: job.nextAttemptAt,
+        lastError: job.lastError,
+        createdAt: job.createdAt ?? undefined,
+        updatedAt: job.updatedAt ?? undefined,
+      }));
+    }),
+
   /** Reconcile alterações feitas diretamente no Google Calendar → OllCLin. */
   pullRange: protectedProcedure
-    .input(z.object({
-      organizationId: z.number().int().positive(),
-      from: z.string().min(10),
-      to: z.string().min(10),
-    }))
+    .input(
+      z.object({
+        organizationId: z.number().int().positive(),
+        from: z.string().min(10),
+        to: z.string().min(10),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       assertOrganization(ctx.user.organizationId, input.organizationId);
       parseRange(input.from, input.to);

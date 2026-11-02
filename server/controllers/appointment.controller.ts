@@ -6,9 +6,10 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { appointmentModel } from "../models/appointment.model";
+import type { Appointment } from "../models/appointment.model";
 import { protectedProcedure, protectedWith, router } from "../_core/trpc";
 import { writeAuditLog } from "../lib/audit";
-import { syncAfterAppointmentMutation } from "../services/google-calendar-sync.service";
+import { enqueueAppointmentSync } from "../services/google-calendar-sync.service";
 
 const statusSchema = z.enum([
   "solicitado",
@@ -27,21 +28,49 @@ const isoDate = z
     message: "Data inválida",
   });
 
-async function syncSafely(
-  appointment: Awaited<ReturnType<typeof appointmentModel.findById>>,
-  userId: number,
-) {
+/** Versão do agendamento usada na chave de idempotência da fila Google Calendar. */
+function syncVersion(appointment: Appointment): string {
+  const version = appointment.updatedAt ?? appointment.createdAt;
+  return version ? String(version) : `${appointment.startsAt}|${appointment.endsAt}|${appointment.status}`;
+}
+
+/**
+ * Fase 2 (SaaS): enfileira job de sincronização no worker (create/update/delete).
+ * A resposta devolve o estado do job na fila (pending/processing/done/failed).
+ */
+async function enqueueGoogleSync(input: {
+  organizationId: number;
+  appointmentId: number;
+  userId: number;
+  operation: "create" | "update" | "delete";
+}): Promise<{
+  status: string;
+  operation: string;
+  idempotencyKey: string;
+  attempts: number;
+  lastError: string | null;
+}> {
+  const appointment = await appointmentModel.findById(
+    input.appointmentId,
+    input.organizationId,
+  );
   if (!appointment) {
-    return { status: "error" as const, message: "Agendamento não encontrado após salvar" };
+    throw new Error("Agendamento não encontrado para enfileirar sincronização");
   }
-  try {
-    return await syncAfterAppointmentMutation(appointment, userId);
-  } catch (error) {
-    return {
-      status: "error" as const,
-      message: error instanceof Error ? error.message : "Falha ao sincronizar com o Google Calendar",
-    };
-  }
+  const job = await enqueueAppointmentSync({
+    organizationId: input.organizationId,
+    appointmentId: appointment.id,
+    userId: input.userId,
+    operation: input.operation,
+    version: syncVersion(appointment),
+  });
+  return {
+    status: job.status,
+    operation: job.operation,
+    idempotencyKey: job.idempotencyKey,
+    attempts: job.attempts,
+    lastError: job.lastError,
+  };
 }
 
 export const createAppointmentSchema = z.object({
@@ -164,9 +193,16 @@ export const appointmentRouter = router({
         request: ctx.req,
       });
 
+      const googleSync = await enqueueGoogleSync({
+        organizationId: input.organizationId,
+        appointmentId: appointment.id,
+        userId: ctx.user.id,
+        operation: "create",
+      });
+
       return {
         appointment,
-        googleSync: await syncSafely(appointment, ctx.user.id),
+        googleSync,
       };
     }),
 
@@ -217,6 +253,12 @@ export const appointmentRouter = router({
         startsAt: nextStartsAt.toISOString(),
         endsAt: nextEndsAt.toISOString(),
       });
+      if (!appointment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Agendamento não encontrado",
+        });
+      }
 
       await writeAuditLog({
         organizationId,
@@ -237,9 +279,16 @@ export const appointmentRouter = router({
         request: ctx.req,
       });
 
+      const googleSync = await enqueueGoogleSync({
+        organizationId,
+        appointmentId: appointment.id,
+        userId: ctx.user.id,
+        operation: input.status === "desmarcado" ? "delete" : "update",
+      });
+
       return {
         appointment,
-        googleSync: await syncSafely(appointment, ctx.user.id),
+        googleSync,
       };
     }),
 
@@ -267,9 +316,16 @@ export const appointmentRouter = router({
         request: ctx.req,
       });
 
+      const googleSync = await enqueueGoogleSync({
+        organizationId: input.organizationId,
+        appointmentId: appointment.id,
+        userId: ctx.user.id,
+        operation: "delete",
+      });
+
       return {
         success: true,
-        googleSync: await syncSafely(appointment, ctx.user.id),
+        googleSync,
       };
     }),
 

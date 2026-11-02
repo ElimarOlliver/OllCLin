@@ -11,6 +11,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { registerGoogleCalendarRoutes } from "../routes/google-calendar";
 import { checkSupabaseConnection } from "../lib/supabase-server";
+import { startGoogleSyncWorker } from "../services/google-sync.worker";
 
 async function startServer() {
   const app = express();
@@ -38,6 +39,8 @@ async function startServer() {
   });
   registerOAuthRoutes(app);
   registerGoogleCalendarRoutes(app);
+  // Fase 2 (SaaS): worker assíncrono da fila de sincronização Google Calendar.
+  startGoogleSyncWorker();
   // tRPC API
   app.use(
     "/api/trpc",
