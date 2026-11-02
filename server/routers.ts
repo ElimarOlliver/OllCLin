@@ -25,6 +25,7 @@ import { payoutRouter } from "./controllers/payout.controller";
 import { statementRouter } from "./controllers/statement.controller";
 import { receiptRouter } from "./controllers/receipt.controller";
 import { googleAgendaRouter } from "./controllers/google-calendar.controller";
+import { chatRouter } from "./controllers/chat.controller";
 
 export const appRouter = router({
   // Sistema / Saúde
@@ -80,6 +81,9 @@ export const appRouter = router({
 
   // Integração Google Calendar (OAuth no servidor + sincronização de eventos)
   googleAgenda: googleAgendaRouter,
+
+  // Comunicação interna temporária entre usuários da mesma organização
+  chat: chatRouter,
 
   // TODO: Prontuário, Exames, Cirurgias, Despesas, Repasse, TISS, Telessaúde, Marketing, Relatórios
   // exemplo:
