@@ -60,3 +60,17 @@ create index if not exists idx_calendar_sync_jobs_status
   on calendar_sync_jobs (status, next_attempt_at);
 
 alter table calendar_sync_jobs enable row level security;
+
+-- Garante unicidade por agendamento/usuário para upsert do vínculo.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'appointment_google_events_appointment_user_key'
+  ) then
+    alter table appointment_google_events
+      add constraint appointment_google_events_appointment_user_key
+      unique (appointment_id, user_id);
+  end if;
+end
+$$;
