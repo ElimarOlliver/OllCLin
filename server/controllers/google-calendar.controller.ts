@@ -9,7 +9,7 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, protectedWith, router } from "../_core/trpc";
 import { appointmentModel, type Appointment } from "../models/appointment.model";
 import { googleCalendarModel } from "../models/google-calendar.model";
 import { writeAuditLog } from "../lib/audit";
@@ -236,7 +236,7 @@ export const googleAgendaRouter = router({
     }),
 
   /** URL de consentimento do Google (state assinado, validade de 10 min). */
-  connectUrl: protectedProcedure
+  connectUrl: protectedWith("google_calendar.connect")
     .input(z.object({ organizationId: z.number().int().positive() }))
     .query(async ({ ctx, input }) => {
       assertOrganization(ctx.user.organizationId, input.organizationId);
@@ -268,7 +268,7 @@ export const googleAgendaRouter = router({
     }),
 
   /** Desconecta a conta Google e revoga o token (LGPD). */
-  disconnect: protectedProcedure
+  disconnect: protectedWith("google_calendar.connect")
     .input(z.object({ organizationId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       assertOrganization(ctx.user.organizationId, input.organizationId);
@@ -324,7 +324,7 @@ export const googleAgendaRouter = router({
     }),
 
   /** Sincroniza um agendamento com o Google (cria ou atualiza o evento). */
-  syncAppointment: protectedProcedure
+  syncAppointment: protectedWith("google_calendar.connect")
     .input(
       z.object({
         organizationId: z.number().int().positive(),
@@ -429,7 +429,7 @@ export const googleAgendaRouter = router({
     }),
 
   /** Sincroniza todos os agendamentos do período (OllCLin → Google). */
-  syncRange: protectedProcedure
+  syncRange: protectedWith("google_calendar.connect")
     .input(
       z.object({
         organizationId: z.number().int().positive(),

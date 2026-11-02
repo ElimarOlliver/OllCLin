@@ -11,7 +11,7 @@ import {
   type Sale,
   type SaleStatus,
 } from "../models/sale.model";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, protectedWith, router } from "../_core/trpc";
 import { writeAuditLog } from "../lib/audit";
 
 const saleStatusSchema = z.enum(["a_receber", "recebido", "cancelada"]);
@@ -95,7 +95,7 @@ export const saleRouter = router({
       return saleModel.listHistory(input.id);
     }),
 
-  create: protectedProcedure
+  create: protectedWith("finance.write")
     .input(createSaleSchema)
     .mutation(async ({ ctx, input }): Promise<Sale> => {
       const amount = totalOf(input.items, input.amount);
@@ -124,7 +124,7 @@ export const saleRouter = router({
       return sale;
     }),
 
-  update: protectedProcedure
+  update: protectedWith("finance.write")
     .input(updateSaleSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, organizationId, ...data } = input;
@@ -154,7 +154,7 @@ export const saleRouter = router({
       return sale;
     }),
 
-  cancel: protectedProcedure
+  cancel: protectedWith("finance.write")
     .input(
       z.object({
         id: z.number().int().positive(),

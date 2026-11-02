@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { appointmentModel } from "../models/appointment.model";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, protectedWith, router } from "../_core/trpc";
 import { writeAuditLog } from "../lib/audit";
 import { syncAfterAppointmentMutation } from "../services/google-calendar-sync.service";
 
@@ -113,7 +113,7 @@ export const appointmentRouter = router({
       return appointment;
     }),
 
-  create: protectedProcedure
+  create: protectedWith("appointments.write")
     .input(createAppointmentSchema)
     .mutation(async ({ ctx, input }) => {
       const startsAt = new Date(input.startsAt);
@@ -170,7 +170,7 @@ export const appointmentRouter = router({
       };
     }),
 
-  update: protectedProcedure
+  update: protectedWith("appointments.write")
     .input(updateAppointmentSchema)
     .mutation(async ({ ctx, input }) => {
       const { id, organizationId, startsAt, endsAt, ...data } = input;
@@ -243,7 +243,7 @@ export const appointmentRouter = router({
       };
     }),
 
-  delete: protectedProcedure
+  delete: protectedWith("appointments.write")
     .input(z.object({ id: z.number().int(), organizationId: z.number().int() }))
     .mutation(async ({ ctx, input }) => {
       const appointment = await appointmentModel.delete(
