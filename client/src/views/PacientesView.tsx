@@ -9,7 +9,7 @@
  * - Consentimentos LGPD no cadastro
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -184,18 +184,6 @@ export default function PacientesView() {
   });
 
   const exportAppointmentsCsvMutation = trpc.relatorios.appointmentsCsv.useMutation({
-    onSuccess: (result) => {
-      const blob = new Blob([result.csv], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = `ollclin_consultas_${new Date().toISOString().slice(0, 10)}.csv`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
-      toast.success("Exportação CSV gerada com sucesso.");
-    },
     onError: (error) => {
       toast.error(String(error?.message) || "Falha ao exportar CSV");
     },
@@ -372,19 +360,24 @@ export default function PacientesView() {
     }
   }
 
-  async function handleImportFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleImportFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
+    setImportPreview(null);
     const reader = new FileReader();
     reader.onload = async () => {
-      const base64 = String(reader.result).split(",")[1] ?? "";
-      const preview = await createImportBatchMutation.mutateAsync({
-        organizationId: ORGANIZATION_ID,
-        fileName: file.name,
-        fileType: (file.name.split(".").pop() ?? "csv").toLowerCase(),
-        contentBase64: base64,
-      });
-      setImportPreview(preview);
+      try {
+        const base64 = String(reader.result).split(",")[1] ?? "";
+        await createImportBatchMutation.mutateAsync({
+          organizationId: ORGANIZATION_ID,
+          fileName: file.name,
+          fileType: (file.name.split(".").pop() ?? "csv").toLowerCase(),
+          contentBase64: base64,
+        });
+      } catch (error) {
+        console.error(error);
+        toast.error((error as Error).message || "Falha ao ler o arquivo de importação");
+      }
     };
     reader.readAsDataURL(file);
   }
@@ -417,7 +410,19 @@ export default function PacientesView() {
             Cadastre, busque e gerencie o histórico dos pacientes da clínica.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload className="mr-2 h-4 w-4" />
+            Importar
+          </Button>
+          <Button variant="outline" onClick={handleExportCsv} disabled={exporting}>
+            {exporting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Exportar consultas (CSV)
+          </Button>
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Paciente
@@ -522,6 +527,148 @@ export default function PacientesView() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Dialog: Importação de pacientes (CSV/TSV) */}
+      <Dialog
+        open={importOpen}
+        onOpenChange={(open) => {
+          setImportOpen(open);
+          if (!open) setImportPreview(null);
+        }}
+      >
+        <DialogContent className="max-h-[92vh] overflow-y-auto border-slate-200 bg-[#fbfcfa] sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Importar pacientes</DialogTitle>
+            <DialogDescription>
+              Envie um arquivo CSV ou TSV com cabeçalho na primeira linha. O sistema valida os
+              dados e mostra uma prévia antes de gravar qualquer informação.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 p-1">
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-4">
+              <Label htmlFor="import-file" className="text-sm font-medium">
+                Arquivo (.csv, .tsv, .txt)
+              </Label>
+              <Input
+                id="import-file"
+                type="file"
+                accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"
+                className="mt-2 cursor-pointer bg-white"
+                onChange={handleImportFileChange}
+                disabled={createImportBatchMutation.isPending}
+              />
+              <p className="mt-2 text-xs text-slate-500">
+                Colunas reconhecidas: nome, cpf, data de nascimento, telefone, e-mail, endereço,
+                cidade, UF, CEP, responsável e CPF do responsável.
+              </p>
+              {createImportBatchMutation.isPending && (
+                <p className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Processando arquivo...
+                </p>
+              )}
+            </div>
+
+            {importPreview && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs text-slate-500">Linhas</p>
+                    <p className="text-lg font-semibold text-slate-900">{importPreview.totalRows}</p>
+                  </div>
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                    <p className="text-xs text-emerald-700">Válidas</p>
+                    <p className="text-lg font-semibold text-emerald-700">{importPreview.validRows}</p>
+                  </div>
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                    <p className="text-xs text-red-700">Rejeitadas</p>
+                    <p className="text-lg font-semibold text-red-700">{importPreview.rejectedRows}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs text-slate-500">Colunas</p>
+                    <p className="text-lg font-semibold text-slate-900">{importPreview.columns.length}</p>
+                  </div>
+                </div>
+
+                {importPreview.errors.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto rounded-lg border border-red-200 bg-red-50 p-3">
+                    <p className="mb-2 flex items-center gap-1 text-sm font-medium text-red-700">
+                      <AlertCircle className="h-4 w-4" /> Linhas rejeitadas
+                    </p>
+                    <ul className="space-y-1 text-xs text-red-700">
+                      {importPreview.errors.map((error, index) => (
+                        <li key={`${error.row}-${index}`}>
+                          Linha {error.row}
+                          {error.field ? ` (${error.field})` : ""}: {error.message}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {importPreview.validRows > 0 && (
+                  <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>CPF</TableHead>
+                          <TableHead>Nascimento</TableHead>
+                          <TableHead>Responsável</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {importPreview.rows.slice(0, 10).map((row, index) => (
+                          <TableRow key={`${row.fullName}-${index}`}>
+                            <TableCell className="text-sm">{row.fullName}</TableCell>
+                            <TableCell className="text-sm font-mono">{row.cpf || "—"}</TableCell>
+                            <TableCell className="text-sm">{row.birthDate || "—"}</TableCell>
+                            <TableCell className="text-sm">{row.guardianName || "—"}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {importPreview.validRows > 10 && (
+                      <p className="border-t border-slate-200 p-2 text-xs text-slate-500">
+                        Exibindo as primeiras 10 de {importPreview.validRows} linhas válidas.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setImportOpen(false);
+                setImportPreview(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={handleConfirmImport}
+              disabled={
+                !importPreview?.batchId ||
+                importPreview.validRows === 0 ||
+                confirmImportMutation.isPending
+              }
+            >
+              {confirmImportMutation.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+              )}
+              Confirmar importação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog: Novo/Editar Paciente */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>

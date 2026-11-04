@@ -341,6 +341,9 @@ export async function confirmImportBatch(input: {
   }
 
   const content = batch.fileContent ?? "";
+  if (!content.trim()) {
+    throw new Error("Conteúdo do arquivo de importação não está disponível. Reenvie o arquivo.");
+  }
   const preview = parseImportContent({
     fileName: batch.fileName,
     fileType: batch.fileType,
@@ -348,10 +351,16 @@ export async function confirmImportBatch(input: {
   });
 
   let importedRows = 0;
-  const rejectedRows = preview.errors.length;
+  let rejectedRows = preview.errors.length;
   for (const row of preview.rows) {
-    const exists = await patientModel.existsByCpf(row.cpf ?? "", input.organizationId);
-    if (row.cpf && exists) continue; // duplicidade de CPF: rejeitada na validação final
+    if (row.cpf) {
+      const exists = await patientModel.existsByCpf(row.cpf, input.organizationId);
+      if (exists) {
+        // CPF já cadastrado no tenant: não sobrescreve, apenas rejeita a linha.
+        rejectedRows += 1;
+        continue;
+      }
+    }
     await patientModel.create({
       organizationId: input.organizationId,
       fullName: row.fullName,

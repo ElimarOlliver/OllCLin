@@ -35,13 +35,6 @@ export const importRouter = router({
           fileType: input.fileType,
           content,
         });
-        await writeAuditLog({
-          organizationId: input.organizationId,
-          userId: ctx.user.id,
-          action: "CREATE",
-          entity: "import_batch",
-          newValues: { fileName: input.fileName, status: preview.status, totalRows: preview.totalRows, validRows: preview.validRows, rejectedRows: preview.rejectedRows },
-        });
         return preview;
       } catch (error) {
         throw new TRPCError({
