@@ -116,8 +116,10 @@ export const users = mysqlTable("users", {
   name: varchar("name", { length: 255 }),
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("login_method", { length: 64 }),
-  role: mysqlEnum("role", ["admin", "user"]).default("user").notNull(),
+  role: varchar("role", { length: 64 }).default("user").notNull(),
   organizationId: int("organization_id").references(() => organizations.id, { onDelete: "set null" }),
+  /** SaaS: somente o primeiro cadastro da conta é titular (acesso master). */
+  isOwner: boolean("is_owner").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("last_signed_in").defaultNow().notNull(),

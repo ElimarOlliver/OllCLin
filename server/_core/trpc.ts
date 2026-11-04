@@ -89,6 +89,25 @@ export function permissionsForRole(role?: string | null): Permission[] {
   return key ? ROLE_PERMISSIONS[key] ?? [] : [];
 }
 
+/**
+ * Mapeia uma permissão tRPC para a área do catálogo (permission_areas) que a
+ * governa. Áreas sem entrada retornam null (só RBAC clássico se aplica).
+ */
+const PERMISSION_AREA_MAP: Record<string, string> = {
+  "patients": "pacientes",
+  "appointments": "agenda",
+  "professionals": "profissionais",
+  "finance": "financeiro",
+  "reports": "relatorios",
+  "organization": "usuarios",
+};
+
+export function areaForPermission(permission: Permission): string | null {
+  if (permission === "*") return null;
+  const [domain] = permission.split(".");
+  return PERMISSION_AREA_MAP[domain] ?? null;
+}
+
 const requirePermission = (permission: Permission) =>
   t.middleware(async (opts) => {
     const { ctx, next } = opts;
@@ -98,9 +117,29 @@ const requirePermission = (permission: Permission) =>
       throw new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
     }
 
+    // SaaS: titular da conta tem acesso master a tudo.
+    if (ctx.isOwner) {
+      return next({ ctx: { ...ctx, user } });
+    }
+
     const permissions = permissionsForRole(user.role);
     const allowed = permissions.includes("*") || permissions.includes(permission);
-    if (!allowed) {
+
+    // SaaS: permissão granular por área (setada pelo titular na página
+    // Permissões). "full" libera a área; "partial" só leitura.
+    let areaGranted: boolean | null = null;
+    if (ctx.areaPermissions) {
+      const area = areaForPermission(permission);
+      if (area && area in ctx.areaPermissions) {
+        const level = ctx.areaPermissions[area];
+        if (level === "full") areaGranted = true;
+        else if (level === "partial") areaGranted = permission.endsWith(".read");
+        else areaGranted = false;
+      }
+    }
+
+    const finalAllowed = areaGranted !== null ? areaGranted : allowed;
+    if (!finalAllowed) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: `Permissão negada: ${permission}`,

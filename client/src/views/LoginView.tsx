@@ -96,6 +96,13 @@ export default function LoginView() {
           </Button>
         </form>
 
+        <p className="text-sm text-center text-slate-500">
+          Não tem conta?{" "}
+          <a href="/cadastro" className="font-semibold text-[#075e63] hover:underline">
+            Criar conta (10 dias grátis)
+          </a>
+        </p>
+
         <p className="text-xs text-slate-500 text-center">
           Ainda em ambiente de desenvolvimento? Defina <code>ALLOW_DEV_AUTH=true</code> no
           <code>.env</code> para usar o modo local sem Supabase Auth.

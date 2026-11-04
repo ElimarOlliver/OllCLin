@@ -52,6 +52,11 @@ import {
 } from "lucide-react";
 import { CSSProperties } from "react";
 import LoginView from "@/views/LoginView";
+import CadastroView from "@/views/CadastroView";
+import PrimeiroAcessoView from "@/views/PrimeiroAcessoView";
+import AceitarConviteView from "@/views/AceitarConviteView";
+import EquipeView from "@/views/EquipeView";
+import PermissoesView from "@/views/PermissoesView";
 import LandingPageView from "@/views/LandingPageView";
 import CorporateChatWidget from "@/components/CorporateChatWidget";
 
@@ -69,6 +74,8 @@ const menuItems = [
   { icon: Scale, label: "Extrato", path: "/extrato" },
   { icon: FileText, label: "Recibos", path: "/recibos" },
   { icon: MapPin, label: "Configurações", path: "/configuracoes" },
+  { icon: ShieldCheck, label: "Permissões", path: "/permissoes", ownerOnly: true },
+  { icon: Users, label: "Equipe", path: "/equipe", ownerOnly: true },
 ];
 
 function Router() {
@@ -87,6 +94,8 @@ function Router() {
       <Route path="/extrato" component={ExtratoView} />
       <Route path="/recibos" component={RecibosView} />
       <Route path="/configuracoes" component={ConfiguracoesView} />
+      <Route path="/permissoes" component={PermissoesView} />
+      <Route path="/equipe" component={EquipeView} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -146,7 +155,7 @@ function DashboardLayout() {
   return <SidebarProvider style={{ "--sidebar-width": "280px" } as CSSProperties}><DashboardShell /></SidebarProvider>;
 }
 
-const PUBLIC_ROUTES = ["/landing", "/entrar"];
+const PUBLIC_ROUTES = ["/landing", "/entrar", "/cadastro", "/primeiro-acesso", "/aceitar-convite"];
 
 function DashboardShell() {
   const { loading, user, logout } = useAuth();
@@ -162,6 +171,9 @@ function DashboardShell() {
         <Switch>
           <Route path="/landing" component={() => <LandingPageView onEnter={() => setLocation("/entrar")} />} />
           <Route path="/entrar" component={() => <div className="flex min-h-screen w-full items-center justify-center bg-[#f7f8f5]"><LoginView /></div>} />
+          <Route path="/cadastro" component={() => <div className="flex min-h-screen w-full items-center justify-center bg-[#f7f8f5]"><CadastroView /></div>} />
+          <Route path="/primeiro-acesso" component={() => <div className="flex min-h-screen w-full items-center justify-center bg-[#f7f8f5]"><PrimeiroAcessoView token={new URLSearchParams(window.location.search).get("token") ?? ""} /></div>} />
+          <Route path="/aceitar-convite" component={() => <div className="flex min-h-screen w-full items-center justify-center bg-[#f7f8f5]"><AceitarConviteView token={new URLSearchParams(window.location.search).get("token") ?? ""} /></div>} />
           <Route component={NotFound} />
         </Switch>
       </main>
@@ -174,7 +186,11 @@ function DashboardShell() {
   if (loading) return <div className="flex min-h-screen w-full items-center justify-center bg-[#f7f8f5]"><div className="flex flex-col items-center gap-3"><div className="h-8 w-8 animate-pulse rounded-full bg-[#075e63]" /><p className="text-sm text-slate-500">Carregando sessão...</p></div></div>;
   if (!user) return <LandingPageView onEnter={() => setLocation("/entrar")} />;
 
-  return <><Sidebar collapsible="icon" className="border-r border-slate-200 bg-white"><SidebarHeader className="h-16 justify-center px-4"><div className="flex items-center gap-3"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#075e63] text-white"><Stethoscope className="h-5 w-5" /></div>{!isCollapsed && <div><div className="font-bold tracking-tight text-slate-900">OllCLin</div><div className="text-[10px] uppercase tracking-wider text-slate-400">Gestão clínica</div></div>}</div></SidebarHeader><SidebarContent><SidebarMenu className="px-2 py-2">{menuItems.map(({ icon: Icon, label, path }) => <SidebarMenuItem key={path}><SidebarMenuButton isActive={location === path} onClick={() => setLocation(path)} tooltip={label} className="h-10 transition-colors data-[active=true]:bg-teal-50 data-[active=true]:text-[#075e63]"><Icon className="h-4 w-4" /><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}<SidebarSeparator className="my-2" /></SidebarMenu></SidebarContent><SidebarFooter className="p-3"><DropdownMenu><DropdownMenuTrigger asChild><button className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#075e63]"><Avatar className="h-9 w-9 shrink-0 border"><AvatarFallback className="bg-teal-50 text-xs font-semibold text-[#075e63]">{user.name?.charAt(0).toUpperCase() ?? "U"}</AvatarFallback></Avatar><div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-medium leading-none text-slate-900">{user.name || "Usuário"}</p><p className="mt-1.5 truncate text-xs text-slate-500">{user.email || "—"}</p></div></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48"><DropdownMenuItem onClick={() => logout()}><LogOut className="mr-2 h-4 w-4" /><span>Sair</span></DropdownMenuItem></DropdownMenuContent></DropdownMenu></SidebarFooter></Sidebar><SidebarInset className="min-w-0 bg-[#f7f8f5]"><header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6"><div className="flex items-center gap-3"><SidebarTrigger className="h-9 w-9 rounded-lg bg-slate-50" /><div><p className="text-sm font-semibold text-slate-900">{activeLabel}</p><p className="hidden text-xs text-slate-500 sm:block">OllCLin · gestão simples e segura</p></div></div></header><main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24"><Router /></main></SidebarInset><CorporateChatWidget /></>;
+  // "Permissões" é área exclusiva do titular da conta (contratante).
+  const isOwner = user.role === "owner" || user.role === "admin" || (user as { role?: string }).role === "owner";
+  const visibleMenuItems = menuItems.filter((item) => !item.ownerOnly || isOwner);
+
+  return <><Sidebar collapsible="icon" className="border-r border-slate-200 bg-white"><SidebarHeader className="h-16 justify-center px-4"><div className="flex items-center gap-3"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#075e63] text-white"><Stethoscope className="h-5 w-5" /></div>{!isCollapsed && <div><div className="font-bold tracking-tight text-slate-900">OllCLin</div><div className="text-[10px] uppercase tracking-wider text-slate-400">Gestão clínica</div></div>}</div></SidebarHeader><SidebarContent><SidebarMenu className="px-2 py-2">{visibleMenuItems.map(({ icon: Icon, label, path }) => <SidebarMenuItem key={path}><SidebarMenuButton isActive={location === path} onClick={() => setLocation(path)} tooltip={label} className="h-10 transition-colors data-[active=true]:bg-teal-50 data-[active=true]:text-[#075e63]"><Icon className="h-4 w-4" /><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}<SidebarSeparator className="my-2" /></SidebarMenu></SidebarContent><SidebarFooter className="p-3"><DropdownMenu><DropdownMenuTrigger asChild><button className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#075e63]"><Avatar className="h-9 w-9 shrink-0 border"><AvatarFallback className="bg-teal-50 text-xs font-semibold text-[#075e63]">{user.name?.charAt(0).toUpperCase() ?? "U"}</AvatarFallback></Avatar><div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-medium leading-none text-slate-900">{user.name || "Usuário"}</p><p className="mt-1.5 truncate text-xs text-slate-500">{user.email || "—"}</p></div></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48"><DropdownMenuItem onClick={() => logout()}><LogOut className="mr-2 h-4 w-4" /><span>Sair</span></DropdownMenuItem></DropdownMenuContent></DropdownMenu></SidebarFooter></Sidebar><SidebarInset className="min-w-0 bg-[#f7f8f5]"><header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6"><div className="flex items-center gap-3"><SidebarTrigger className="h-9 w-9 rounded-lg bg-slate-50" /><div><p className="text-sm font-semibold text-slate-900">{activeLabel}</p><p className="hidden text-xs text-slate-500 sm:block">OllCLin · gestão simples e segura</p></div></div></header><main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24"><Router /></main></SidebarInset><CorporateChatWidget /></>;
 }
 
 export default App;

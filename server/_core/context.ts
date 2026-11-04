@@ -5,11 +5,16 @@ import { sdk } from "./sdk";
 import { ENV } from "./env";
 import { resolveUserFromSupabaseAccessToken } from "../lib/supabase-auth";
 import { resolveTenantAccessByEmail } from "../lib/tenant-access";
+import { getSupabaseAdmin } from "../lib/supabase-server";
 
 export type TrpcContext = {
   req: CreateExpressContextOptions["req"];
   res: CreateExpressContextOptions["res"];
   user: User | null;
+  /** Permissões granulares da conta (área -> none|partial|full). */
+  areaPermissions?: Record<string, "none" | "partial" | "full">;
+  /** true quando o usuário é o titular (owner) da conta. */
+  isOwner?: boolean;
 };
 
 /**
@@ -81,6 +86,9 @@ export async function createContext(
 
   // Fase 1 (SaaS): resolve o tenant ativo a partir do vínculo
   // organization_members (com fallback no vínculo legado users.organization_id).
+  let isOwner = false;
+  let areaPermissions: Record<string, "none" | "partial" | "full"> | undefined;
+
   if (user) {
     const tenant =
       user.openId === DEV_USER.openId
@@ -93,11 +101,50 @@ export async function createContext(
         role: tenant.role,
       } as User;
     }
+
+    // SaaS: titular (is_owner) e permissões granulares por área.
+    if (user.organizationId && user.openId !== DEV_USER.openId) {
+      try {
+        const admin = getSupabaseAdmin();
+        const local = await admin
+          .from("users")
+          .select("id, is_owner")
+          .ilike("email", user.email ?? "")
+          .limit(1)
+          .maybeSingle<{ id: number; is_owner: boolean | null }>();
+
+        if (local.data) {
+          isOwner = Boolean(local.data.is_owner);
+
+          const { data: perms } = await admin
+            .from("member_permissions")
+            .select("area_key, access_level")
+            .eq("organization_id", user.organizationId)
+            .eq("user_id", local.data.id);
+
+          if (perms) {
+            areaPermissions = {};
+            for (const row of perms as Array<{ area_key: string; access_level: string }>) {
+              areaPermissions[row.area_key] =
+                row.access_level === "full" ? "full" : row.access_level === "partial" ? "partial" : "none";
+            }
+          }
+        }
+      } catch (error) {
+        // Permissões granulares são opcionais: falha não bloqueia a sessão.
+        console.warn(
+          "[Auth] Falha ao carregar permissões granulares:",
+          error instanceof Error ? error.message : error,
+        );
+      }
+    }
   }
 
   return {
     req: opts.req,
     res: opts.res,
     user,
+    isOwner,
+    areaPermissions,
   };
 }

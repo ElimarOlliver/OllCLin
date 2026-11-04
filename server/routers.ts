@@ -29,6 +29,9 @@ import { chatRouter } from "./controllers/chat.controller";
 import { importRouter } from "./controllers/import.controller";
 import { reportRouter } from "./controllers/report.controller";
 import { paymentRouter } from "./controllers/payment.controller";
+import { saasRouter } from "./controllers/saas.controller";
+import { onboardingRouter } from "./controllers/onboarding.controller";
+import { equipeRouter } from "./controllers/equipe.controller";
 
 export const appRouter = router({
   // Sistema / Saúde
@@ -94,6 +97,15 @@ export const appRouter = router({
 
   // Fase 5 (SaaS) — Pagamentos (maquininhas de cartão via PaymentProvider)
   pagamentos: paymentRouter,
+
+  // SaaS — cadastro público (titular + trial 10 dias) e Permissões
+  saas: saasRouter,
+
+  // Onboarding do owner (/primeiro-acesso) e aceite de convite (/aceitar-convite)
+  onboarding: onboardingRouter,
+
+  // Equipe (RBAC team.manage)
+  equipe: equipeRouter,
 
   // TODO: Prontuário, Exames, Cirurgias, Despesas, Repasse, TISS, Telessaúde, Marketing, Relatórios
   // exemplo:

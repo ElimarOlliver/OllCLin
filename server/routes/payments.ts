@@ -11,6 +11,8 @@ import type { Express, Request, Response } from "express";
 import { activePaymentProvider } from "../lib/payment-mock";
 import { paymentModel } from "../models/payment.model";
 import { writeAuditLog } from "../lib/audit";
+import { provisionTenant, suspendTenantByGatewayRef } from "../lib/provisioning";
+import * as provisioningModel from "../models/provisioning.model";
 
 const OPENAPI_SPEC = {
   openapi: "3.1.0",
@@ -198,6 +200,54 @@ export function registerPaymentRoutes(app: Express): void {
     if (!inserted) {
       res.json({ received: true, duplicated: true });
       return;
+    }
+
+    // ---------------------------------------------------------------------
+    // Provisionamento SaaS: pagamento confirmado → ativa/cria tenant.
+    // Eventos de ASSINATURA (plan_key presente) disparam provisionamento;
+    // eventos de maquininha (payment_intents) seguem o fluxo legado abaixo.
+    // ---------------------------------------------------------------------
+    const planKey = payload.plan_key ? String(payload.plan_key) : null;
+    const buyerEmail = payload.buyer_email ? String(payload.buyer_email) : null;
+
+    if (planKey && buyerEmail) {
+      try {
+        if (toStatus === "captured" || toStatus === "authorized") {
+          const result = await provisionTenant(
+            {
+              provider,
+              eventId,
+              buyerEmail,
+              buyerName: payload.buyer_name ? String(payload.buyer_name) : null,
+              organizationName: payload.organization_name ? String(payload.organization_name) : null,
+              planKey,
+              gatewayCustomerId: payload.customer_id ? String(payload.customer_id) : null,
+              gatewaySubscriptionId: payload.subscription_id ? String(payload.subscription_id) : null,
+            },
+            req,
+          );
+          res.json({ received: true, provisioned: result });
+          return;
+        }
+
+        if (["failed", "cancelled", "refunded"].includes(toStatus ?? "")) {
+          const suspended = await suspendTenantByGatewayRef(
+            payload.customer_id ? String(payload.customer_id) : null,
+            payload.subscription_id ? String(payload.subscription_id) : null,
+            `webhook:${provider}:${toStatus}`,
+            req,
+          );
+          res.json({ received: true, suspended });
+          return;
+        }
+      } catch (error) {
+        console.error(
+          "[Webhook] Falha no provisionamento:",
+          error instanceof Error ? error.message : error,
+        );
+        res.status(500).json({ received: true, error: "provisioning_failed" });
+        return;
+      }
     }
 
     if (providerTransactionId && toStatus) {

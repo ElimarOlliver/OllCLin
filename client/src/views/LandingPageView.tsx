@@ -327,6 +327,85 @@ export default function LandingPageView({ onEnter }: { onEnter: () => void }) {
           </div>
         </section>
 
+        {/* Planos (SaaS) */}
+        <section id="planos" className="border-t border-slate-200 bg-[#f7f8f5] py-14">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#075e63]">Planos</p>
+            <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              Preço simples, comece com 10 dias grátis
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm text-slate-500">
+              Sem fidelidade. Cada clínica tem seu painel independente, com permissões por usuário
+              e possibilidade de usar o próprio provedor de pagamentos.
+            </p>
+            <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3">
+              {[
+                {
+                  name: "Essencial",
+                  price: "R$ 97",
+                  period: "/mês",
+                  users: "até 2 usuários",
+                  features: ["Agenda + Google Calendar", "Pacientes ilimitados", "Financeiro básico", "Permissões por usuário"],
+                  highlight: false,
+                },
+                {
+                  name: "Profissional",
+                  price: "R$ 197",
+                  period: "/mês",
+                  users: "até 8 usuários",
+                  features: ["Tudo do Essencial", "Repasses e recibos", "Relatórios e exportações", "Chat interno"],
+                  highlight: true,
+                },
+                {
+                  name: "Clínica",
+                  price: "R$ 347",
+                  period: "/mês",
+                  users: "até 25 usuários",
+                  features: ["Tudo do Profissional", "Multi-estabelecimento", "Permissões avançadas", "Suporte prioritário"],
+                  highlight: false,
+                },
+              ].map((plan) => (
+                <article
+                  key={plan.name}
+                  className={`relative flex flex-col rounded-2xl border bg-white p-6 shadow-sm transition-shadow hover:shadow-md ${
+                    plan.highlight ? "border-[#075e63] ring-2 ring-[#075e63]/20" : "border-slate-200"
+                  }`}
+                >
+                  {plan.highlight && (
+                    <span className="absolute -top-3 left-6 rounded-full bg-[#075e63] px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
+                      Mais popular
+                    </span>
+                  )}
+                  <h3 className="font-semibold text-slate-900">{plan.name}</h3>
+                  <p className="mt-2 flex items-baseline gap-1">
+                    <span className="text-3xl font-bold tracking-tight text-slate-900">{plan.price}</span>
+                    <span className="text-sm text-slate-500">{plan.period}</span>
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-[#075e63]">{plan.users}</p>
+                  <ul className="mt-4 space-y-2 text-sm text-slate-600">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2">
+                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    className={`mt-6 w-full ${plan.highlight ? "bg-[#075e63] text-white hover:bg-[#064f53]" : "bg-slate-100 text-slate-800 hover:bg-slate-200"}`}
+                    onClick={() => onEnter()}
+                  >
+                    Começar 10 dias grátis <ArrowRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </article>
+              ))}
+            </div>
+            <p className="mt-4 text-xs text-slate-400">
+              Valores de referência do mercado.gateway de pagamento à escolha da clínica (Stripe,
+              Mercado Pago, Asaas ou Pagar.me) para cobrança da assinatura.
+            </p>
+          </div>
+        </section>
+
         {/* Segurança / LGPD */}
         <section id="seguranca" className="bg-gradient-to-br from-[#075e63] to-[#064f53] py-14 text-white">
           <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-4 sm:px-6 lg:grid-cols-2">

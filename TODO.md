@@ -1,5 +1,20 @@
 # TODO — Site de estratégia do novo sistema clínico
 
+## Incremento — Provisionamento de Tenant (pós-pagamento) [CÓDIGO CONCLUÍDO]
+- [x] Migração `0011_tenant_provisioning.sql` (aplicada via `scripts/pg-split-run.mjs`, statement a statement — o pooler do Supabase falha em multi-statement):
+  - `organizations` + colunas: `logo_url`, `slug` (unique parcial), `status` (trial/active/suspended/canceled + trigger que sincroniza `is_active`), `gateway_customer_id`, `gateway_subscription_id`, `onboarding_completed_at`, `plan_key`, `payment_provider` (backfill: orgs existentes → 'active').
+  - `saas_plans`: catálogo (Essencial R$97 / Profissional R$197 / Clínica R$347 — baseados na faixa de mercado de R$89–499).
+  - `organization_payment_providers`: multi-gateway POR tenant (cada estabelecimento escolhe seu provedor; secrets ficam no .env, nunca no banco).
+  - `account_invitations`: tokens de ativação (hash SHA-256, uso único, 72h) com RLS por tenant.
+  - REUTILIZADO: `payment_webhook_events` (0009, dedupe por provider+event_id), `organization_members` (0006), `audit_log`, RLS `current_ollclin_organization_id()` (0005).
+- [x] Webhook: `POST /api/payments/webhooks/:provider` estendido — eventos com `plan_key`+`buyer_email` disparam `provisionTenant()` (captured/authorized → ativa/cria org + owner + convite; failed/cancelled/refunded → suspende sem apagar dados). Assinatura HMAC obrigatória; idempotência por event_id.
+- [x] `server/lib/provisioning.ts` + `provisioning.model.ts`: provisionamento transacional de tenant, convite owner_activation (72h), auditoria TENANT_PROVISIONED.
+- [x] `server/lib/email.ts`: interface `EmailService` + impl. Supabase Auth (inviteUserByEmail/generateLink). Nenhuma senha por e-mail.
+- [x] Onboarding: tRPC `onboarding` (validateToken/activateWithPassword/acceptInvite, rate limit em memória) + telas públicas `/primeiro-acesso` e `/aceitar-convite` (tela cheia, padrão de /entrar).
+- [x] Equipe: `EquipeView.tsx` em `/equipe` (menu ownerOnly) + router `equipe` (list/invite/resend via novo token/revoke/updateRole/disable/enable). Regras: admin não altera owner; último owner ativo protegido; org_id sempre da sessão; auditoria completa.
+- [x] Landing: seção "Planos" abaixo das funcionalidades com os 3 planos e CTA para o trial de 10 dias.
+- [ ] Pendências: definir gateway real (Stripe/MP/Asaas/Pagar.me) e implementar o adapter de assinatura; migrar `drizzle/schema.ts` de `mysqlTable` → `pgTable` (divergência documentada); provedor de e-mail dedicado se o nativo do Supabase não atender.
+
 ## Incremento 2 — Despesas + Locais/Salas + Campos Obrigatórios [CONCLUÍDO]
 - [x] Migração `0002_despesas_locais_campos.sql` aplicada no Supabase: `expense_categories` (hierárquica, Fixas/Variáveis), `expenses`, `expense_history`, `org_settings` (campos obrigatórios + inatividade + funcionalidades), colunas extras em `locations` (organization_id, telefone, e-mail).
 - [x] Financeiro > Despesas: Model (`expense.model.ts`) + Controller (`expense.controller.ts`) com categorias hierárquicas (REQ-08-016..026), favorecido, parcelas condicionais, recorrência, resumo pago/a pagar/atrasado, cancelamento com motivo obrigatório e histórico por despesa (Cap. 15.2).
