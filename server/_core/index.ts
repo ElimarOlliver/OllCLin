@@ -8,7 +8,6 @@ import { registerOAuthRoutes } from "./oauth";
 import { publicPlatformScript } from "./publicConfig";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
-import { serveStatic, setupVite } from "./vite";
 import { registerGoogleCalendarRoutes } from "../routes/google-calendar";
 import { registerPaymentRoutes } from "../routes/payments";
 import { checkSupabaseConnection } from "../lib/supabase-server";
@@ -54,6 +53,7 @@ export async function createApp(): Promise<Express> {
   );
   // development mode uses Vite, production mode uses static files
   if (!process.env.VERCEL) {
+    const { serveStatic, setupVite } = await import("./vite");
     const server = createServer(app);
     if (process.env.NODE_ENV !== "production") {
       await setupVite(app, server);
