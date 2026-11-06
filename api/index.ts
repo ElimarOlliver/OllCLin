@@ -1,10 +1,20 @@
-import type { Request, Response } from "express";
-import { createApp } from "../server/_core/index";
+import type { Express, Request, Response } from "express";
 
-let appPromise: ReturnType<typeof createApp> | undefined;
+let appPromise: Promise<Express> | undefined;
+
+async function loadApp() {
+  const { createApp } = await import("../server/_core/index");
+  return createApp();
+}
 
 export default async function handler(req: Request, res: Response) {
-  appPromise ??= createApp();
-  const app = await appPromise;
-  return app(req, res);
+  try {
+    appPromise ??= loadApp();
+    const app = await appPromise;
+    return app(req, res);
+  } catch (error) {
+    appPromise = undefined;
+    console.error("[Vercel] Falha ao inicializar a API OllCLin", error);
+    return res.status(500).json({ error: "Falha ao inicializar a API" });
+  }
 }
