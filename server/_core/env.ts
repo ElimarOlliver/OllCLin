@@ -10,8 +10,12 @@ export const ENV = {
   get forgeApiUrl() { return process.env.MANUS_API_URL ?? ""; },
   get forgeApiKey() { return process.env.MANUS_API_KEY ?? ""; },
   // Supabase configuration
-  get supabaseUrl() { return process.env.SUPABASE_URL ?? ""; },
-  get supabaseAnonKey() { return process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? ""; },
-  get supabaseServiceKey() { return process.env.SUPABASE_SECRET_KEY ?? ""; },
-  get supabaseJwksUrl() { return process.env.SUPABASE_JWKS_URL ?? ""; },
+  get supabaseUrl() { return process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""; },
+  get supabaseAnonKey() {
+    return process.env.SUPABASE_PUBLISHABLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+  },
+  get supabaseServiceKey() { return process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? ""; },
+  get supabaseJwksUrl() {
+    return process.env.SUPABASE_JWKS_URL ?? (ENV.supabaseUrl ? `${ENV.supabaseUrl}/auth/v1/.well-known/jwks.json` : "");
+  },
 };
