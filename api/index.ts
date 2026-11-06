@@ -1,16 +1,12 @@
 import type { Express, Request, Response } from "express";
+import { createApp } from "../server/_core/index.ts";
 
-let appPromise: Promise<Express> | undefined;
-
-async function loadApp() {
-  const { createApp } = await import("../server/_core/index.ts");
-  return createApp();
-}
+let appPromise: ReturnType<typeof createApp> | undefined;
 
 export default async function handler(req: Request, res: Response) {
   try {
-    appPromise ??= loadApp();
-    const app = await appPromise;
+    appPromise ??= createApp();
+    const app: Express = await appPromise;
     return app(req, res);
   } catch (error) {
     appPromise = undefined;
