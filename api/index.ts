@@ -3,7 +3,7 @@ import type { Express, Request, Response } from "express";
 let appPromise: Promise<Express> | undefined;
 
 async function loadApp() {
-  const { createApp } = await import("../server/_core/index");
+  const { createApp } = await import("../server/_core/index.ts");
   return createApp();
 }
 
