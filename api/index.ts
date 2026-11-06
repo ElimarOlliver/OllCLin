@@ -1,12 +1,16 @@
 import type { Express, Request, Response } from "express";
-import { createApp } from "./backend.mjs";
 
-let appPromise: ReturnType<typeof createApp> | undefined;
+let appPromise: Promise<Express> | undefined;
+
+async function loadApp() {
+  const { createApp } = await import("./backend.mjs");
+  return createApp();
+}
 
 export default async function handler(req: Request, res: Response) {
   try {
-    appPromise ??= createApp();
-    const app: Express = await appPromise;
+    appPromise ??= loadApp();
+    const app = await appPromise;
     return app(req, res);
   } catch (error) {
     appPromise = undefined;
