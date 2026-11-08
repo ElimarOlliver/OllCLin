@@ -56,25 +56,6 @@ var init_env = __esm({
   }
 });
 
-// server/_core/publicConfig.ts
-function publicPlatformConfig(env = process.env) {
-  return {
-    projectId: env.MANUS_PROJECT_ID ?? "",
-    oauthPortalUrl: env.MANUS_OAUTH_PORTAL_URL ?? "",
-    apiUrl: env.MANUS_API_URL ?? "",
-    apiBrowserKey: env.MANUS_API_BROWSER_KEY ?? ""
-  };
-}
-function publicPlatformScript(env = process.env) {
-  const json = JSON.stringify(publicPlatformConfig(env)).replaceAll("<", "\\u003c");
-  return `window.__MANUS_CONFIG__=${json};`;
-}
-var init_publicConfig = __esm({
-  "server/_core/publicConfig.ts"() {
-    "use strict";
-  }
-});
-
 // server/lib/supabase-server.ts
 import { createClient } from "@supabase/supabase-js";
 function getSupabaseAdmin() {
@@ -311,247 +292,9 @@ var init_provisioning_model = __esm({
   }
 });
 
-// vite.config.ts
-import tailwindcss from "@tailwindcss/vite";
-import react from "@vitejs/plugin-react";
-import fs from "node:fs";
-import path from "node:path";
-import { defineConfig } from "vite";
-function ensureLogDir() {
-  if (!fs.existsSync(LOG_DIR)) {
-    fs.mkdirSync(LOG_DIR, { recursive: true });
-  }
-}
-function trimLogFile(logPath, maxSize) {
-  try {
-    if (!fs.existsSync(logPath) || fs.statSync(logPath).size <= maxSize) {
-      return;
-    }
-    const lines = fs.readFileSync(logPath, "utf-8").split("\n");
-    const keptLines = [];
-    let keptBytes = 0;
-    const targetSize = TRIM_TARGET_BYTES;
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const lineBytes = Buffer.byteLength(`${lines[i]}
-`, "utf-8");
-      if (keptBytes + lineBytes > targetSize) break;
-      keptLines.unshift(lines[i]);
-      keptBytes += lineBytes;
-    }
-    fs.writeFileSync(logPath, keptLines.join("\n"), "utf-8");
-  } catch {
-  }
-}
-function writeToLogFile(source, entries) {
-  if (entries.length === 0) return;
-  ensureLogDir();
-  const logPath = path.join(LOG_DIR, `${source}.log`);
-  const lines = entries.map((entry) => {
-    const ts = (/* @__PURE__ */ new Date()).toISOString();
-    return `[${ts}] ${JSON.stringify(entry)}`;
-  });
-  fs.appendFileSync(logPath, `${lines.join("\n")}
-`, "utf-8");
-  trimLogFile(logPath, MAX_LOG_SIZE_BYTES);
-}
-function vitePluginManusDebugCollector() {
-  return {
-    name: "manus-debug-collector",
-    transformIndexHtml(html) {
-      if (process.env.NODE_ENV === "production") {
-        return html;
-      }
-      return {
-        html,
-        tags: [
-          {
-            tag: "script",
-            attrs: {
-              src: "/__manus__/debug-collector.js"
-            },
-            injectTo: "head"
-          }
-        ]
-      };
-    },
-    configureServer(server) {
-      server.middlewares.use("/__manus__/logs", (req, res, next) => {
-        if (req.method !== "POST") {
-          return next();
-        }
-        const handlePayload = (payload) => {
-          if (payload.consoleLogs?.length > 0) {
-            writeToLogFile("browserConsole", payload.consoleLogs);
-          }
-          if (payload.networkRequests?.length > 0) {
-            writeToLogFile("networkRequests", payload.networkRequests);
-          }
-          if (payload.sessionEvents?.length > 0) {
-            writeToLogFile("sessionReplay", payload.sessionEvents);
-          }
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ success: true }));
-        };
-        const reqBody = req.body;
-        if (reqBody && typeof reqBody === "object") {
-          try {
-            handlePayload(reqBody);
-          } catch (e) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ success: false, error: String(e) }));
-          }
-          return;
-        }
-        let body = "";
-        req.on("data", (chunk) => {
-          body += chunk.toString();
-        });
-        req.on("end", () => {
-          try {
-            const payload = JSON.parse(body);
-            handlePayload(payload);
-          } catch (e) {
-            res.writeHead(400, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ success: false, error: String(e) }));
-          }
-        });
-      });
-    }
-  };
-}
-function vitePluginPublicPlatformConfig() {
-  return {
-    name: "manus-public-platform-config",
-    configureServer(server) {
-      server.middlewares.use("/api/platform/config.js", (_req, res) => {
-        res.setHeader("Content-Type", "application/javascript");
-        res.setHeader("Cache-Control", "no-store");
-        res.end(publicPlatformScript());
-      });
-    },
-    generateBundle() {
-      this.emitFile({ type: "asset", fileName: "api/platform/config.js", source: publicPlatformScript() });
-    }
-  };
-}
-var PROJECT_ROOT, LOG_DIR, MAX_LOG_SIZE_BYTES, TRIM_TARGET_BYTES, plugins, vite_config_default;
-var init_vite_config = __esm({
-  "vite.config.ts"() {
-    "use strict";
-    init_publicConfig();
-    PROJECT_ROOT = import.meta.dirname;
-    LOG_DIR = path.join(PROJECT_ROOT, ".manus-logs");
-    MAX_LOG_SIZE_BYTES = 1 * 1024 * 1024;
-    TRIM_TARGET_BYTES = Math.floor(MAX_LOG_SIZE_BYTES * 0.6);
-    plugins = [vitePluginPublicPlatformConfig(), react(), tailwindcss(), vitePluginManusDebugCollector()];
-    vite_config_default = defineConfig({
-      plugins,
-      resolve: {
-        alias: {
-          "@": path.resolve(import.meta.dirname, "client", "src"),
-          "@shared": path.resolve(import.meta.dirname, "shared"),
-          "@assets": path.resolve(import.meta.dirname, "attached_assets")
-        }
-      },
-      envDir: path.resolve(import.meta.dirname),
-      root: path.resolve(import.meta.dirname, "client"),
-      publicDir: path.resolve(import.meta.dirname, "client", "public"),
-      build: {
-        outDir: path.resolve(import.meta.dirname, "dist/public"),
-        emptyOutDir: true
-      },
-      server: {
-        host: true,
-        allowedHosts: [
-          ".manuspre.computer",
-          ".manus.computer",
-          ".manus-asia.computer",
-          ".manuscomputer.ai",
-          ".manusvm.computer",
-          "localhost",
-          "127.0.0.1"
-        ],
-        fs: {
-          strict: true,
-          deny: ["**/.*"]
-        }
-      }
-    });
-  }
-});
-
-// server/_core/vite.ts
-var vite_exports = {};
-__export(vite_exports, {
-  serveStatic: () => serveStatic,
-  setupVite: () => setupVite
-});
-import express from "express";
-import fs2 from "fs";
-import { nanoid } from "nanoid";
-import path2 from "path";
-import { createServer as createViteServer } from "vite";
-async function setupVite(app, server) {
-  const serverOptions = {
-    middlewareMode: true,
-    hmr: { server },
-    allowedHosts: true
-  };
-  const vite = await createViteServer({
-    ...vite_config_default,
-    configFile: false,
-    server: serverOptions,
-    appType: "custom"
-  });
-  app.use(vite.middlewares);
-  app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
-    try {
-      const clientTemplate = path2.resolve(
-        import.meta.dirname,
-        "../..",
-        "client",
-        "index.html"
-      );
-      let template = await fs2.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`
-      );
-      const page = await vite.transformIndexHtml(url, template);
-      res.status(200).set({ "Content-Type": "text/html" }).end(page);
-    } catch (e) {
-      vite.ssrFixStacktrace(e);
-      next(e);
-    }
-  });
-}
-function serveStatic(app) {
-  const distPath = process.env.NODE_ENV === "development" ? path2.resolve(import.meta.dirname, "../..", "dist", "public") : path2.resolve(import.meta.dirname, "public");
-  if (!fs2.existsSync(distPath)) {
-    console.error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
-    );
-  }
-  app.use(express.static(distPath));
-  app.get("/404", (_req, res) => {
-    res.status(404).sendFile(path2.resolve(distPath, "index.html"));
-  });
-  app.use("*", (_req, res) => {
-    res.sendFile(path2.resolve(distPath, "index.html"));
-  });
-}
-var init_vite = __esm({
-  "server/_core/vite.ts"() {
-    "use strict";
-    init_vite_config();
-  }
-});
-
 // server/_core/index.ts
 import "dotenv/config";
-import express2 from "express";
-import { createServer } from "http";
+import express from "express";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
@@ -1350,8 +1093,19 @@ function registerOAuthRoutes(app) {
   });
 }
 
-// server/_core/index.ts
-init_publicConfig();
+// server/_core/publicConfig.ts
+function publicPlatformConfig(env = process.env) {
+  return {
+    projectId: env.MANUS_PROJECT_ID ?? "",
+    oauthPortalUrl: env.MANUS_OAUTH_PORTAL_URL ?? "",
+    apiUrl: env.MANUS_API_URL ?? "",
+    apiBrowserKey: env.MANUS_API_BROWSER_KEY ?? ""
+  };
+}
+function publicPlatformScript(env = process.env) {
+  const json = JSON.stringify(publicPlatformConfig(env)).replaceAll("<", "\\u003c");
+  return `window.__MANUS_CONFIG__=${json};`;
+}
 
 // server/_core/systemRouter.ts
 import { z } from "zod";
@@ -6614,10 +6368,10 @@ async function storeImportFile(input) {
   const supabase = getSupabaseAdmin();
   const bucketName = "patient_imports";
   await supabase.storage.createBucket(bucketName);
-  const path3 = `imports/${input.organizationId}/${input.userId}/${input.fileName}`;
-  const { error } = await supabase.storage.from(bucketName).upload(path3, input.content, { upsert: true });
+  const path = `imports/${input.organizationId}/${input.userId}/${input.fileName}`;
+  const { error } = await supabase.storage.from(bucketName).upload(path, input.content, { upsert: true });
   if (error) throw new Error(`Falha ao armazenar arquivo de importa\xE7\xE3o: ${error.message}`);
-  return path3;
+  return path;
 }
 async function createImportBatch(input) {
   const preview = parseImportContent(input);
@@ -8764,9 +8518,9 @@ function startGoogleSyncWorker(intervalMs = 15e3) {
 
 // server/_core/index.ts
 async function createApp() {
-  const app = express2();
-  app.use(express2.json({ limit: "50mb" }));
-  app.use(express2.urlencoded({ limit: "50mb", extended: true }));
+  const app = express();
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ limit: "50mb", extended: true }));
   app.get("/api/health", (_req, res) => res.json({ status: "ok" }));
   app.get("/api/health/db", async (_req, res) => {
     const result = await checkSupabaseConnection();
@@ -8794,33 +8548,7 @@ async function createApp() {
       createContext
     })
   );
-  if (!process.env.VERCEL) {
-    const { serveStatic: serveStatic2, setupVite: setupVite2 } = await Promise.resolve().then(() => (init_vite(), vite_exports));
-    const server = createServer(app);
-    if (process.env.NODE_ENV !== "production") {
-      await setupVite2(app, server);
-    } else {
-      serveStatic2(app);
-    }
-  }
   return app;
-}
-async function startServer() {
-  const app = await createApp();
-  const server = createServer(app);
-  const port = Number(process.env.PORT || "3000");
-  if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("Invalid PORT");
-  server.on("error", (error) => {
-    console.error("Server failed:", error.message);
-    process.exit(1);
-  });
-  server.listen(port, "0.0.0.0", () => console.log(`Server listening on port ${port}`));
-}
-if (!process.env.VERCEL) {
-  startServer().catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
 }
 export {
   createApp
