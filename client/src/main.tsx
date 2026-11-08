@@ -18,10 +18,12 @@ const redirectToLoginIfUnauthorized = (error: unknown) => {
 
   if (!isUnauthorized) return;
 
-  // Só redireciona se o OAuth do Manus estiver configurado.
-  if (!window.__MANUS_CONFIG__?.oauthPortalUrl) return;
+  if (window.location.pathname !== "/entrar") {
+    window.location.replace("/entrar");
+    return;
+  }
 
-  startLogin();
+  if (window.__MANUS_CONFIG__?.oauthPortalUrl) startLogin();
 };
 
 queryClient.getQueryCache().subscribe(event => {
@@ -46,7 +48,12 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       async headers() {
-        // Preview auto-login fallback: when the browser blocks iframe cookies
+        // O login principal usa Supabase Auth. Ele deve ter prioridade sobre
+        // um cookie Manus antigo que possa ter ficado no sessionStorage.
+        const supabaseHeaders = await getSupabaseAuthHeaders();
+        if (supabaseHeaders.Authorization) return supabaseHeaders;
+
+        // Preview auto-login fallback: quando o navegador bloqueia iframe cookies
         // (Safari ITP / private browsing / WebView), the runtime mirrors the
         // session into sessionStorage so we can forward it as a Bearer token.
         // The regular OAuth cookie flow keeps working and takes priority server-side.
@@ -63,8 +70,7 @@ const trpcClient = trpc.createClient({
         } catch {
           // sessionStorage unavailable
         }
-        // Sessão do Supabase Auth (email/senha ou magic link).
-        return getSupabaseAuthHeaders();
+        return {};
       },
       fetch(input, init) {
         return globalThis.fetch(input, {
