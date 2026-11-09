@@ -10,7 +10,7 @@
  * - Detecção de conflitos de horário
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -60,6 +60,12 @@ import {
   formatGoogleEventTime,
   type GoogleCalendarEvent,
 } from "@/lib/googleCalendar";
+import {
+  formatDateTimeBR,
+  parseLocalDateTime,
+  toDateInputValue,
+  toTimeInputValue,
+} from "@/lib/date";
 
 // Tipos
 type AppointmentStatus =
@@ -102,28 +108,44 @@ type AppointmentForm = {
   patientId: string;
   professionalId: string;
   procedureId: string;
-  startsAt: string;
-  endsAt: string;
+  /** yyyy-MM-dd (valor do <input type="date">). */
+  date: string;
+  /** HH:mm (valor do <input type="time">). */
+  time: string;
+  /** Duração em minutos escolhida na lista predefinida. */
+  durationMinutes: string;
   status: AppointmentStatus;
   notes: string;
 };
+
+/**
+ * Durações de consulta predefinidas. O fim é sempre calculado a partir do
+ * início + duração, evitando que o usuário erre o dia final do agendamento.
+ */
+const DURATION_PRESETS = [
+  { value: "50", label: "50 minutos" },
+  { value: "60", label: "1 hora" },
+  { value: "90", label: "1 hora e 30 minutos" },
+  { value: "120", label: "2 horas" },
+] as const;
+
+const DEFAULT_DURATION = "50";
+
+/** Janela visível da grade da agenda (07:00–21:00, 1px por minuto). */
+const AGENDA_START_HOUR = 7;
+const AGENDA_END_HOUR = 21;
+const AGENDA_GRID_MINUTES = (AGENDA_END_HOUR - AGENDA_START_HOUR) * 60;
 
 const emptyAppointmentForm: AppointmentForm = {
   patientId: "",
   professionalId: "",
   procedureId: "",
-  startsAt: "",
-  endsAt: "",
+  date: "",
+  time: "08:00",
+  durationMinutes: DEFAULT_DURATION,
   status: "solicitado",
   notes: "",
 };
-
-function toDateTimeInput(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
-}
 
 // Status badge configuration
 type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;
@@ -319,7 +341,10 @@ export default function AgendaView() {
   // Abrir diálogo de novo agendamento
   function handleNewAppointment() {
     setEditingAppointment(null);
-    setAppointmentForm(emptyAppointmentForm);
+    setAppointmentForm({
+      ...emptyAppointmentForm,
+      date: toDateInputValue(selectedDate),
+    });
     setAppointmentErrors({});
     setOpenDialog(true);
   }
@@ -327,12 +352,19 @@ export default function AgendaView() {
   // Editar agendamento existente
   function handleEditAppointment(appt: Appointment) {
     setEditingAppointment(appt);
+    const starts = new Date(appt.startsAt);
+    const ends = new Date(appt.endsAt);
+    const duration = Math.max(
+      1,
+      Math.round((ends.getTime() - starts.getTime()) / 60_000),
+    );
     setAppointmentForm({
       patientId: String(appt.patientId),
       professionalId: String(appt.professionalId),
       procedureId: String(appt.procedureId),
-      startsAt: toDateTimeInput(appt.startsAt),
-      endsAt: toDateTimeInput(appt.endsAt),
+      date: toDateInputValue(appt.startsAt),
+      time: toTimeInputValue(appt.startsAt),
+      durationMinutes: String(duration),
       status: appt.status,
       notes: appt.notes ?? "",
     });
@@ -414,26 +446,63 @@ export default function AgendaView() {
     if (!appointmentForm.patientId) errors.patientId = "Selecione um paciente.";
     if (!appointmentForm.professionalId) errors.professionalId = "Selecione um profissional.";
     if (!appointmentForm.procedureId) errors.procedureId = "Selecione um procedimento.";
-    if (!appointmentForm.startsAt) errors.startsAt = "Informe o início.";
-    if (!appointmentForm.endsAt) errors.endsAt = "Informe o fim.";
-    if (appointmentForm.startsAt && appointmentForm.endsAt && appointmentForm.endsAt <= appointmentForm.startsAt) {
-      errors.endsAt = "O fim deve ser depois do início.";
+    if (!appointmentForm.date) errors.startsAt = "Informe a data do atendimento.";
+    if (!appointmentForm.time) errors.startsAt = "Informe a hora de início.";
+    if (!appointmentForm.date || !appointmentForm.time) {
+      errors.startsAt = "Informe a data e a hora de início.";
     }
+    const duration = Number(appointmentForm.durationMinutes);
+    if (!Number.isFinite(duration) || duration <= 0) {
+      errors.durationMinutes = "Selecione a duração do atendimento.";
+    }
+
+    const startsAt = parseLocalDateTime(appointmentForm.date, appointmentForm.time);
+    if (appointmentForm.date && appointmentForm.time && !startsAt) {
+      errors.startsAt = "Data ou hora inválida.";
+    }
+
     setAppointmentErrors(errors);
-    if (Object.keys(errors).length > 0) {
+    if (Object.keys(errors).length > 0 || !startsAt) {
       toast.error("Revise os campos obrigatórios do agendamento");
       return;
     }
+
     await handleSaveAppointment({
       patientId: Number(appointmentForm.patientId),
       professionalId: Number(appointmentForm.professionalId),
       procedureId: Number(appointmentForm.procedureId),
-      startsAt: new Date(appointmentForm.startsAt),
-      endsAt: new Date(appointmentForm.endsAt),
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + duration * 60_000),
       status: appointmentForm.status,
       notes: appointmentForm.notes.trim() || undefined,
     });
   }
+
+  // Duração escolhida + término calculado (início + duração), sempre no mesmo dia.
+  const durationMinutes = Number(appointmentForm.durationMinutes) || 0;
+  const appointmentStart = parseLocalDateTime(appointmentForm.date, appointmentForm.time);
+  const appointmentEnd =
+    appointmentStart && durationMinutes > 0
+      ? new Date(appointmentStart.getTime() + durationMinutes * 60_000)
+      : null;
+
+  // Presets fixos; se o agendamento editado tiver duração fora deles, ela entra
+  // como opção extra para não perder o valor original.
+  const durationOptions = useMemo(() => {
+    const options: Array<{ value: string; label: string }> = DURATION_PRESETS.map(
+      (preset) => ({ value: preset.value, label: preset.label }),
+    );
+    if (
+      durationMinutes > 0 &&
+      !DURATION_PRESETS.some((preset) => Number(preset.value) === durationMinutes)
+    ) {
+      options.push({
+        value: String(durationMinutes),
+        label: `${durationMinutes} minutos`,
+      });
+    }
+    return options;
+  }, [durationMinutes]);
 
   // Sincronizar o dia com o Google Calendar (OllCLin → Google)
   async function handleSyncGoogleCalendar() {
@@ -755,12 +824,15 @@ export default function AgendaView() {
             {/* Calendário */}
             <div className="grid grid-cols-12 gap-4">
               <div className="col-span-3">
-                {/* Lista de horários (08:00 - 18:00) */}
-                <div className="space-y-1">
-                  {[8, 9, 10, 11, 12, 13, 14, 15, 16, 17].map((hour) => (
+                {/* Lista de horários (07:00 - 21:00) */}
+                <div>
+                  {Array.from(
+                    { length: AGENDA_END_HOUR - AGENDA_START_HOUR },
+                    (_, index) => AGENDA_START_HOUR + index,
+                  ).map((hour) => (
                     <div
                       key={hour}
-                      className="text-xs text-slate-500 text-right w-full h-12 flex items-end pr-2"
+                      className="text-xs text-slate-500 text-right w-full h-[60px] flex items-end pr-2"
                     >
                       {hour.toString().padStart(2, "0")}:00
                     </div>
@@ -769,23 +841,29 @@ export default function AgendaView() {
               </div>
 
               <div className="col-span-9">
-                {/* Grade de agendamentos */}
+                {/* Grade de agendamentos (1px por minuto) */}
                 <div
-                  className="relative h-[600px] border-b border-slate-200 overflow-hidden"
-                  style={{ position: "relative" }}
+                  className="relative border-b border-slate-200 overflow-hidden"
+                  style={{ height: `${AGENDA_GRID_MINUTES}px` }}
                 >
                   {dayAppointments.map((appt) => {
                     const startTime = parseISO(appt.startsAt);
                     const endTime = parseISO(appt.endsAt);
-                    const startHour = startTime.getHours();
-                    const startMin = startTime.getMinutes();
-                    const endHour = endTime.getHours();
-                    const endMin = endTime.getMinutes();
+                    const startMin = startTime.getHours() * 60 + startTime.getMinutes();
+                    const endMin = endTime.getHours() * 60 + endTime.getMinutes();
 
-                    const startTop = (startHour - 8) * 60 + startMin;
-                    const endTop = (endHour - 8) * 60 + endMin;
-                    const height = Math.max(endTop - startTop, 30);
-                    const top = startTop;
+                    const rawTop = startMin - AGENDA_START_HOUR * 60;
+                    const top = Math.min(
+                      Math.max(rawTop, 0),
+                      AGENDA_GRID_MINUTES - 30,
+                    );
+                    // Usa a duração real (funciona mesmo quando o término passa
+                    // da meia-noite) e evita blocos maiores que a grade.
+                    const rawDuration = Math.max(endMin - startMin, 30);
+                    const height = Math.max(
+                      Math.min(rawDuration, AGENDA_GRID_MINUTES - top),
+                      30,
+                    );
 
                     const status = STATUS_CONFIG[appt.status];
 
@@ -1062,7 +1140,25 @@ export default function AgendaView() {
               </label>
               <Select
                 value={appointmentForm.procedureId}
-                onValueChange={(value) => setAppointmentForm((current) => ({ ...current, procedureId: value }))}
+                onValueChange={(value) =>
+                  setAppointmentForm((current) => {
+                    const procedure = proceduresData.find(
+                      (p) => String(p.id) === value,
+                    );
+                    const procedureDuration = procedure?.durationMinutes ?? 0;
+                    const matchesPreset = DURATION_PRESETS.some(
+                      (preset) => Number(preset.value) === procedureDuration,
+                    );
+                    return {
+                      ...current,
+                      procedureId: value,
+                      // Se o procedimento tem duração predefinida, já ajusta o campo.
+                      durationMinutes: matchesPreset
+                        ? String(procedureDuration)
+                        : current.durationMinutes,
+                    };
+                  })
+                }
               >
                 <SelectTrigger id="appointmentProcedure" aria-invalid={Boolean(appointmentErrors.procedureId)}>
                     <SelectValue placeholder="Selecionar procedimento" />
@@ -1080,20 +1176,77 @@ export default function AgendaView() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label htmlFor="appointmentStartsAt" className="text-sm font-medium text-slate-700">
-                  Data e Hora Início
+                <label htmlFor="appointmentDate" className="text-sm font-medium text-slate-700">
+                  Data
                   <span className="text-red-600"> *</span>
                 </label>
-                <Input id="appointmentStartsAt" type="datetime-local" value={appointmentForm.startsAt} aria-invalid={Boolean(appointmentErrors.startsAt)} onChange={(event) => setAppointmentForm((current) => ({ ...current, startsAt: event.target.value }))} />
+                <Input
+                  id="appointmentDate"
+                  type="date"
+                  lang="pt-BR"
+                  value={appointmentForm.date}
+                  aria-invalid={Boolean(appointmentErrors.startsAt)}
+                  onChange={(event) =>
+                    setAppointmentForm((current) => ({ ...current, date: event.target.value }))
+                  }
+                />
                 {appointmentErrors.startsAt && <p className="text-xs text-red-600">{appointmentErrors.startsAt}</p>}
               </div>
               <div className="space-y-2">
-                <label htmlFor="appointmentEndsAt" className="text-sm font-medium text-slate-700">
-                  Data e Hora Fim
+                <label htmlFor="appointmentTime" className="text-sm font-medium text-slate-700">
+                  Hora de início
                   <span className="text-red-600"> *</span>
                 </label>
-                <Input id="appointmentEndsAt" type="datetime-local" value={appointmentForm.endsAt} aria-invalid={Boolean(appointmentErrors.endsAt)} onChange={(event) => setAppointmentForm((current) => ({ ...current, endsAt: event.target.value }))} />
-                {appointmentErrors.endsAt && <p className="text-xs text-red-600">{appointmentErrors.endsAt}</p>}
+                <Input
+                  id="appointmentTime"
+                  type="time"
+                  lang="pt-BR"
+                  value={appointmentForm.time}
+                  aria-invalid={Boolean(appointmentErrors.startsAt)}
+                  onChange={(event) =>
+                    setAppointmentForm((current) => ({ ...current, time: event.target.value }))
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <label htmlFor="appointmentDuration" className="text-sm font-medium text-slate-700">
+                  Duração
+                  <span className="text-red-600"> *</span>
+                </label>
+                <Select
+                  value={appointmentForm.durationMinutes}
+                  onValueChange={(value) =>
+                    setAppointmentForm((current) => ({ ...current, durationMinutes: value }))
+                  }
+                >
+                  <SelectTrigger id="appointmentDuration" aria-invalid={Boolean(appointmentErrors.durationMinutes)}>
+                    <SelectValue placeholder="Selecione a duração" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {durationOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {appointmentErrors.durationMinutes && (
+                  <p className="text-xs text-red-600">{appointmentErrors.durationMinutes}</p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <span className="text-sm font-medium text-slate-700">Término (calculado)</span>
+                <div
+                  className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-foreground"
+                  aria-live="polite"
+                >
+                  {appointmentEnd
+                    ? formatDateTimeBR(appointmentEnd)
+                    : "Selecione data, hora e duração"}
+                </div>
               </div>
             </div>
 
