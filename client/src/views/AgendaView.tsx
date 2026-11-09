@@ -677,16 +677,16 @@ export default function AgendaView() {
               Profissional
             </h3>
             <Select
-              value={selectedProfessional?.toString() ?? ""}
+              value={selectedProfessional?.toString() ?? "all"}
               onValueChange={(val) =>
-                setSelectedProfessional(val ? Number(val) : null)
+                setSelectedProfessional(val === "all" ? null : Number(val))
               }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Todos os profissionais" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
+                <SelectItem value="all">Todos</SelectItem>
                 {professionalsData.map((p) => (
                   <SelectItem key={p.id} value={p.id.toString()}>
                     {p.fullName} ({p.specialty})
