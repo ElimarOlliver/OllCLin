@@ -4,8 +4,8 @@
   "type": "module",
   "license": "MIT",
   "scripts": {
-    "dev": "tsx watch server/_core/index.ts",
-    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "dev": "tsx watch server/_core/dev-server.ts",
+    "build": "vite build && esbuild server/_core/dev-server.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
@@ -14,7 +14,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx scripts/seed.ts",
     "dev:static": "vite --host 0.0.0.0 --port ${PORT:-3000} --strictPort",
-    "build:static": "vite build"
+    "build:static": "vite build",
+    "build:vercel": "esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outfile=api/backend.mjs && vite build"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
@@ -46,6 +47,8 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@supabase/server": "^1.9.2",
+    "@supabase/supabase-js": "^2.45.0",
     "@tanstack/react-query": "^5.90.2",
     "@trpc/client": "^11.6.0",
     "@trpc/react-query": "^11.6.0",
@@ -55,6 +58,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "cookie": "^1.0.2",
+    "d3-dsv": "^3.0.2",
     "date-fns": "^4.1.0",
     "dotenv": "^17.2.2",
     "drizzle-orm": "^0.44.5",
@@ -76,8 +80,6 @@
     "sonner": "^2.0.7",
     "streamdown": "^1.4.0",
     "superjson": "^1.13.3",
-    "@supabase/supabase-js": "^2.45.0",
-    "@supabase/server": "^1.9.2",
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "vaul": "^1.1.2",
@@ -85,8 +87,10 @@
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@rollup/rollup-linux-x64-gnu": "4.52.4",
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "^4.1.3",
+    "@types/d3-dsv": "^3.0.7",
     "@types/express": "4.17.21",
     "@types/google.maps": "^3.58.1",
     "@types/node": "^24.7.0",
@@ -96,6 +100,7 @@
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.0",
+    "lightningcss-linux-x64-gnu": "1.30.1",
     "postcss": "^8.4.47",
     "prettier": "^3.6.2",
     "tailwindcss": "^4.1.14",

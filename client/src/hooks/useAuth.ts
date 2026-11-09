@@ -6,9 +6,9 @@
  * estado da query `auth.me`.
  */
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { signOutSupabase } from "@/lib/supabase";
+import { signOutSupabase, supabase } from "@/lib/supabase";
 
 export function useAuth() {
   const utils = trpc.useUtils();
@@ -16,6 +16,17 @@ export function useAuth() {
     staleTime: 5 * 60 * 1000, // 5 minutos
     retry: false,
   });
+
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
+        utils.auth.me.setData(undefined, null);
+        void utils.auth.me.invalidate();
+      }
+    });
+
+    return () => data.subscription.unsubscribe();
+  }, [utils]);
 
   const logout = useCallback(async () => {
     try {
@@ -28,8 +39,9 @@ export function useAuth() {
     } catch {
       // Sem sessão ativa no Supabase: segue para a tela inicial.
     }
+    utils.auth.me.setData(undefined, null);
     await utils.auth.me.invalidate();
-    window.location.href = "/";
+    window.location.replace("/entrar");
   }, [utils]);
 
   return {

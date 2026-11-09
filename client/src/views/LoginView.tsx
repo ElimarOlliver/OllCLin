@@ -8,6 +8,7 @@
  */
 
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import { signInWithEmailPassword } from "@/lib/supabase";
 
 export default function LoginView() {
   const utils = trpc.useUtils();
+  const [, setLocation] = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export default function LoginView() {
       // A sessão (JWT) agora existe; invalida o cache do auth.me para buscar o
       // usuário local vinculado à organização.
       await utils.auth.me.invalidate();
+      setLocation("/");
     } catch (error: any) {
       setErrorMessage(error?.message ?? "Falha ao autenticar.");
     } finally {

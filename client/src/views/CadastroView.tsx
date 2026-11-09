@@ -6,6 +6,7 @@
  */
 
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +15,7 @@ import { Stethoscope, Sparkles } from "lucide-react";
 
 export default function CadastroView({ onDone }: { onDone?: () => void }) {
   const utils = trpc.useUtils();
+  const [, setLocation] = useLocation();
   const [organizationName, setOrganizationName] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -37,6 +39,7 @@ export default function CadastroView({ onDone }: { onDone?: () => void }) {
     try {
       await signupMutation.mutateAsync({ organizationName, name, email, password });
       onDone?.();
+      setLocation("/entrar");
     } catch {
       // erro tratado no onError da mutation
     } finally {
