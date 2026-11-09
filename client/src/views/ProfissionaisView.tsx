@@ -39,8 +39,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-
-const ORGANIZATION_ID = 1;
+import { useOrganizationId } from "@/hooks/useOrganizationId";
 
 type Professional = {
   id: number;
@@ -83,6 +82,7 @@ function text(value: string): string | undefined {
 }
 
 export default function ProfissionaisView() {
+  const ORGANIZATION_ID = useOrganizationId();
   const [search, setSearch] = useState("");
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [isLoading, setIsLoading] = useState(true);

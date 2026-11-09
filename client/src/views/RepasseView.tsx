@@ -51,8 +51,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-
-const ORGANIZATION_ID = 1;
+import { useOrganizationId } from "@/hooks/useOrganizationId";
 
 type EligibleRevenue = {
   id: number;
@@ -98,6 +97,7 @@ function isoDate(value: Date): string {
 }
 
 export default function RepasseView() {
+  const ORGANIZATION_ID = useOrganizationId();
   const [tab, setTab] = useState("receitas");
 
   /* ------------------------------ Filtros ------------------------------ */

@@ -198,7 +198,7 @@ export const paymentModel = {
 
   /** Registra evento de webhook (idempotente por event_id da adquirente). */
   async recordWebhookEvent(input: {
-    organizationId: number;
+    organizationId: number | null;
     providerName: string;
     eventId: string;
     payload: unknown;

@@ -25,7 +25,26 @@ const requireUser = t.middleware(async opts => {
   });
 });
 
-export const protectedProcedure = t.procedure.use(requireUser);
+const requireTenantScope = t.middleware(async (opts) => {
+  const { ctx, input, next } = opts;
+  const requested = (input as { organizationId?: unknown } | undefined)?.organizationId;
+
+  if (typeof requested === "number") {
+    const active = ctx.user?.organizationId ?? null;
+    if (active === null || requested !== active) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Acesso negado para esta organização.",
+      });
+    }
+  }
+
+  return next();
+});
+
+export const protectedProcedure = t.procedure
+  .use(requireUser)
+  .use(requireTenantScope);
 
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
@@ -154,4 +173,4 @@ const requirePermission = (permission: Permission) =>
  * A autorização roda em camada de procedure; o RLS e o serviço completam.
  */
 export const protectedWith = (permission: Permission) =>
-  t.procedure.use(requirePermission(permission));
+  t.procedure.use(requirePermission(permission)).use(requireTenantScope);

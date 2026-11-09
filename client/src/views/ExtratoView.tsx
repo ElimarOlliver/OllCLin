@@ -35,9 +35,8 @@ import {
   Download,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useOrganizationId } from "@/hooks/useOrganizationId";
 import { Button } from "@/components/ui/button";
-
-const ORGANIZATION_ID = 1;
 
 type StatementEntry = {
   id: string;
@@ -82,6 +81,7 @@ function isoDate(value: Date): string {
 }
 
 export default function ExtratoView() {
+  const ORGANIZATION_ID = useOrganizationId();
   const [from, setFrom] = useState(startOfMonth());
   const [to, setTo] = useState(isoDate(new Date()));
   const [type, setType] = useState("todos");

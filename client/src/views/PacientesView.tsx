@@ -41,10 +41,9 @@ import {
 import { User, Search, Plus, Loader2, Pencil, AlertCircle, CheckCircle2, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { useOrganizationId } from "@/hooks/useOrganizationId";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-
-const ORGANIZATION_ID = 1;
 
 type Patient = {
   id: number;
@@ -156,6 +155,7 @@ function parseGender(value: string): "M" | "F" | "O" | undefined {
 }
 
 export default function PacientesView() {
+  const ORGANIZATION_ID = useOrganizationId();
   const [search, setSearch] = useState("");
   const [openDialog, setOpenDialog] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);

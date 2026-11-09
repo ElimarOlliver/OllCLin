@@ -46,8 +46,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-
-const ORGANIZATION_ID = 1;
+import { useOrganizationId } from "@/hooks/useOrganizationId";
 
 type Receipt = {
   id: number;
@@ -90,6 +89,7 @@ const emptyForm = {
 };
 
 export default function RecibosView() {
+  const ORGANIZATION_ID = useOrganizationId();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
   const [receipts, setReceipts] = useState<Receipt[]>([]);

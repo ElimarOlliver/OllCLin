@@ -41,6 +41,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/trpc";
+import { useOrganizationId } from "@/hooks/useOrganizationId";
 import {
   Calendar as CalendarIcon,
   Plus,
@@ -176,7 +177,7 @@ export default function AgendaView() {
   const [appointmentErrors, setAppointmentErrors] = useState<Record<string, string>>({});
   const [savingAppointment, setSavingAppointment] = useState(false);
 
-  const organizationId = 1; // TODO: pegar do contexto do usuário/tenant
+  const organizationId = useOrganizationId();
   const utils = trpc.useUtils();
 
   const { data: googleStatus, refetch: refetchGoogleStatus } =
@@ -245,7 +246,7 @@ export default function AgendaView() {
 
       if (viewMode === "dia") {
         const data = await utils.agendamentos.list.fetch({
-          organizationId: 1, // TODO: pegar do contexto do usuário/tenant
+          organizationId,
           startsAtFrom: start.toISOString(),
           startsAtTo: end.toISOString(),
           limit: 100,
@@ -255,7 +256,7 @@ export default function AgendaView() {
 
       // Carregar profissionais
       const profs = await utils.profissionais.list.fetch({
-        organizationId: 1,
+        organizationId,
         isActive: true,
         limit: 50,
       });
@@ -263,7 +264,7 @@ export default function AgendaView() {
 
       // Carregar procedimentos
       const procs = await utils.procedimentos.list.fetch({
-        organizationId: 1,
+        organizationId,
         isActive: true,
         limit: 50,
       });
@@ -271,7 +272,7 @@ export default function AgendaView() {
 
       // Carregar pacientes
       const pats = await utils.pacientes.list.fetch({
-        organizationId: 1,
+        organizationId,
         isActive: true,
         limit: 100,
       });
@@ -361,7 +362,7 @@ export default function AgendaView() {
       if (editingAppointment) {
         const result = await utils.client.agendamentos.update.mutate({
           id: editingAppointment.id,
-          organizationId: 1,
+          organizationId,
           patientId: formData.patientId,
           professionalId: formData.professionalId,
           procedureId: formData.procedureId,
@@ -373,7 +374,7 @@ export default function AgendaView() {
         googleSync = result.googleSync;
       } else {
         const result = await utils.client.agendamentos.create.mutate({
-          organizationId: 1,
+          organizationId,
           patientId: formData.patientId,
           professionalId: formData.professionalId,
           procedureId: formData.procedureId,

@@ -50,8 +50,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-
-const ORGANIZATION_ID = 1;
+import { useOrganizationId } from "@/hooks/useOrganizationId";
 
 type Expense = {
   id: number;
@@ -102,6 +101,7 @@ const emptyForm = {
 };
 
 export default function DespesasView() {
+  const ORGANIZATION_ID = useOrganizationId();
   const [search, setSearch] = useState("");
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -559,6 +559,7 @@ export default function DespesasView() {
 
 /** Formas de pagamento ativas (reutiliza procedure do módulo de receitas). */
 function PaymentMethodItems() {
+  const ORGANIZATION_ID = useOrganizationId();
   const { data, isLoading } = trpc.receitas.paymentMethods.useQuery({
     organizationId: ORGANIZATION_ID,
   });

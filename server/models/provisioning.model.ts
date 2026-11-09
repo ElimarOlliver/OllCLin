@@ -343,7 +343,7 @@ export async function recordWebhookEventOnce(input: {
   const { error } = await getSupabaseAdmin()
     .from("payment_webhook_events")
     .insert({
-      organization_id: 0, // provisionamento: resolvido pelo payload
+      organization_id: null, // resolvido após o provisionamento (webhook de assinatura)
       provider_name: input.provider,
       event_id: input.eventId,
       payload: input.payload,

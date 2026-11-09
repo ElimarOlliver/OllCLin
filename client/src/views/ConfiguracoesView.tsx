@@ -39,8 +39,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-
-const ORGANIZATION_ID = 1;
+import { useOrganizationId } from "@/hooks/useOrganizationId";
 
 type Location = { id: number; name: string; address: string | null; phone: string | null; isActive: boolean };
 type Room = { id: number; name: string; capacity: number; isActive: boolean };
@@ -58,6 +57,7 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 export default function ConfiguracoesView() {
+  const ORGANIZATION_ID = useOrganizationId();
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);

@@ -107,6 +107,22 @@ export const importBatchModel = {
     return toBatch(data);
   },
 
+  /**
+   * Claim atômico: só marca "processing" se o lote ainda estiver em "preview".
+   * Evita confirmação concorrente (duas abas) duplicar a importação.
+   */
+  async claimForProcessing(id: number, organizationId: number): Promise<boolean> {
+    const { data, error } = await getSupabaseAdmin()
+      .from("import_batches")
+      .update({ status: "processing", updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("organization_id", organizationId)
+      .eq("status", "preview")
+      .select("id");
+    if (error) throw new Error(`import_batches: ${error.message}`);
+    return (data ?? []).length > 0;
+  },
+
   async findById(id: number): Promise<ImportBatchRecord | null> {
     const { data, error } = await getSupabaseAdmin()
       .from("import_batches")
@@ -115,6 +131,31 @@ export const importBatchModel = {
       .maybeSingle<Record<string, unknown>>();
     if (error || !data) return null;
     return toBatch(data);
+  },
+
+  /**
+   * Conteúdo bruto do arquivo (dado pessoal). Lido só na confirmação e apagado
+   * logo depois; nunca entra em listagens nem em logs.
+   */
+  async findContentById(id: number, organizationId: number): Promise<string | null> {
+    const { data, error } = await getSupabaseAdmin()
+      .from("import_batches")
+      .select("file_content")
+      .eq("id", id)
+      .eq("organization_id", organizationId)
+      .maybeSingle<{ file_content: string | null }>();
+    if (error || !data) return null;
+    return data.file_content ? String(data.file_content) : null;
+  },
+
+  /** Apaga o conteúdo do arquivo após a confirmação (minimização LGPD). */
+  async clearFileContent(id: number, organizationId: number): Promise<void> {
+    const { error } = await getSupabaseAdmin()
+      .from("import_batches")
+      .update({ file_content: null })
+      .eq("id", id)
+      .eq("organization_id", organizationId);
+    if (error) throw new Error(`import_batches: ${error.message}`);
   },
 
   async findByOrganization(organizationId: number, limit = 20): Promise<ImportBatchRecord[]> {

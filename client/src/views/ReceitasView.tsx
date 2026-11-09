@@ -51,8 +51,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-
-const ORGANIZATION_ID = 1;
+import { useOrganizationId } from "@/hooks/useOrganizationId";
 
 type Revenue = {
   id: number;
@@ -107,6 +106,7 @@ const emptyForm = {
 };
 
 export default function ReceitasView() {
+  const ORGANIZATION_ID = useOrganizationId();
   const [search, setSearch] = useState("");
   const [revenues, setRevenues] = useState<Revenue[]>([]);
   const [summary, setSummary] = useState({ receivedTotal: 0, toReceiveTotal: 0 });
@@ -604,6 +604,7 @@ export default function ReceitasView() {
 
 /** Opções de forma de pagamento carregadas do backend (REQ-08-036). */
 function PaymentMethodOptions() {
+  const ORGANIZATION_ID = useOrganizationId();
   const { data, isLoading } = trpc.receitas.paymentMethods.useQuery({
     organizationId: ORGANIZATION_ID,
   });
@@ -618,6 +619,7 @@ function PaymentMethodOptions() {
 }
 /** Opções de convênio carregadas do backend. */
 function HealthPlanOptions() {
+  const ORGANIZATION_ID = useOrganizationId();
   const [plans, setPlans] = useState<Array<{ id: number; operatorName: string }>>([]);
   const utils = trpc.useUtils();
   useEffect(() => {

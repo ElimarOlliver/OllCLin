@@ -192,7 +192,7 @@ export function registerPaymentRoutes(app: Express): void {
 
     // Dedupe: evento já processado?
     const inserted = await paymentModel.recordWebhookEvent({
-      organizationId: 0, // resolvido pelo provider real em produção
+      organizationId: null, // assinatura/provisionamento: tenant resolvido no fluxo
       providerName: provider,
       eventId,
       payload,

@@ -282,4 +282,24 @@ export const patientModel = {
     if (error) fail("erro ao verificar CPF", error);
     return (data ?? []).length > 0;
   },
+
+  /**
+   * Usado na importação para tornar a confirmação idempotente quando a linha
+   * não tem CPF: mesmo nome + nascimento no tenant = já importado.
+   */
+  async existsByFullNameAndBirthDate(
+    fullName: string,
+    birthDate: string,
+    organizationId: number,
+  ): Promise<boolean> {
+    const { data, error } = await getSupabaseAdmin()
+      .from("patients")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .ilike("full_name", fullName)
+      .eq("birth_date", birthDate)
+      .limit(1);
+    if (error) fail("erro ao verificar paciente por nome/nascimento", error);
+    return (data ?? []).length > 0;
+  },
 };

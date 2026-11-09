@@ -59,6 +59,8 @@ export type ImportPreview = {
 };
 
 const ALLOWED_IMPORT_TYPES = ["csv", "tsv", "txt"];
+/** Limite defensivo: importações são clínicas, não cargas em massa. */
+const MAX_IMPORT_ROWS = 5000;
 
 const CANONICAL_FIELDS = [
   "fullName",
@@ -235,6 +237,12 @@ export function parseImportContent(input: {
   const columns = parsed.length > 0 ? Object.keys(parsed[0]) : [];
   const rawRows = parsed;
 
+  if (rawRows.length > MAX_IMPORT_ROWS) {
+    throw new Error(
+      `Arquivo com ${rawRows.length} linhas excede o limite de ${MAX_IMPORT_ROWS}. Divida a importação em partes.`,
+    );
+  }
+
   const rows: ImportPatientRow[] = [];
   const errors: ImportRowError[] = [];
 
@@ -331,7 +339,7 @@ export async function confirmImportBatch(input: {
   userId: number;
 }): Promise<{ batchId: number; status: string; importedRows: number; rejectedRows: number }> {
   const batch = await importBatchModel.findById(input.batchId);
-  if (!batch) throw new Error("Falha ao buscar lote de importação");
+  if (!batch) throw new Error("Lote de importação não encontrado");
   if (batch.organizationId !== input.organizationId) {
     throw new Error("Acesso negado para este lote de importação");
   }
@@ -340,72 +348,111 @@ export async function confirmImportBatch(input: {
     return { batchId: input.batchId, status, importedRows: batch.importedRows, rejectedRows: batch.rejectedRows };
   }
 
-  const content = batch.fileContent ?? "";
-  if (!content.trim()) {
+  const content = await importBatchModel.findContentById(input.batchId, input.organizationId);
+  if (!content?.trim()) {
     throw new Error("Conteúdo do arquivo de importação não está disponível. Reenvie o arquivo.");
   }
-  const preview = parseImportContent({
-    fileName: batch.fileName,
-    fileType: batch.fileType,
-    content,
-  });
 
-  let importedRows = 0;
-  let rejectedRows = preview.errors.length;
-  for (const row of preview.rows) {
-    if (row.cpf) {
-      const exists = await patientModel.existsByCpf(row.cpf, input.organizationId);
-      if (exists) {
-        // CPF já cadastrado no tenant: não sobrescreve, apenas rejeita a linha.
-        rejectedRows += 1;
-        continue;
-      }
-    }
-    await patientModel.create({
-      organizationId: input.organizationId,
-      fullName: row.fullName,
-      socialName: row.socialName ?? undefined,
-      cpf: row.cpf ?? undefined,
-      rg: row.rg ?? undefined,
-      birthDate: row.birthDate ?? undefined,
-      gender: (row.gender as "M" | "F" | "O" | undefined) ?? undefined,
-      phone: row.phone ?? undefined,
-      email: row.email ?? undefined,
-      address: row.address ?? undefined,
-      city: row.city ?? undefined,
-      state: row.state ?? undefined,
-      zipCode: row.zipCode ?? undefined,
-      emergencyContact: row.emergencyContact ?? undefined,
-      emergencyPhone: row.emergencyPhone ?? undefined,
-      consentDataSharing: row.consentDataSharing,
-      consentMarketing: row.consentMarketing,
-      isMinor: row.isMinor,
-      guardianPatientId: row.guardianPatientId ?? undefined,
-      guardianName: row.guardianName ?? undefined,
-      guardianDocument: row.guardianDocument ?? undefined,
-      consentStatus: row.consentStatus as ImportConsentStatus,
-    });
-    importedRows += 1;
+  // Claim atômico: duas abas confirmando ao mesmo tempo não duplicam pacientes.
+  const claimed = await importBatchModel.claimForProcessing(input.batchId, input.organizationId);
+  if (!claimed) {
+    const current = await importBatchModel.findById(input.batchId);
+    return {
+      batchId: input.batchId,
+      status: current?.status ?? "processing",
+      importedRows: current?.importedRows ?? 0,
+      rejectedRows: current?.rejectedRows ?? 0,
+    };
   }
 
-  const updated = await importBatchModel.update(input.batchId, {
-    status: "confirmed",
-    imported_rows: importedRows,
-    rejected_rows: rejectedRows,
-    updated_at: new Date().toISOString(),
-  });
-  if (!updated) throw new Error("Falha ao atualizar lote de importação");
+  try {
+    const preview = parseImportContent({
+      fileName: batch.fileName,
+      fileType: batch.fileType,
+      content,
+    });
 
-  await writeAuditLog({
-    organizationId: input.organizationId,
-    userId: input.userId,
-    action: "CREATE",
-    entity: "import_batch",
-    entityId: input.batchId,
-    newValues: { status: "confirmed", importedRows, rejectedRows },
-  });
+    let importedRows = 0;
+    let rejectedRows = preview.errors.length;
+    for (const row of preview.rows) {
+      // Idempotência: CPF é a chave forte; sem CPF, nome + nascimento.
+      if (row.cpf) {
+        if (await patientModel.existsByCpf(row.cpf, input.organizationId)) {
+          rejectedRows += 1;
+          continue;
+        }
+      } else if (row.birthDate) {
+        if (
+          await patientModel.existsByFullNameAndBirthDate(
+            row.fullName,
+            row.birthDate,
+            input.organizationId,
+          )
+        ) {
+          rejectedRows += 1;
+          continue;
+        }
+      }
 
-  return { batchId: input.batchId, status: "confirmed", importedRows, rejectedRows };
+      await patientModel.create({
+        organizationId: input.organizationId,
+        fullName: row.fullName,
+        socialName: row.socialName ?? undefined,
+        cpf: row.cpf ?? undefined,
+        rg: row.rg ?? undefined,
+        birthDate: row.birthDate ?? undefined,
+        gender: (row.gender as "M" | "F" | "O" | undefined) ?? undefined,
+        phone: row.phone ?? undefined,
+        email: row.email ?? undefined,
+        address: row.address ?? undefined,
+        city: row.city ?? undefined,
+        state: row.state ?? undefined,
+        zipCode: row.zipCode ?? undefined,
+        emergencyContact: row.emergencyContact ?? undefined,
+        emergencyPhone: row.emergencyPhone ?? undefined,
+        consentDataSharing: row.consentDataSharing,
+        consentMarketing: row.consentMarketing,
+        isMinor: row.isMinor,
+        guardianPatientId: row.guardianPatientId ?? undefined,
+        guardianName: row.guardianName ?? undefined,
+        guardianDocument: row.guardianDocument ?? undefined,
+        consentStatus: row.consentStatus as ImportConsentStatus,
+      });
+      importedRows += 1;
+    }
+
+    const updated = await importBatchModel.update(input.batchId, {
+      status: "confirmed",
+      imported_rows: importedRows,
+      rejected_rows: rejectedRows,
+      updated_at: new Date().toISOString(),
+    });
+    if (!updated) throw new Error("Falha ao atualizar lote de importação");
+
+    // LGPD: o arquivo bruto (dado pessoal) já cumpriu sua função.
+    await importBatchModel.clearFileContent(input.batchId, input.organizationId).catch(() => {
+      // Falha na purga não invalida a importação; o lote fica sem conteúdo na
+      // próxima tentativa e o operador pode reenviar se necessário.
+    });
+
+    await writeAuditLog({
+      organizationId: input.organizationId,
+      userId: input.userId,
+      action: "CREATE",
+      entity: "import_batch",
+      entityId: input.batchId,
+      newValues: { status: "confirmed", importedRows, rejectedRows },
+    });
+
+    return { batchId: input.batchId, status: "confirmed", importedRows, rejectedRows };
+  } catch (err) {
+    // Devolve o lote para "preview" para permitir nova tentativa em vez de
+    // deixá-lo preso em "processing".
+    await importBatchModel
+      .update(input.batchId, { status: "preview", updated_at: new Date().toISOString() })
+      .catch(() => {});
+    throw err;
+  }
 }
 
 /** Lista lotes de importação de uma organização. */
@@ -426,16 +473,26 @@ export async function buildAppointmentsExportCsv(input: {
   status?: string;
   procedureId?: number;
 }): Promise<string> {
-  const appointments = await appointmentModel.findMany({
-    organizationId: input.organizationId,
-    professionalId: input.professionalId,
-    patientId: input.patientId,
-    status: input.status,
-    startsAtFrom: input.from,
-    startsAtTo: input.to,
-    limit: 1000,
-    offset: 0,
-  });
+  // Exporta TODAS as linhas do filtro em páginas (antes havia um teto silencioso
+  // de 1000, o que truncava históricos grandes).
+  const PAGE_SIZE = 1000;
+  const MAX_EXPORT_ROWS = 50_000;
+  let appointments: Awaited<ReturnType<typeof appointmentModel.findMany>> = [];
+
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const page = await appointmentModel.findMany({
+      organizationId: input.organizationId,
+      professionalId: input.professionalId,
+      patientId: input.patientId,
+      status: input.status,
+      startsAtFrom: input.from,
+      startsAtTo: input.to,
+      limit: PAGE_SIZE,
+      offset,
+    });
+    appointments = appointments.concat(page);
+    if (page.length < PAGE_SIZE || appointments.length >= MAX_EXPORT_ROWS) break;
+  }
 
   const header = [
     "ID",
@@ -452,11 +509,14 @@ export async function buildAppointmentsExportCsv(input: {
   ];
 
   const escapeCell = (value: string): string => {
-    const safe = value ?? "";
-    if (/[",\n\r]/.test(safe)) {
-      return `"${safe.replace(/"/g, '""')}"`;
+    const safe = (value ?? "").replace(/^\uFEFF/, "");
+    // CSV injection: campos iniciados por = + - @ (ou tab/CR) executariam
+    // fórmula ao abrir no Excel/Sheets. Prefixamos com apóstrofo.
+    const guarded = /^[=+\-@\t\r]/.test(safe) ? `'${safe}` : safe;
+    if (/[",\n\r]/.test(guarded)) {
+      return `"${guarded.replace(/"/g, '""')}"`;
     }
-    return safe;
+    return guarded;
   };
 
   const lines = [header.map(escapeCell).join(",")];

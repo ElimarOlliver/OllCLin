@@ -49,8 +49,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-
-const ORGANIZATION_ID = 1;
+import { useOrganizationId } from "@/hooks/useOrganizationId";
 
 type SaleItem = {
   id?: number;
@@ -135,6 +134,7 @@ function parseAmount(value: string): number {
 }
 
 export default function VendasView() {
+  const ORGANIZATION_ID = useOrganizationId();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("todas");
   const [sales, setSales] = useState<Sale[]>([]);

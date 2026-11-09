@@ -29,6 +29,7 @@ import {
   Pencil,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useOrganizationId } from "@/hooks/useOrganizationId";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -41,6 +42,7 @@ import {
 import { Label } from "@/components/ui/label";
 
 export default function ProcedimentosView() {
+  const ORGANIZATION_ID = useOrganizationId();
   const [search, setSearch] = useState("");
   const [procedures, setProcedures] = useState<Array<{
     id: number;
@@ -66,7 +68,7 @@ export default function ProcedimentosView() {
     setIsLoading(true);
     try {
       const data = await utils.procedimentos.list.fetch({
-        organizationId: 1,
+        organizationId: ORGANIZATION_ID,
         search: search || undefined,
         isActive: true,
         limit: 100,
@@ -105,7 +107,7 @@ export default function ProcedimentosView() {
     if (!Number.isInteger(duration) || duration <= 0) return toast.error("A duração deve ser maior que zero");
     setSaving(true);
     try {
-      const payload = { organizationId: 1, name: form.name.trim(), description: form.description.trim() || undefined, durationMinutes: duration, price: form.price || "0.00", isActive: true };
+      const payload = { organizationId: ORGANIZATION_ID, name: form.name.trim(), description: form.description.trim() || undefined, durationMinutes: duration, price: form.price || "0.00", isActive: true };
       if (editing) await utils.client.procedimentos.update.mutate({ id: editing.id, ...payload });
       else await utils.client.procedimentos.create.mutate(payload);
       toast.success(editing ? "Procedimento atualizado" : "Procedimento cadastrado");

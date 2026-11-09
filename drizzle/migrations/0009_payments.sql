@@ -50,7 +50,9 @@ create index if not exists idx_payment_tx_intent
 
 create table if not exists payment_webhook_events (
   id bigserial primary key,
-  organization_id bigint not null references organizations(id) on delete cascade,
+  -- Webhooks de assinatura chegam ANTES do tenant existir (provisionamento),
+  -- por isso a coluna é anulável. Eventos de maquininha já trazem a org.
+  organization_id bigint references organizations(id) on delete set null,
   provider_name varchar(64) not null,
   event_id varchar(255) not null,
   payload jsonb not null default '{}'::jsonb,

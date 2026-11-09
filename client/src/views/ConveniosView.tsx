@@ -32,8 +32,7 @@ import { Label } from "@/components/ui/label";
 import { Search, Plus, Loader2, Pencil, Trash2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
-
-const ORGANIZATION_ID = 1;
+import { useOrganizationId } from "@/hooks/useOrganizationId";
 
 const OPERADORAS_PREDEFINIDAS = [
   "Unimed",
@@ -64,6 +63,7 @@ const emptyForm = {
 };
 
 export default function ConveniosView() {
+  const ORGANIZATION_ID = useOrganizationId();
   const [search, setSearch] = useState("");
   const [plans, setPlans] = useState<HealthPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
