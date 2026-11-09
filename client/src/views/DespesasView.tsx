@@ -51,6 +51,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useOrganizationId } from "@/hooks/useOrganizationId";
+import { formatDateBR } from "@/lib/date";
 
 type Expense = {
   id: number;
@@ -301,7 +302,7 @@ export default function DespesasView() {
                   <TableCell>
                     {exp.installmentsTotal > 1 ? `${exp.installmentNo}/${exp.installmentsTotal}` : "—"}
                   </TableCell>
-                  <TableCell>{exp.dueDate ?? "—"}</TableCell>
+                  <TableCell>{exp.dueDate ? formatDateBR(exp.dueDate) : "—"}</TableCell>
                   <TableCell className="font-semibold">{brl(exp.amount)}</TableCell>
                   <TableCell>
                     <Badge className={STATUS_STYLE[exp.status] ?? "bg-gray-100"}>
@@ -428,6 +429,7 @@ export default function DespesasView() {
                 <Input
                   id="dueDate"
                   type="date"
+                  lang="pt-BR"
                   value={form.dueDate}
                   onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
                 />

@@ -527,6 +527,7 @@ export default function RecibosView() {
                 <Input
                   id="receiptIssuedAt"
                   type="date"
+                  lang="pt-BR"
                   value={form.issuedAt}
                   onChange={(e) => setForm({ ...form, issuedAt: e.target.value })}
                 />

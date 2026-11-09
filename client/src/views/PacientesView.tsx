@@ -751,6 +751,7 @@ export default function PacientesView() {
                 <Input
                   id="birthDate"
                   type="date"
+                  lang="pt-BR"
                   value={form.birthDate}
                   onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
                   onBlur={() => markTouched("birthDate")}

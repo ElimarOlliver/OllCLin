@@ -52,6 +52,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useOrganizationId } from "@/hooks/useOrganizationId";
+import { formatDateBR } from "@/lib/date";
 
 type Revenue = {
   id: number;
@@ -323,7 +324,7 @@ export default function ReceitasView() {
                       ? `${rev.installmentNo}/${rev.installmentsTotal}`
                       : "—"}
                   </TableCell>
-                  <TableCell>{rev.dueDate ?? "—"}</TableCell>
+                  <TableCell>{rev.dueDate ? formatDateBR(rev.dueDate) : "—"}</TableCell>
                   <TableCell className="font-semibold">{brl(rev.amount)}</TableCell>
                   <TableCell>
                     <Badge className={STATUS_STYLE[rev.status] ?? "bg-gray-100"}>
@@ -517,6 +518,7 @@ export default function ReceitasView() {
                 <Input
                   id="dueDate"
                   type="date"
+                  lang="pt-BR"
                   value={form.dueDate}
                   onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
                 />

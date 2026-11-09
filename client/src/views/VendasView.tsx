@@ -50,6 +50,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useOrganizationId } from "@/hooks/useOrganizationId";
+import { formatDateBR } from "@/lib/date";
 
 type SaleItem = {
   id?: number;
@@ -401,7 +402,7 @@ export default function VendasView() {
               <TableBody>
                 {sales.map((sale) => (
                   <TableRow key={sale.id}>
-                    <TableCell className="text-sm">{sale.issuedAt?.slice(0, 10) ?? "—"}</TableCell>
+                    <TableCell className="text-sm">{sale.issuedAt ? formatDateBR(sale.issuedAt) : "—"}</TableCell>
                     <TableCell className="text-sm">
                       {sale.patientId
                         ? patientName.get(sale.patientId) ?? sale.payerName ?? `Paciente #${sale.patientId}`
@@ -577,6 +578,7 @@ export default function VendasView() {
                 <Input
                   id="issuedAt"
                   type="date"
+                  lang="pt-BR"
                   value={form.issuedAt}
                   onChange={(e) => setForm({ ...form, issuedAt: e.target.value })}
                 />

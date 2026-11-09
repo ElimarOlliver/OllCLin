@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useOrganizationId } from "@/hooks/useOrganizationId";
+import { formatDateBR } from "@/lib/date";
 import { Button } from "@/components/ui/button";
 
 type StatementEntry = {
@@ -147,6 +148,7 @@ export default function ExtratoView() {
             <Input
               id="statementFrom"
               type="date"
+              lang="pt-BR"
               value={from}
               onChange={(e) => setFrom(e.target.value)}
             />
@@ -156,6 +158,7 @@ export default function ExtratoView() {
             <Input
               id="statementTo"
               type="date"
+              lang="pt-BR"
               value={to}
               onChange={(e) => setTo(e.target.value)}
             />
@@ -248,7 +251,7 @@ export default function ExtratoView() {
               <TableBody>
                 {entries.map((entry) => (
                   <TableRow key={entry.id}>
-                    <TableCell className="text-sm">{entry.date ?? "—"}</TableCell>
+                    <TableCell className="text-sm">{entry.date ? formatDateBR(entry.date) : "—"}</TableCell>
                     <TableCell>
                       <span
                         className={`inline-flex items-center gap-1 text-xs font-medium ${

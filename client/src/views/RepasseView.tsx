@@ -52,6 +52,7 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useOrganizationId } from "@/hooks/useOrganizationId";
+import { formatDateBR } from "@/lib/date";
 
 type EligibleRevenue = {
   id: number;
@@ -169,7 +170,10 @@ export default function RepasseView() {
     { enabled: professionalNumber > 0 && !!from && !!to },
   );
 
-  const eligible = (eligibleData ?? []) as EligibleRevenue[];
+  const eligible = useMemo(
+    () => (eligibleData ?? []) as EligibleRevenue[],
+    [eligibleData],
+  );
   const carryover = (carryoverData?.amount ?? 0) as number;
 
   useEffect(() => {
@@ -182,8 +186,15 @@ export default function RepasseView() {
   }, [professionalId, locationId, from, to, statusFilter]);
 
   // Não mantém selecionados itens que não estão mais visíveis/elegíveis.
+  // Retorna o mesmo array quando nada mudou para não disparar re-render em loop
+  // (eligible é recriado a cada render enquanto a query não resolve).
   useEffect(() => {
-    setSelected((current) => current.filter((id) => eligible.some((e) => e.id === id && !e.repassed)));
+    setSelected((current) => {
+      const next = current.filter((id) =>
+        eligible.some((e) => e.id === id && !e.repassed),
+      );
+      return next.length === current.length ? current : next;
+    });
   }, [eligible]);
 
   const selectedRevenues = useMemo(
@@ -371,11 +382,11 @@ export default function RepasseView() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="from">De</Label>
-                <Input id="from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+                <Input id="from" type="date" lang="pt-BR" value={from} onChange={(e) => setFrom(e.target.value)} />
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="to">Até</Label>
-                <Input id="to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+                <Input id="to" type="date" lang="pt-BR" value={to} onChange={(e) => setTo(e.target.value)} />
               </div>
               <div className="grid gap-2">
                 <Label>Situação</Label>
@@ -438,7 +449,7 @@ export default function RepasseView() {
                         </TableCell>
                         <TableCell className="text-sm">{revenue.patientName ?? "—"}</TableCell>
                         <TableCell className="text-sm">
-                          {revenue.receivedAt ? revenue.receivedAt.slice(0, 10) : "—"}
+                          {revenue.receivedAt ? formatDateBR(revenue.receivedAt) : "—"}
                         </TableCell>
                         <TableCell className="font-semibold">{brl(revenue.amount)}</TableCell>
                         <TableCell>
@@ -562,7 +573,7 @@ export default function RepasseView() {
                         </TableCell>
                         <TableCell className="text-sm">{payout.locationName ?? "—"}</TableCell>
                         <TableCell className="text-sm">
-                          {payout.periodStart} → {payout.periodEnd}
+                          {formatDateBR(payout.periodStart)} → {formatDateBR(payout.periodEnd)}
                         </TableCell>
                         <TableCell className="text-sm text-center">{payout.percentage}%</TableCell>
                         <TableCell className="text-sm text-right">{brl(payout.expectedAmount)}</TableCell>
