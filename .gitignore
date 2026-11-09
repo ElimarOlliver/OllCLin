@@ -123,3 +123,4 @@ client/public/__manus__/version.json
 AGENTS.md
 skills-lock.json
 .agents/
+.opencode/
