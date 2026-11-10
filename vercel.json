@@ -6,6 +6,7 @@
   "outputDirectory": "dist/public",
   "routes": [
     { "src": "/api/(.*)", "dest": "/api/index.ts" },
+    { "src": "/manus-routes.json", "dest": "/manus-routes.json" },
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
