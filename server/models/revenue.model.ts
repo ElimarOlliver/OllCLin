@@ -34,12 +34,14 @@ export type Revenue = {
   appointmentId: number | null;
   healthPlanId: number | null;
   paymentMethodId: number | null;
+  paymentMethodName: string | null;
   professionalId: number | null;
   locationId: number | null;
   installmentNo: number;
   installmentsTotal: number;
   amount: number;
   status: RevenueStatus;
+  invoiceStatus: string | null;
   dueDate: string | null;
   receivedAt: string | null;
   description: string | null;
@@ -65,6 +67,7 @@ export type CreateRevenueInput = {
   installmentsTotal?: number;
   amount: number;
   status?: RevenueStatus;
+  invoiceStatus?: string;
   dueDate?: string;
   receivedAt?: string;
   description?: string;
@@ -103,6 +106,7 @@ type RevenueRow = {
   appointment_id: number | null;
   health_plan_id: number | null;
   payment_method_id: number | null;
+  payment_methods?: { name?: string | null }[] | null;
   /** Ausentes quando a migração 0003 ainda não foi aplicada. */
   professional_id?: number | null;
   location_id?: number | null;
@@ -110,6 +114,7 @@ type RevenueRow = {
   installments_total: number | null;
   amount: string | number;
   status: string;
+  invoice_status?: string | null;
   due_date: string | null;
   received_at: string | null;
   description: string | null;
@@ -127,10 +132,10 @@ type RevenueRow = {
  * de Receitas continue funcionando.
  */
 const LEGACY_REVENUE_COLUMNS =
-  "id, organization_id, patient_id, payer_name, procedure_id, appointment_id, health_plan_id, payment_method_id, installment_no, installments_total, amount, status, due_date, received_at, description, attachment_url, sent_to_omie, sent_to_conta_azul, created_by, created_at, updated_at";
+  "id, organization_id, patient_id, payer_name, procedure_id, appointment_id, health_plan_id, payment_method_id, installment_no, installments_total, amount, status, invoice_status, due_date, received_at, description, attachment_url, sent_to_omie, sent_to_conta_azul, created_by, created_at, updated_at";
 
 const LINKED_REVENUE_COLUMNS =
-  "id, organization_id, patient_id, payer_name, procedure_id, appointment_id, health_plan_id, payment_method_id, professional_id, location_id, installment_no, installments_total, amount, status, due_date, received_at, description, attachment_url, sent_to_omie, sent_to_conta_azul, created_by, created_at, updated_at" as const;
+  "id, organization_id, patient_id, payer_name, procedure_id, appointment_id, health_plan_id, payment_method_id, professional_id, location_id, installment_no, installments_total, amount, status, invoice_status, due_date, received_at, description, attachment_url, sent_to_omie, sent_to_conta_azul, created_by, created_at, updated_at" as const;
 
 function revenueColumns(hasLinks: boolean): typeof LINKED_REVENUE_COLUMNS {
   // A lista legada é um subconjunto; o tipo "completo" mantém a inferência das
@@ -150,12 +155,14 @@ function toRevenue(row: RevenueRow): Revenue {
     appointmentId: row.appointment_id,
     healthPlanId: row.health_plan_id,
     paymentMethodId: row.payment_method_id,
+    paymentMethodName: row.payment_methods?.[0]?.name ?? null,
     professionalId: row.professional_id ?? null,
     locationId: row.location_id ?? null,
     installmentNo: row.installment_no ?? 1,
     installmentsTotal: row.installments_total ?? 1,
     amount: Number(row.amount),
     status: (row.status as RevenueStatus) ?? "a_receber",
+    invoiceStatus: row.invoice_status ?? null,
     dueDate: row.due_date,
     receivedAt: row.received_at,
     description: row.description,
@@ -204,6 +211,7 @@ export const revenueModel = {
       installments_total: data.installmentsTotal ?? 1,
       amount: data.amount,
       status: data.status ?? "a_receber",
+      invoice_status: data.invoiceStatus ?? null,
       due_date: data.dueDate ?? null,
       // Se a receita já nasce RECEBIDA, `received_at` precisa existir: o
       // Repasse e o Extrato filtram por essa data.
@@ -222,7 +230,7 @@ export const revenueModel = {
     const { data: row, error } = await getSupabaseAdmin()
       .from("revenues")
       .insert(payload)
-      .select(revenueColumns(caps.revenueLinks))
+      .select(`${revenueColumns(caps.revenueLinks)}, payment_methods(name)`)
       .single();
     if (error) fail("criar", error);
     return toRevenue(row);
@@ -232,7 +240,7 @@ export const revenueModel = {
     const caps = await getSchemaCapabilities();
     const { data: row, error } = await getSupabaseAdmin()
       .from("revenues")
-      .select(revenueColumns(caps.revenueLinks))
+      .select(`${revenueColumns(caps.revenueLinks)}, payment_methods(name)`)
       .eq("id", id)
       .eq("organization_id", organizationId)
       .maybeSingle();
@@ -249,7 +257,7 @@ export const revenueModel = {
 
     let query = getSupabaseAdmin()
       .from("revenues")
-      .select(revenueColumns(caps.revenueLinks))
+      .select(`${revenueColumns(caps.revenueLinks)}, payment_methods(name)`)
       .eq("organization_id", filter.organizationId)
       .order("created_at", { ascending: false });
 
@@ -303,6 +311,7 @@ export const revenueModel = {
     const patch: Record<string, unknown> = {};
     if (data.amount !== undefined) patch.amount = data.amount;
     if (data.status !== undefined) patch.status = data.status;
+    if (data.invoiceStatus !== undefined) patch.invoice_status = data.invoiceStatus;
     if (data.payerName !== undefined) patch.payer_name = data.payerName;
     if (data.dueDate !== undefined) patch.due_date = data.dueDate;
     if (data.receivedAt !== undefined) patch.received_at = data.receivedAt;
@@ -330,7 +339,7 @@ export const revenueModel = {
       .update(patch)
       .eq("id", id)
       .eq("organization_id", organizationId)
-      .select(revenueColumns(caps.revenueLinks))
+      .select(`${revenueColumns(caps.revenueLinks)}, payment_methods(name)`)
       .maybeSingle();
     if (error) fail("atualizar", error);
     return row ? toRevenue(row) : null;

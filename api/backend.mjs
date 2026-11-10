@@ -273,8 +273,8 @@ async function markInvitationUsed(invitationId) {
 }
 async function recordWebhookEventOnce(input) {
   const { error } = await getSupabaseAdmin().from("payment_webhook_events").insert({
-    organization_id: 0,
-    // provisionamento: resolvido pelo payload
+    organization_id: null,
+    // resolvido após o provisionamento (webhook de assinatura)
     provider_name: input.provider,
     event_id: input.eventId,
     payload: input.payload
@@ -1213,7 +1213,21 @@ var requireUser = t.middleware(async (opts) => {
     }
   });
 });
-var protectedProcedure = t.procedure.use(requireUser);
+var requireTenantScope = t.middleware(async (opts) => {
+  const { ctx, input, next } = opts;
+  const requested = input?.organizationId;
+  if (typeof requested === "number") {
+    const active = ctx.user?.organizationId ?? null;
+    if (active === null || requested !== active) {
+      throw new TRPCError2({
+        code: "FORBIDDEN",
+        message: "Acesso negado para esta organiza\xE7\xE3o."
+      });
+    }
+  }
+  return next();
+});
+var protectedProcedure = t.procedure.use(requireUser).use(requireTenantScope);
 var adminProcedure = t.procedure.use(
   t.middleware(async (opts) => {
     const { ctx, next } = opts;
@@ -1297,7 +1311,7 @@ var requirePermission = (permission) => t.middleware(async (opts) => {
   }
   return next({ ctx: { ...ctx, user } });
 });
-var protectedWith = (permission) => t.procedure.use(requirePermission(permission));
+var protectedWith = (permission) => t.procedure.use(requirePermission(permission)).use(requireTenantScope);
 
 // server/_core/systemRouter.ts
 var systemRouter = router({
@@ -1446,6 +1460,15 @@ var patientModel = {
     if (excludeId) query = query.neq("id", excludeId);
     const { data, error } = await query.limit(1);
     if (error) fail("erro ao verificar CPF", error);
+    return (data ?? []).length > 0;
+  },
+  /**
+   * Usado na importação para tornar a confirmação idempotente quando a linha
+   * não tem CPF: mesmo nome + nascimento no tenant = já importado.
+   */
+  async existsByFullNameAndBirthDate(fullName, birthDate, organizationId) {
+    const { data, error } = await getSupabaseAdmin().from("patients").select("id").eq("organization_id", organizationId).ilike("full_name", fullName).eq("birth_date", birthDate).limit(1);
+    if (error) fail("erro ao verificar paciente por nome/nascimento", error);
     return (data ?? []).length > 0;
   }
 };
@@ -4069,8 +4092,8 @@ import { TRPCError as TRPCError10 } from "@trpc/server";
 
 // server/models/revenue.model.ts
 init_supabase_server();
-var LEGACY_REVENUE_COLUMNS = "id, organization_id, patient_id, payer_name, procedure_id, appointment_id, health_plan_id, payment_method_id, installment_no, installments_total, amount, status, due_date, received_at, description, attachment_url, sent_to_omie, sent_to_conta_azul, created_by, created_at, updated_at";
-var LINKED_REVENUE_COLUMNS = "id, organization_id, patient_id, payer_name, procedure_id, appointment_id, health_plan_id, payment_method_id, professional_id, location_id, installment_no, installments_total, amount, status, due_date, received_at, description, attachment_url, sent_to_omie, sent_to_conta_azul, created_by, created_at, updated_at";
+var LEGACY_REVENUE_COLUMNS = "id, organization_id, patient_id, payer_name, procedure_id, appointment_id, health_plan_id, payment_method_id, installment_no, installments_total, amount, status, invoice_status, due_date, received_at, description, attachment_url, sent_to_omie, sent_to_conta_azul, created_by, created_at, updated_at";
+var LINKED_REVENUE_COLUMNS = "id, organization_id, patient_id, payer_name, procedure_id, appointment_id, health_plan_id, payment_method_id, professional_id, location_id, installment_no, installments_total, amount, status, invoice_status, due_date, received_at, description, attachment_url, sent_to_omie, sent_to_conta_azul, created_by, created_at, updated_at";
 function revenueColumns(hasLinks) {
   return hasLinks ? LINKED_REVENUE_COLUMNS : LEGACY_REVENUE_COLUMNS;
 }
@@ -4084,12 +4107,14 @@ function toRevenue(row) {
     appointmentId: row.appointment_id,
     healthPlanId: row.health_plan_id,
     paymentMethodId: row.payment_method_id,
+    paymentMethodName: row.payment_methods?.[0]?.name ?? null,
     professionalId: row.professional_id ?? null,
     locationId: row.location_id ?? null,
     installmentNo: row.installment_no ?? 1,
     installmentsTotal: row.installments_total ?? 1,
     amount: Number(row.amount),
     status: row.status ?? "a_receber",
+    invoiceStatus: row.invoice_status ?? null,
     dueDate: row.due_date,
     receivedAt: row.received_at,
     description: row.description,
@@ -4133,6 +4158,7 @@ var revenueModel = {
       installments_total: data.installmentsTotal ?? 1,
       amount: data.amount,
       status: data.status ?? "a_receber",
+      invoice_status: data.invoiceStatus ?? null,
       due_date: data.dueDate ?? null,
       // Se a receita já nasce RECEBIDA, `received_at` precisa existir: o
       // Repasse e o Extrato filtram por essa data.
@@ -4145,13 +4171,13 @@ var revenueModel = {
       payload.professional_id = data.professionalId ?? null;
       payload.location_id = data.locationId ?? null;
     }
-    const { data: row, error } = await getSupabaseAdmin().from("revenues").insert(payload).select(revenueColumns(caps.revenueLinks)).single();
+    const { data: row, error } = await getSupabaseAdmin().from("revenues").insert(payload).select(`${revenueColumns(caps.revenueLinks)}, payment_methods(name)`).single();
     if (error) fail8("criar", error);
     return toRevenue(row);
   },
   async findById(id, organizationId) {
     const caps = await getSchemaCapabilities();
-    const { data: row, error } = await getSupabaseAdmin().from("revenues").select(revenueColumns(caps.revenueLinks)).eq("id", id).eq("organization_id", organizationId).maybeSingle();
+    const { data: row, error } = await getSupabaseAdmin().from("revenues").select(`${revenueColumns(caps.revenueLinks)}, payment_methods(name)`).eq("id", id).eq("organization_id", organizationId).maybeSingle();
     if (error) fail8("consultar", error);
     return row ? toRevenue(row) : null;
   },
@@ -4160,7 +4186,7 @@ var revenueModel = {
     const caps = await getSchemaCapabilities();
     const wantsLinkFilters = filter.professionalId !== void 0 || filter.locationId !== void 0;
     if (wantsLinkFilters && !caps.revenueLinks) throw new Error(MIGRATION_0003_FIELDS_HINT);
-    let query = getSupabaseAdmin().from("revenues").select(revenueColumns(caps.revenueLinks)).eq("organization_id", filter.organizationId).order("created_at", { ascending: false });
+    let query = getSupabaseAdmin().from("revenues").select(`${revenueColumns(caps.revenueLinks)}, payment_methods(name)`).eq("organization_id", filter.organizationId).order("created_at", { ascending: false });
     if (filter.patientId) query = query.eq("patient_id", filter.patientId);
     if (filter.professionalId && caps.revenueLinks) {
       query = query.eq("professional_id", filter.professionalId);
@@ -4201,6 +4227,7 @@ var revenueModel = {
     const patch = {};
     if (data.amount !== void 0) patch.amount = data.amount;
     if (data.status !== void 0) patch.status = data.status;
+    if (data.invoiceStatus !== void 0) patch.invoice_status = data.invoiceStatus;
     if (data.payerName !== void 0) patch.payer_name = data.payerName;
     if (data.dueDate !== void 0) patch.due_date = data.dueDate;
     if (data.receivedAt !== void 0) patch.received_at = data.receivedAt;
@@ -4218,7 +4245,7 @@ var revenueModel = {
       patch.received_at = (/* @__PURE__ */ new Date()).toISOString();
     }
     if (Object.keys(patch).length === 0) return this.findById(id, organizationId);
-    const { data: row, error } = await getSupabaseAdmin().from("revenues").update(patch).eq("id", id).eq("organization_id", organizationId).select(revenueColumns(caps.revenueLinks)).maybeSingle();
+    const { data: row, error } = await getSupabaseAdmin().from("revenues").update(patch).eq("id", id).eq("organization_id", organizationId).select(`${revenueColumns(caps.revenueLinks)}, payment_methods(name)`).maybeSingle();
     if (error) fail8("atualizar", error);
     return row ? toRevenue(row) : null;
   },
@@ -4284,6 +4311,7 @@ var createRevenueSchema = z9.object({
   installmentsTotal: z9.number().int().min(1).max(48).default(1),
   amount: z9.number().min(0, "Valor n\xE3o pode ser negativo"),
   status: revenueStatusSchema.default("a_receber"),
+  invoiceStatus: z9.string().max(80).optional(),
   dueDate: z9.string().optional(),
   receivedAt: z9.string().optional(),
   description: z9.string().optional()
@@ -4293,6 +4321,7 @@ var updateRevenueSchema = z9.object({
   organizationId: z9.number().int().positive(),
   amount: z9.number().min(0).optional(),
   status: revenueStatusSchema.optional(),
+  invoiceStatus: z9.string().max(80).optional(),
   payerName: z9.string().max(255).optional(),
   dueDate: z9.string().optional(),
   receivedAt: z9.string().optional(),
@@ -6181,10 +6210,33 @@ var importBatchModel = {
     if (error || !data) return null;
     return toBatch(data);
   },
+  /**
+   * Claim atômico: só marca "processing" se o lote ainda estiver em "preview".
+   * Evita confirmação concorrente (duas abas) duplicar a importação.
+   */
+  async claimForProcessing(id, organizationId) {
+    const { data, error } = await getSupabaseAdmin().from("import_batches").update({ status: "processing", updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", id).eq("organization_id", organizationId).eq("status", "preview").select("id");
+    if (error) throw new Error(`import_batches: ${error.message}`);
+    return (data ?? []).length > 0;
+  },
   async findById(id) {
     const { data, error } = await getSupabaseAdmin().from("import_batches").select(BATCH_COLUMNS).eq("id", id).maybeSingle();
     if (error || !data) return null;
     return toBatch(data);
+  },
+  /**
+   * Conteúdo bruto do arquivo (dado pessoal). Lido só na confirmação e apagado
+   * logo depois; nunca entra em listagens nem em logs.
+   */
+  async findContentById(id, organizationId) {
+    const { data, error } = await getSupabaseAdmin().from("import_batches").select("file_content").eq("id", id).eq("organization_id", organizationId).maybeSingle();
+    if (error || !data) return null;
+    return data.file_content ? String(data.file_content) : null;
+  },
+  /** Apaga o conteúdo do arquivo após a confirmação (minimização LGPD). */
+  async clearFileContent(id, organizationId) {
+    const { error } = await getSupabaseAdmin().from("import_batches").update({ file_content: null }).eq("id", id).eq("organization_id", organizationId);
+    if (error) throw new Error(`import_batches: ${error.message}`);
   },
   async findByOrganization(organizationId, limit = 20) {
     const { data, error } = await getSupabaseAdmin().from("import_batches").select(BATCH_COLUMNS).eq("organization_id", organizationId).order("created_at", { ascending: false }).limit(Math.min(Math.max(limit, 1), 50));
@@ -6210,6 +6262,7 @@ function toBatch(row) {
 
 // server/services/import-export.service.ts
 var ALLOWED_IMPORT_TYPES = ["csv", "tsv", "txt"];
+var MAX_IMPORT_ROWS = 5e3;
 var FIELD_ALIASES = {
   nome: "fullName",
   nomecompleto: "fullName",
@@ -6341,6 +6394,11 @@ function parseImportContent(input) {
   const parsed = fileTypeNormalized === "tsv" ? tsvParse(input.content) : csvParse(input.content);
   const columns = parsed.length > 0 ? Object.keys(parsed[0]) : [];
   const rawRows = parsed;
+  if (rawRows.length > MAX_IMPORT_ROWS) {
+    throw new Error(
+      `Arquivo com ${rawRows.length} linhas excede o limite de ${MAX_IMPORT_ROWS}. Divida a importa\xE7\xE3o em partes.`
+    );
+  }
   const rows = [];
   const errors = [];
   rawRows.forEach((raw, index2) => {
@@ -6409,7 +6467,7 @@ async function createImportBatch(input) {
 }
 async function confirmImportBatch(input) {
   const batch = await importBatchModel.findById(input.batchId);
-  if (!batch) throw new Error("Falha ao buscar lote de importa\xE7\xE3o");
+  if (!batch) throw new Error("Lote de importa\xE7\xE3o n\xE3o encontrado");
   if (batch.organizationId !== input.organizationId) {
     throw new Error("Acesso negado para este lote de importa\xE7\xE3o");
   }
@@ -6417,82 +6475,115 @@ async function confirmImportBatch(input) {
   if (status !== "preview") {
     return { batchId: input.batchId, status, importedRows: batch.importedRows, rejectedRows: batch.rejectedRows };
   }
-  const content = batch.fileContent ?? "";
-  if (!content.trim()) {
+  const content = await importBatchModel.findContentById(input.batchId, input.organizationId);
+  if (!content?.trim()) {
     throw new Error("Conte\xFAdo do arquivo de importa\xE7\xE3o n\xE3o est\xE1 dispon\xEDvel. Reenvie o arquivo.");
   }
-  const preview = parseImportContent({
-    fileName: batch.fileName,
-    fileType: batch.fileType,
-    content
-  });
-  let importedRows = 0;
-  let rejectedRows = preview.errors.length;
-  for (const row of preview.rows) {
-    if (row.cpf) {
-      const exists = await patientModel.existsByCpf(row.cpf, input.organizationId);
-      if (exists) {
-        rejectedRows += 1;
-        continue;
-      }
-    }
-    await patientModel.create({
-      organizationId: input.organizationId,
-      fullName: row.fullName,
-      socialName: row.socialName ?? void 0,
-      cpf: row.cpf ?? void 0,
-      rg: row.rg ?? void 0,
-      birthDate: row.birthDate ?? void 0,
-      gender: row.gender ?? void 0,
-      phone: row.phone ?? void 0,
-      email: row.email ?? void 0,
-      address: row.address ?? void 0,
-      city: row.city ?? void 0,
-      state: row.state ?? void 0,
-      zipCode: row.zipCode ?? void 0,
-      emergencyContact: row.emergencyContact ?? void 0,
-      emergencyPhone: row.emergencyPhone ?? void 0,
-      consentDataSharing: row.consentDataSharing,
-      consentMarketing: row.consentMarketing,
-      isMinor: row.isMinor,
-      guardianPatientId: row.guardianPatientId ?? void 0,
-      guardianName: row.guardianName ?? void 0,
-      guardianDocument: row.guardianDocument ?? void 0,
-      consentStatus: row.consentStatus
-    });
-    importedRows += 1;
+  const claimed = await importBatchModel.claimForProcessing(input.batchId, input.organizationId);
+  if (!claimed) {
+    const current = await importBatchModel.findById(input.batchId);
+    return {
+      batchId: input.batchId,
+      status: current?.status ?? "processing",
+      importedRows: current?.importedRows ?? 0,
+      rejectedRows: current?.rejectedRows ?? 0
+    };
   }
-  const updated = await importBatchModel.update(input.batchId, {
-    status: "confirmed",
-    imported_rows: importedRows,
-    rejected_rows: rejectedRows,
-    updated_at: (/* @__PURE__ */ new Date()).toISOString()
-  });
-  if (!updated) throw new Error("Falha ao atualizar lote de importa\xE7\xE3o");
-  await writeAuditLog({
-    organizationId: input.organizationId,
-    userId: input.userId,
-    action: "CREATE",
-    entity: "import_batch",
-    entityId: input.batchId,
-    newValues: { status: "confirmed", importedRows, rejectedRows }
-  });
-  return { batchId: input.batchId, status: "confirmed", importedRows, rejectedRows };
+  try {
+    const preview = parseImportContent({
+      fileName: batch.fileName,
+      fileType: batch.fileType,
+      content
+    });
+    let importedRows = 0;
+    let rejectedRows = preview.errors.length;
+    for (const row of preview.rows) {
+      if (row.cpf) {
+        if (await patientModel.existsByCpf(row.cpf, input.organizationId)) {
+          rejectedRows += 1;
+          continue;
+        }
+      } else if (row.birthDate) {
+        if (await patientModel.existsByFullNameAndBirthDate(
+          row.fullName,
+          row.birthDate,
+          input.organizationId
+        )) {
+          rejectedRows += 1;
+          continue;
+        }
+      }
+      await patientModel.create({
+        organizationId: input.organizationId,
+        fullName: row.fullName,
+        socialName: row.socialName ?? void 0,
+        cpf: row.cpf ?? void 0,
+        rg: row.rg ?? void 0,
+        birthDate: row.birthDate ?? void 0,
+        gender: row.gender ?? void 0,
+        phone: row.phone ?? void 0,
+        email: row.email ?? void 0,
+        address: row.address ?? void 0,
+        city: row.city ?? void 0,
+        state: row.state ?? void 0,
+        zipCode: row.zipCode ?? void 0,
+        emergencyContact: row.emergencyContact ?? void 0,
+        emergencyPhone: row.emergencyPhone ?? void 0,
+        consentDataSharing: row.consentDataSharing,
+        consentMarketing: row.consentMarketing,
+        isMinor: row.isMinor,
+        guardianPatientId: row.guardianPatientId ?? void 0,
+        guardianName: row.guardianName ?? void 0,
+        guardianDocument: row.guardianDocument ?? void 0,
+        consentStatus: row.consentStatus
+      });
+      importedRows += 1;
+    }
+    const updated = await importBatchModel.update(input.batchId, {
+      status: "confirmed",
+      imported_rows: importedRows,
+      rejected_rows: rejectedRows,
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    });
+    if (!updated) throw new Error("Falha ao atualizar lote de importa\xE7\xE3o");
+    await importBatchModel.clearFileContent(input.batchId, input.organizationId).catch(() => {
+    });
+    await writeAuditLog({
+      organizationId: input.organizationId,
+      userId: input.userId,
+      action: "CREATE",
+      entity: "import_batch",
+      entityId: input.batchId,
+      newValues: { status: "confirmed", importedRows, rejectedRows }
+    });
+    return { batchId: input.batchId, status: "confirmed", importedRows, rejectedRows };
+  } catch (err) {
+    await importBatchModel.update(input.batchId, { status: "preview", updated_at: (/* @__PURE__ */ new Date()).toISOString() }).catch(() => {
+    });
+    throw err;
+  }
 }
 async function listImportBatches(input) {
   return importBatchModel.findByOrganization(input.organizationId, input.limit ?? 20);
 }
 async function buildAppointmentsExportCsv(input) {
-  const appointments2 = await appointmentModel.findMany({
-    organizationId: input.organizationId,
-    professionalId: input.professionalId,
-    patientId: input.patientId,
-    status: input.status,
-    startsAtFrom: input.from,
-    startsAtTo: input.to,
-    limit: 1e3,
-    offset: 0
-  });
+  const PAGE_SIZE = 1e3;
+  const MAX_EXPORT_ROWS = 5e4;
+  let appointments2 = [];
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const page = await appointmentModel.findMany({
+      organizationId: input.organizationId,
+      professionalId: input.professionalId,
+      patientId: input.patientId,
+      status: input.status,
+      startsAtFrom: input.from,
+      startsAtTo: input.to,
+      limit: PAGE_SIZE,
+      offset
+    });
+    appointments2 = appointments2.concat(page);
+    if (page.length < PAGE_SIZE || appointments2.length >= MAX_EXPORT_ROWS) break;
+  }
   const header = [
     "ID",
     "Data",
@@ -6507,11 +6598,12 @@ async function buildAppointmentsExportCsv(input) {
     "Criado em"
   ];
   const escapeCell = (value) => {
-    const safe = value ?? "";
-    if (/[",\n\r]/.test(safe)) {
-      return `"${safe.replace(/"/g, '""')}"`;
+    const safe = (value ?? "").replace(/^\uFEFF/, "");
+    const guarded2 = /^[=+\-@\t\r]/.test(safe) ? `'${safe}` : safe;
+    if (/[",\n\r]/.test(guarded2)) {
+      return `"${guarded2.replace(/"/g, '""')}"`;
     }
-    return safe;
+    return guarded2;
   };
   const lines = [header.map(escapeCell).join(",")];
   for (const appointment of appointments2) {
@@ -8332,8 +8424,8 @@ function registerPaymentRoutes(app) {
     const providerTransactionId = payload.transaction_id ? String(payload.transaction_id) : null;
     const toStatus = payload.status ? String(payload.status) : null;
     const inserted = await paymentModel.recordWebhookEvent({
-      organizationId: 0,
-      // resolvido pelo provider real em produção
+      organizationId: null,
+      // assinatura/provisionamento: tenant resolvido no fluxo
       providerName: provider,
       eventId,
       payload

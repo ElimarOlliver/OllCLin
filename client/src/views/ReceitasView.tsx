@@ -59,6 +59,8 @@ type Revenue = {
   payerName: string | null;
   amount: number;
   status: string;
+  invoiceStatus: string | null;
+  paymentMethodName: string | null;
   installmentNo: number;
   installmentsTotal: number;
   dueDate: string | null;
@@ -307,10 +309,12 @@ export default function ReceitasView() {
               <TableRow>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Pagador</TableHead>
+                <TableHead>Pagamento</TableHead>
                 <TableHead>Parcela</TableHead>
                 <TableHead>Vencimento</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Status NF</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -319,6 +323,7 @@ export default function ReceitasView() {
                 <TableRow key={rev.id}>
                   <TableCell className="font-medium">{rev.description || `Receita #${rev.id}`}</TableCell>
                   <TableCell>{rev.payerName || "—"}</TableCell>
+                  <TableCell>{rev.paymentMethodName || "Não informado"}</TableCell>
                   <TableCell>
                     {rev.installmentsTotal > 1
                       ? `${rev.installmentNo}/${rev.installmentsTotal}`
@@ -331,6 +336,7 @@ export default function ReceitasView() {
                       {STATUS_LABEL[rev.status] ?? rev.status}
                     </Badge>
                   </TableCell>
+                  <TableCell>{rev.invoiceStatus || "Não informado"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="sm" title="Histórico" onClick={() => openHistory(rev)}>
