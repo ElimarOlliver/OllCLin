@@ -167,6 +167,14 @@ export const professionals = mysqlTable(
     cpf: varchar("cpf", { length: 14 }),
     council: varchar("council", { length: 50 }), // CRM, CRO, etc.
     councilNumber: varchar("council_number", { length: 50 }),
+    /* Módulo fiscal (FISCAL.md §6) */
+    fiscalUfConselho: varchar("fiscal_uf_conselho", { length: 2 }),
+    fiscalTipoConselho: mysqlEnum("fiscal_tipo_conselho", [
+      "CRM",
+      "CRO",
+      "CREFITO",
+      "OUTRO",
+    ]),
     specialty: varchar("specialty", { length: 100 }),
     phone: varchar("phone", { length: 20 }),
     email: varchar("email", { length: 320 }),
@@ -261,6 +269,30 @@ export const appointments = mysqlTable(
       "desmarcado",
     ]).default("solicitado").notNull(),
     googleCalendarEventId: varchar("google_calendar_event_id", { length: 255 }),
+
+    /* Módulo fiscal (FISCAL.md §6) */
+    fiscalTomadorId: int("fiscal_tomador_id"), // FK → tomadores_fiscais (id dinâmico, evita ciclo)
+    valorConsulta: decimal("valor_consulta", { precision: 12, scale: 2 }), // nullable até conclusão
+    valorPago: decimal("valor_pago", { precision: 12, scale: 2 }),
+    formaPagamento: mysqlEnum("forma_pagamento", [
+      "PIX",
+      "DINHEIRO",
+      "CARTAO_CREDITO",
+      "CARTAO_DEBITO",
+      "CONVENIO",
+      "OUTRO",
+    ]),
+    /** Status FISCAL do agendamento — NÃO confundir com o status clínico (§6). */
+    fiscalStatus: mysqlEnum("fiscal_status", [
+      "NAO_EMITIDA",
+      "PENDENTE",
+      "EMITIDA",
+      "CANCELADA",
+      "ERRO",
+    ]).default("NAO_EMITIDA").notNull(),
+    fiscalNotaId: int("fiscal_nota_id"), // FK → notas_fiscais (aponta para a nota ATIVA, V4)
+    concluidoEm: timestamp("concluido_em"), // data de competência da nota (§11)
+    fiscalObservacao: text("fiscal_observacao"),
     recurrenceRule: text("recurrence_rule"), // iCal RRULE
     isRecurrenceParent: boolean("is_recurrence_parent").default(false).notNull(),
     recurrenceParentId: int("recurrence_parent_id").references((): AnyMySqlColumn => appointments.id, { onDelete: "set null" }),
