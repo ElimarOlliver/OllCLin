@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { registerGoogleCalendarRoutes } from "../routes/google-calendar";
 import { registerPaymentRoutes } from "../routes/payments";
+import { registerFiscalRoutes } from "../routes/fiscal";
 import { checkSupabaseConnection } from "../lib/supabase-server";
 import { startGoogleSyncWorker } from "../services/google-sync.worker";
 import type { Express } from "express";
@@ -40,6 +41,7 @@ export async function createApp(): Promise<Express> {
   registerGoogleCalendarRoutes(app);
   // Fase 5 (SaaS): documentação OpenAPI + webhook de pagamentos
   registerPaymentRoutes(app);
+  registerFiscalRoutes(app);
   // Fase 2 (SaaS): worker assíncrono da fila de sincronização Google Calendar.
   if (!process.env.VERCEL) startGoogleSyncWorker();
   // tRPC API

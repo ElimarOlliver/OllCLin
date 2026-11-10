@@ -16,6 +16,7 @@ import VendasView from "@/views/VendasView";
 import RepasseView from "@/views/RepasseView";
 import ExtratoView from "@/views/ExtratoView";
 import RecibosView from "@/views/RecibosView";
+import NotasFiscaisView from "@/views/NotasFiscaisView";
 import ConfiguracoesView from "@/views/ConfiguracoesView";
 import {
   Sidebar,
@@ -93,6 +94,7 @@ function Router() {
       <Route path="/repasses" component={RepasseView} />
       <Route path="/extrato" component={ExtratoView} />
       <Route path="/recibos" component={RecibosView} />
+      <Route path="/notas-fiscais" component={NotasFiscaisView} />
       <Route path="/configuracoes" component={ConfiguracoesView} />
       <Route path="/permissoes" component={PermissoesView} />
       <Route path="/equipe" component={EquipeView} />

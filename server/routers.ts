@@ -32,6 +32,7 @@ import { paymentRouter } from "./controllers/payment.controller";
 import { saasRouter } from "./controllers/saas.controller";
 import { onboardingRouter } from "./controllers/onboarding.controller";
 import { equipeRouter } from "./controllers/equipe.controller";
+import { fiscalRouter } from "./controllers/fiscal.controller";
 
 export const appRouter = router({
   // Sistema / Saúde
@@ -106,6 +107,9 @@ export const appRouter = router({
 
   // Equipe (RBAC team.manage)
   equipe: equipeRouter,
+
+  // Fiscal — NFS-e / NF-e (FISCAL.md)
+  fiscal: fiscalRouter,
 
   // TODO: Prontuário, Exames, Cirurgias, Despesas, Repasse, TISS, Telessaúde, Marketing, Relatórios
   // exemplo:
