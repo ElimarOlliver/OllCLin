@@ -124,3 +124,10 @@ AGENTS.md
 skills-lock.json
 .agents/
 .opencode/
+
+# FISCAL.md R41 — credenciais fiscais NUNCA no repositório
+*.pfx
+*.p12
+*.key
+.secrets/
+xml/*.xml
