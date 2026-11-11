@@ -159,8 +159,8 @@ async function createProvisionedOrganization(input) {
   if (error) throw new Error(`organizations: ${error.message}`);
   return Number(data.id);
 }
-async function setOrganizationStatus(organizationId, status) {
-  const { error } = await getSupabaseAdmin().from("organizations").update({ status }).eq("id", organizationId);
+async function setOrganizationStatus(organizationId, status2) {
+  const { error } = await getSupabaseAdmin().from("organizations").update({ status: status2 }).eq("id", organizationId);
   if (error) throw new Error(`organizations: ${error.message}`);
 }
 async function findOrganizationByEmail(email) {
@@ -458,6 +458,14 @@ var professionals = mysqlTable(
     council: varchar("council", { length: 50 }),
     // CRM, CRO, etc.
     councilNumber: varchar("council_number", { length: 50 }),
+    /* Módulo fiscal (FISCAL.md §6) */
+    fiscalUfConselho: varchar("fiscal_uf_conselho", { length: 2 }),
+    fiscalTipoConselho: mysqlEnum("fiscal_tipo_conselho", [
+      "CRM",
+      "CRO",
+      "CREFITO",
+      "OUTRO"
+    ]),
     specialty: varchar("specialty", { length: 100 }),
     phone: varchar("phone", { length: 20 }),
     email: varchar("email", { length: 320 }),
@@ -540,6 +548,33 @@ var appointments = mysqlTable(
       "desmarcado"
     ]).default("solicitado").notNull(),
     googleCalendarEventId: varchar("google_calendar_event_id", { length: 255 }),
+    /* Módulo fiscal (FISCAL.md §6) */
+    fiscalTomadorId: int("fiscal_tomador_id"),
+    // FK → tomadores_fiscais (id dinâmico, evita ciclo)
+    valorConsulta: decimal("valor_consulta", { precision: 12, scale: 2 }),
+    // nullable até conclusão
+    valorPago: decimal("valor_pago", { precision: 12, scale: 2 }),
+    formaPagamento: mysqlEnum("forma_pagamento", [
+      "PIX",
+      "DINHEIRO",
+      "CARTAO_CREDITO",
+      "CARTAO_DEBITO",
+      "CONVENIO",
+      "OUTRO"
+    ]),
+    /** Status FISCAL do agendamento — NÃO confundir com o status clínico (§6). */
+    fiscalStatus: mysqlEnum("fiscal_status", [
+      "NAO_EMITIDA",
+      "PENDENTE",
+      "EMITIDA",
+      "CANCELADA",
+      "ERRO"
+    ]).default("NAO_EMITIDA").notNull(),
+    fiscalNotaId: int("fiscal_nota_id"),
+    // FK → notas_fiscais (aponta para a nota ATIVA, V4)
+    concluidoEm: timestamp("concluido_em"),
+    // data de competência da nota (§11)
+    fiscalObservacao: text("fiscal_observacao"),
     recurrenceRule: text("recurrence_rule"),
     // iCal RRULE
     isRecurrenceParent: boolean("is_recurrence_parent").default(false).notNull(),
@@ -1103,8 +1138,8 @@ function publicPlatformConfig(env = process.env) {
   };
 }
 function publicPlatformScript(env = process.env) {
-  const json = JSON.stringify(publicPlatformConfig(env)).replaceAll("<", "\\u003c");
-  return `window.__MANUS_CONFIG__=${json};`;
+  const json2 = JSON.stringify(publicPlatformConfig(env)).replaceAll("<", "\\u003c");
+  return `window.__MANUS_CONFIG__=${json2};`;
 }
 
 // server/_core/systemRouter.ts
@@ -1866,7 +1901,7 @@ var appointmentModel = {
       organizationId,
       professionalId,
       patientId,
-      status,
+      status: status2,
       startsAtFrom,
       startsAtTo,
       limit = 50,
@@ -1875,7 +1910,7 @@ var appointmentModel = {
     let query = getSupabaseAdmin().from("appointments").select(APPOINTMENT_COLUMNS).eq("organization_id", organizationId);
     if (professionalId) query = query.eq("professional_id", professionalId);
     if (patientId) query = query.eq("patient_id", patientId);
-    if (status) query = query.eq("status", status);
+    if (status2) query = query.eq("status", status2);
     if (startsAtFrom) query = query.gte("starts_at", toDbTimestamp(startsAtFrom));
     if (startsAtTo) query = query.lte("starts_at", toDbTimestamp(startsAtTo));
     const { data, error } = await query.order("starts_at", { ascending: true }).range(offset, offset + limit - 1);
@@ -1943,9 +1978,9 @@ var GOOGLE_CALENDAR_SCOPES = [
   "https://www.googleapis.com/auth/calendar.events"
 ];
 var GoogleCalendarError = class extends Error {
-  constructor(message, status) {
+  constructor(message, status2) {
     super(message);
-    this.status = status;
+    this.status = status2;
     this.name = "GoogleCalendarError";
   }
 };
@@ -1996,10 +2031,10 @@ function requireGoogleConfig() {
 async function googleFetch(url, init, context) {
   const response = await fetch(url, init);
   if (!response.ok) {
-    const text3 = await response.text();
-    let detail = text3.slice(0, 300);
+    const text4 = await response.text();
+    let detail = text4.slice(0, 300);
     try {
-      const parsed = JSON.parse(text3);
+      const parsed = JSON.parse(text4);
       detail = parsed.error_description ?? (typeof parsed.error === "string" ? parsed.error : parsed.error?.message) ?? detail;
     } catch {
     }
@@ -2177,9 +2212,9 @@ async function deleteEvent(accessToken, eventId, calendarId = "primary") {
     }
   );
   if (!response.ok && response.status !== 404 && response.status !== 410) {
-    const text3 = await response.text();
+    const text4 = await response.text();
     throw new GoogleCalendarError(
-      `Falha ao remover evento do Google Calendar: ${text3.slice(0, 200)}`,
+      `Falha ao remover evento do Google Calendar: ${text4.slice(0, 200)}`,
       response.status
     );
   }
@@ -2586,9 +2621,9 @@ var googleCalendarSyncModel = {
     return toJob(data);
   },
   /** Busca job por id e devolve a versão atualizada (para claim/atualizações). */
-  async updateJobStatus(id, status, overrides = {}) {
+  async updateJobStatus(id, status2, overrides = {}) {
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const patch = { status };
+    const patch = { status: status2 };
     if (overrides.attempts !== void 0) patch.attempts = overrides.attempts;
     if (overrides.nextAttemptAt !== void 0) patch.next_attempt_at = overrides.nextAttemptAt;
     if (overrides.lastError !== void 0) patch.last_error = overrides.lastError;
@@ -2672,20 +2707,20 @@ async function syncAppointmentForUser(appointment, userId) {
   await assertNoGoogleConflict(auth.accessToken, auth.calendarId, appointment, existingEventId);
   const payload = payloadFor(appointment);
   let event;
-  let status = existingEventId ? "updated" : "created";
+  let status2 = existingEventId ? "updated" : "created";
   if (existingEventId) {
     try {
       event = await updateEvent(auth.accessToken, existingEventId, payload, auth.calendarId);
     } catch (error) {
       if (!(error instanceof GoogleCalendarError && (error.status === 404 || error.status === 410))) throw error;
-      status = "created";
+      status2 = "created";
       event = await createEvent(auth.accessToken, payload, auth.calendarId);
     }
   } else {
     event = await createEvent(auth.accessToken, payload, auth.calendarId);
   }
   await saveLink({ organizationId: appointment.organizationId, appointmentId: appointment.id, userId, eventId: event.id, calendarId: auth.calendarId });
-  return { status, eventId: event.id, htmlLink: event.htmlLink };
+  return { status: status2, eventId: event.id, htmlLink: event.htmlLink };
 }
 async function removeAppointmentForUser(appointment, userId) {
   const link = await findLink(appointment.organizationId, appointment.id, userId);
@@ -3547,10 +3582,10 @@ var expenseModel = {
     const summary = { paidTotal: 0, toPayTotal: 0, overdueTotal: 0 };
     for (const row of data ?? []) {
       const amount = Number(row.amount);
-      const status = row.status;
+      const status2 = row.status;
       const due = row.due_date;
-      if (status === "pago") summary.paidTotal += amount;
-      if (status === "a_pagar") {
+      if (status2 === "pago") summary.paidTotal += amount;
+      if (status2 === "a_pagar") {
         summary.toPayTotal += amount;
         if (due && due < today) summary.overdueTotal += amount;
       }
@@ -4216,9 +4251,9 @@ var revenueModel = {
     const summary = { receivedTotal: 0, toReceiveTotal: 0 };
     for (const row of data ?? []) {
       const amount = Number(row.amount);
-      const status = row.status;
-      if (status === "recebido") summary.receivedTotal += amount;
-      if (status === "a_receber") summary.toReceiveTotal += amount;
+      const status2 = row.status;
+      if (status2 === "recebido") summary.receivedTotal += amount;
+      if (status2 === "a_receber") summary.toReceiveTotal += amount;
     }
     return summary;
   },
@@ -4909,7 +4944,7 @@ var payoutModel = financeGuarded({
         patients2.set(row.id, row.full_name);
       }
     }
-    const status = input.status ?? "todos";
+    const status2 = input.status ?? "todos";
     return rows.map((row) => ({
       id: row.id,
       patientId: row.patient_id,
@@ -4919,8 +4954,8 @@ var payoutModel = financeGuarded({
       receivedAt: row.received_at,
       repassed: repassed.has(row.id)
     })).filter((row) => {
-      if (status === "nao_repassado") return !row.repassed;
-      if (status === "repassado") return row.repassed;
+      if (status2 === "nao_repassado") return !row.repassed;
+      if (status2 === "repassado") return row.repassed;
       return true;
     });
   },
@@ -6401,8 +6436,8 @@ function parseImportContent(input) {
   }
   const rows = [];
   const errors = [];
-  rawRows.forEach((raw, index2) => {
-    const rowNumber = index2 + 1;
+  rawRows.forEach((raw, index3) => {
+    const rowNumber = index3 + 1;
     const row = toImportRow(columns, raw);
     const result = validateImportRow(row);
     if (result.valid) {
@@ -6471,9 +6506,9 @@ async function confirmImportBatch(input) {
   if (batch.organizationId !== input.organizationId) {
     throw new Error("Acesso negado para este lote de importa\xE7\xE3o");
   }
-  const status = batch.status;
-  if (status !== "preview") {
-    return { batchId: input.batchId, status, importedRows: batch.importedRows, rejectedRows: batch.rejectedRows };
+  const status2 = batch.status;
+  if (status2 !== "preview") {
+    return { batchId: input.batchId, status: status2, importedRows: batch.importedRows, rejectedRows: batch.rejectedRows };
   }
   const content = await importBatchModel.findContentById(input.batchId, input.organizationId);
   if (!content?.trim()) {
@@ -6759,9 +6794,9 @@ var MockPaymentProvider = class {
     const existing = store.get(input.idempotencyKey);
     if (existing) return existing;
     const capture = input.capture ?? true;
-    const status = capture ? "captured" : "authorized";
+    const status2 = capture ? "captured" : "authorized";
     const result = {
-      status,
+      status: status2,
       providerTransactionId: `mock_${crypto.randomUUID()}`,
       paymentIntentId: `pi_${crypto.randomUUID()}`,
       providerName: this.name,
@@ -7855,6 +7890,1119 @@ var equipeRouter = router({
   // (planos expostos em saas.plans abaixo)
 });
 
+// server/controllers/fiscal.controller.ts
+import { TRPCError as TRPCError21 } from "@trpc/server";
+import { z as z24 } from "zod";
+import { and as and3, eq as eq4, desc as desc2 } from "drizzle-orm";
+
+// drizzle/schema/fiscal.ts
+import {
+  int as int2,
+  mysqlEnum as mysqlEnum2,
+  mysqlTable as mysqlTable2,
+  text as text3,
+  timestamp as timestamp2,
+  varchar as varchar2,
+  decimal as decimal2,
+  boolean as boolean2,
+  index as index2,
+  uniqueIndex,
+  json,
+  bigint
+} from "drizzle-orm/mysql-core";
+var empresasFiscais = mysqlTable2(
+  "empresas_fiscais",
+  {
+    id: int2("id").autoincrement().primaryKey(),
+    /** FK 1:1 com organizations — a "empresaId" do FISCAL.md. */
+    organizationId: int2("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }).unique(),
+    cnpj: varchar2("cnpj", { length: 18 }).notNull().unique(),
+    razaoSocial: varchar2("razao_social", { length: 255 }).notNull(),
+    nomeFantasia: varchar2("nome_fantasia", { length: 255 }),
+    ie: varchar2("ie", { length: 20 }),
+    im: varchar2("im", { length: 20 }),
+    regimeTributario: varchar2("regime_tributario", { length: 50 }).notNull(),
+    cnaePrincipal: varchar2("cnae_principal", { length: 7 }),
+    enderecoCompleto: json("endereco_completo"),
+    municipioIbge: varchar2("municipio_ibge", { length: 7 }).notNull(),
+    uf: varchar2("uf", { length: 2 }).notNull(),
+    emailFiscal: varchar2("email_fiscal", { length: 320 }).notNull(),
+    ativo: boolean2("ativo").default(true).notNull(),
+    criadoEm: timestamp2("criado_em").defaultNow().notNull(),
+    atualizadoEm: timestamp2("atualizado_em").defaultNow().onUpdateNow().notNull()
+  },
+  (table) => ({
+    orgIdx: index2("ef_org_idx").on(table.organizationId)
+  })
+);
+var tomadoresFiscais = mysqlTable2(
+  "tomadores_fiscais",
+  {
+    id: int2("id").autoincrement().primaryKey(),
+    organizationId: int2("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    tipoPessoa: mysqlEnum2("tipo_pessoa", ["FISICA", "JURIDICA"]).notNull(),
+    cpfCnpj: varchar2("cpf_cnpj", { length: 18 }).notNull(),
+    nomeParaNota: varchar2("nome_para_nota", { length: 255 }).notNull(),
+    email: varchar2("email", { length: 320 }),
+    celular: varchar2("celular", { length: 20 }),
+    logradouro: varchar2("logradouro", { length: 255 }),
+    numero: varchar2("numero", { length: 20 }),
+    complemento: varchar2("complemento", { length: 255 }),
+    bairro: varchar2("bairro", { length: 100 }),
+    cidade: varchar2("cidade", { length: 100 }),
+    uf: varchar2("uf", { length: 2 }),
+    cep: varchar2("cep", { length: 9 }),
+    codigoIbge: varchar2("codigo_ibge", { length: 7 }),
+    inscricaoEstadual: varchar2("inscricao_estadual", { length: 20 }),
+    ativo: boolean2("ativo").default(true).notNull(),
+    criadoEm: timestamp2("criado_em").defaultNow().notNull(),
+    atualizadoEm: timestamp2("atualizado_em").defaultNow().onUpdateNow().notNull()
+  },
+  (table) => ({
+    // UNIQUE (organizationId, cpfCnpj) — FISCAL.md §6
+    orgDocIdx: uniqueIndex("tf_org_doc_idx").on(table.organizationId, table.cpfCnpj)
+  })
+);
+var certificados = mysqlTable2(
+  "certificados",
+  {
+    id: int2("id").autoincrement().primaryKey(),
+    organizationId: int2("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    tipo: mysqlEnum2("tipo", ["A1", "A3", "TOKEN_GATEWAY"]).notNull(),
+    titularCnpj: varchar2("titular_cnpj", { length: 18 }).notNull(),
+    thumbprint: varchar2("thumbprint", { length: 128 }),
+    validoDe: timestamp2("valido_de"),
+    validoAte: timestamp2("valido_ate").notNull(),
+    /** Referência ao registro cifrado no cofre (R05) — nunca o material. */
+    segredoRef: varchar2("segredo_ref", { length: 64 }).notNull(),
+    provedor: varchar2("provedor", { length: 50 }),
+    ambiente: mysqlEnum2("ambiente", ["HOMOLOGACAO", "PRODUCAO"]).notNull(),
+    ativo: boolean2("ativo").default(true).notNull(),
+    revogadoEm: timestamp2("revogado_em"),
+    criadoEm: timestamp2("criado_em").defaultNow().notNull()
+  },
+  (table) => ({
+    orgIdx: index2("cert_org_idx").on(table.organizationId),
+    validadeIdx: index2("cert_validade_idx").on(table.validoAte)
+  })
+);
+var cofreFiscal = mysqlTable2(
+  "cofre_fiscal",
+  {
+    id: int2("id").autoincrement().primaryKey(),
+    organizationId: int2("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    /** AES-256-GCM: ciphertext + iv + tag em base64, mesma convenção do token-crypto. */
+    ciphertext: text3("ciphertext").notNull(),
+    criadoEm: timestamp2("criado_em").defaultNow().notNull(),
+    revogadoEm: timestamp2("revogado_em")
+  },
+  (table) => ({
+    orgIdx: index2("cofre_org_idx").on(table.organizationId)
+  })
+);
+var configuracoesFiscais = mysqlTable2(
+  "configuracoes_fiscais",
+  {
+    id: int2("id").autoincrement().primaryKey(),
+    organizationId: int2("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    tipoDocumento: mysqlEnum2("tipo_documento", ["NFS_E", "NF_E", "NFC_E"]).notNull(),
+    ambiente: mysqlEnum2("ambiente", ["HOMOLOGACAO", "PRODUCAO"]).notNull(),
+    provedor: varchar2("provedor", { length: 50 }).notNull(),
+    serie: varchar2("serie", { length: 10 }).notNull(),
+    proximoNumero: bigint("proximo_numero", { mode: "number" }).notNull(),
+    codigoMunicipio: varchar2("codigo_municipio", { length: 7 }).notNull(),
+    itemListaServico: varchar2("item_lista_servico", { length: 10 }).notNull(),
+    aliquotaIssPadrao: decimal2("aliquota_iss_padrao", { precision: 5, scale: 2 }).notNull(),
+    regimeEspecialTributacao: int2("regime_especial_tributacao"),
+    permiteEmissaoRetroativa: boolean2("permite_emissao_retroativa").default(false).notNull(),
+    diasLimiteRetroativo: int2("dias_limite_retroativo").default(0).notNull(),
+    ativo: boolean2("ativo").default(true).notNull(),
+    criadoEm: timestamp2("criado_em").defaultNow().notNull()
+  },
+  (table) => ({
+    orgDocIdx: uniqueIndex("cf_org_doc_idx").on(
+      table.organizationId,
+      table.tipoDocumento,
+      table.ambiente,
+      table.serie
+    )
+  })
+);
+var numeracaoFiscal = mysqlTable2(
+  "numeracao_fiscal",
+  {
+    id: int2("id").autoincrement().primaryKey(),
+    organizationId: int2("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    tipoDocumento: mysqlEnum2("tipo_documento", ["NFS_E", "NF_E", "NFC_E"]).notNull(),
+    ambiente: mysqlEnum2("ambiente", ["HOMOLOGACAO", "PRODUCAO"]).notNull(),
+    serie: varchar2("serie", { length: 10 }).notNull(),
+    ultimoNumero: bigint("ultimo_numero", { mode: "number" }).default(0).notNull()
+  },
+  (table) => ({
+    orgDocIdx: uniqueIndex("nf_org_doc_idx").on(
+      table.organizationId,
+      table.tipoDocumento,
+      table.ambiente,
+      table.serie
+    )
+  })
+);
+var notasFiscais = mysqlTable2(
+  "notas_fiscais",
+  {
+    id: int2("id").autoincrement().primaryKey(),
+    organizationId: int2("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    tipoDocumento: mysqlEnum2("tipo_documento", ["NFS_E", "NF_E", "NFC_E"]).notNull(),
+    ambiente: mysqlEnum2("ambiente", ["HOMOLOGACAO", "PRODUCAO"]).notNull(),
+    serie: varchar2("serie", { length: 10 }).notNull(),
+    numero: bigint("numero", { mode: "number" }).notNull(),
+    /** Rejeitada sem protocolo não tem chave — nullable + unique parcial via índice de aplicação (§6). */
+    chaveAcesso: varchar2("chave_acesso", { length: 44 }),
+    status: mysqlEnum2("status", [
+      "RASCUNHO",
+      "VALIDADA",
+      "ENFILEIRADA",
+      "ENVIANDO",
+      "AUTORIZADA",
+      "REJEITADA",
+      "ERRO_TRANSITORIO",
+      "DENEGADA",
+      "CANCELADA",
+      "SUBSTITUIDA",
+      "EM_CONTINGENCIA"
+    ]).notNull(),
+    agendamentoId: int2("agendamento_id").notNull(),
+    notaSubstituidaId: int2("nota_substituida_id"),
+    /* snapshot do tomador — congelado na emissão (V3) */
+    tomadorTipoPessoa: mysqlEnum2("tomador_tipo_pessoa", ["FISICA", "JURIDICA"]).notNull(),
+    tomadorNome: varchar2("tomador_nome", { length: 255 }).notNull(),
+    tomadorCpfCnpj: varchar2("tomador_cpf_cnpj", { length: 18 }).notNull(),
+    tomadorEmail: varchar2("tomador_email", { length: 320 }),
+    tomadorCelular: varchar2("tomador_celular", { length: 20 }),
+    tomadorLogradouro: varchar2("tomador_logradouro", { length: 255 }),
+    tomadorNumero: varchar2("tomador_numero", { length: 20 }),
+    tomadorComplemento: varchar2("tomador_complemento", { length: 255 }),
+    tomadorBairro: varchar2("tomador_bairro", { length: 100 }),
+    tomadorCidade: varchar2("tomador_cidade", { length: 100 }),
+    tomadorUf: varchar2("tomador_uf", { length: 2 }),
+    tomadorCep: varchar2("tomador_cep", { length: 9 }),
+    /* snapshot do serviço e do profissional (V3) */
+    nomeMedico: varchar2("nome_medico", { length: 255 }),
+    crmMedico: varchar2("crm_medico", { length: 50 }),
+    ufCrm: varchar2("uf_crm", { length: 2 }),
+    tipoConselho: varchar2("tipo_conselho", { length: 50 }),
+    codigoServico: varchar2("codigo_servico", { length: 10 }).notNull(),
+    descricaoServico: text3("descricao_servico").notNull(),
+    dataCompetencia: timestamp2("data_competencia").notNull(),
+    /* valores — snapshot no momento da gravação ENFILEIRADA */
+    valorServicos: decimal2("valor_servicos", { precision: 12, scale: 2 }).notNull(),
+    valorIss: decimal2("valor_iss", { precision: 12, scale: 2 }).notNull(),
+    valorTotal: decimal2("valor_total", { precision: 12, scale: 2 }).notNull(),
+    aliquotaIss: decimal2("aliquota_iss", { precision: 5, scale: 2 }).notNull(),
+    /* resultado */
+    xmlEnviado: text3("xml_enviado"),
+    xmlAutorizado: text3("xml_autorizado"),
+    protocolo: varchar2("protocolo", { length: 64 }),
+    cStat: varchar2("c_stat", { length: 10 }),
+    xMotivo: varchar2("x_motivo", { length: 500 }),
+    hashXml: varchar2("hash_xml", { length: 64 }),
+    tentativas: int2("tentativas").default(0).notNull(),
+    criadoPor: int2("criado_por"),
+    enfileiradoEm: timestamp2("enfileirado_em"),
+    enviadoEm: timestamp2("enviado_em"),
+    autorizadoEm: timestamp2("autorizado_em"),
+    criadoEm: timestamp2("criado_em").defaultNow().notNull()
+  },
+  (table) => ({
+    // UNIQUE (organizationId, tipoDocumento, ambiente, serie, numero) — §6
+    chaveNaturalIdx: uniqueIndex("nota_chave_natural_idx").on(
+      table.organizationId,
+      table.tipoDocumento,
+      table.ambiente,
+      table.serie,
+      table.numero
+    ),
+    orgIdx: index2("nota_org_idx").on(table.organizationId),
+    statusIdx: index2("nota_status_idx").on(table.status),
+    agendamentoIdx: index2("nota_agendamento_idx").on(table.agendamentoId),
+    chaveAcessoIdx: index2("nota_chave_acesso_idx").on(table.chaveAcesso)
+  })
+);
+var eventosFiscais = mysqlTable2(
+  "eventos_fiscais",
+  {
+    id: int2("id").autoincrement().primaryKey(),
+    notaId: int2("nota_id").notNull().references(() => notasFiscais.id, { onDelete: "cascade" }),
+    organizationId: int2("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    tipo: mysqlEnum2("tipo", [
+      "CANCELAMENTO",
+      "CCE",
+      "SUBSTITUICAO",
+      "MANIFESTACAO",
+      "INUTILIZACAO"
+    ]).notNull(),
+    sequencia: int2("sequencia").notNull(),
+    motivo: varchar2("motivo", { length: 255 }).notNull(),
+    xmlEvento: text3("xml_evento"),
+    protocolo: varchar2("protocolo", { length: 64 }),
+    status: varchar2("status", { length: 50 }).notNull(),
+    criadoEm: timestamp2("criado_em").defaultNow().notNull()
+  },
+  (table) => ({
+    notaIdx: index2("ev_nota_idx").on(table.notaId),
+    orgIdx: index2("ev_org_idx").on(table.organizationId)
+  })
+);
+var logsFiscais = mysqlTable2(
+  "logs_fiscais",
+  {
+    id: int2("id").autoincrement().primaryKey(),
+    organizationId: int2("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    notaId: int2("nota_id"),
+    adapter: varchar2("adapter", { length: 50 }).notNull(),
+    operacao: varchar2("operacao", { length: 50 }).notNull(),
+    /** Resumos com documento mascarado — NUNCA XML completo (LGPD). */
+    requestResumo: varchar2("request_resumo", { length: 500 }),
+    responseResumo: varchar2("response_resumo", { length: 500 }),
+    cStat: varchar2("c_stat", { length: 10 }),
+    duracaoMs: int2("duracao_ms"),
+    erro: varchar2("erro", { length: 500 }),
+    criadoEm: timestamp2("criado_em").defaultNow().notNull()
+  },
+  (table) => ({
+    orgIdx: index2("lf_org_idx").on(table.organizationId),
+    notaIdx: index2("lf_nota_idx").on(table.notaId)
+  })
+);
+var filaFiscal = mysqlTable2(
+  "fila_fiscal",
+  {
+    id: int2("id").autoincrement().primaryKey(),
+    /** fila:fiscal:nfse:{provedor} — FISCAL.md §7, R12 */
+    destino: varchar2("destino", { length: 100 }).notNull(),
+    notaId: int2("nota_id").notNull(),
+    organizationId: int2("organization_id").notNull().references(() => organizations.id, { onDelete: "cascade" }),
+    operacao: mysqlEnum2("operacao", ["EMITIR", "CONSULTAR", "EVENTO"]).notNull(),
+    tentativas: int2("tentativas").default(0).notNull(),
+    disponivelEm: timestamp2("disponivel_em").defaultNow().notNull(),
+    processadoEm: timestamp2("processado_em"),
+    erro: varchar2("erro", { length: 500 }),
+    criadoEm: timestamp2("criado_em").defaultNow().notNull()
+  },
+  (table) => ({
+    destinoIdx: index2("ff_destino_idx").on(table.destino, table.disponivelEm),
+    notaIdx: index2("ff_nota_idx").on(table.notaId)
+  })
+);
+
+// server/fiscal/nota.service.ts
+import { and, desc, eq as eq2, gte, inArray, lte, sql } from "drizzle-orm";
+async function prepararNota(organizationId, agendamentoId) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const bloqueios = [];
+  const aptRows = await db.select().from(appointments).where(and(eq2(appointments.id, agendamentoId), eq2(appointments.organizationId, organizationId))).limit(1);
+  const agendamento = aptRows[0];
+  if (!agendamento) throw new Error("Agendamento n\xE3o encontrado");
+  if (agendamento.status !== "atendido") {
+    bloqueios.push({ campo: "status", problema: "Agendamento n\xE3o est\xE1 conclu\xEDdo" });
+  }
+  const cfgRows = await db.select().from(configuracoesFiscais).where(
+    and(
+      eq2(configuracoesFiscais.organizationId, organizationId),
+      eq2(configuracoesFiscais.ativo, true)
+    )
+  ).limit(1);
+  const config = cfgRows[0];
+  if (!config) {
+    bloqueios.push({ campo: "configuracao", problema: "Configura\xE7\xE3o fiscal ausente" });
+  } else if (!config.permiteEmissaoRetroativa && agendamento.concluidoEm) {
+    const dias = Math.floor((Date.now() - agendamento.concluidoEm.getTime()) / 864e5);
+    if (dias > config.diasLimiteRetroativo) {
+      bloqueios.push({
+        campo: "competencia",
+        problema: `Emiss\xE3o retroativa al\xE9m do limite de ${config.diasLimiteRetroativo} dia(s)`
+      });
+    }
+  }
+  const profRows = await db.select().from(professionals).where(
+    and(
+      eq2(professionals.id, agendamento.professionalId),
+      eq2(professionals.organizationId, organizationId)
+    )
+  ).limit(1);
+  const profissional = profRows[0];
+  if (!profissional?.councilNumber) {
+    bloqueios.push({
+      campo: "crm",
+      problema: "CRM do profissional n\xE3o cadastrado"
+    });
+  }
+  if (!agendamento.fiscalTomadorId) {
+    bloqueios.push({
+      campo: "tomador",
+      problema: "CPF/CNPJ do tomador n\xE3o informado"
+    });
+  }
+  const valor = agendamento.valorConsulta;
+  if (!valor || Number(valor) <= 0) {
+    bloqueios.push({ campo: "valor", problema: "Valor da consulta n\xE3o informado" });
+  }
+  const aliquota = config?.aliquotaIssPadrao ?? "0";
+  const valorNum = valor ? Number(valor) : 0;
+  return {
+    agendamentoId,
+    bloqueios,
+    payload: bloqueios.length === 0 ? {
+      tomadorId: agendamento.fiscalTomadorId ?? null,
+      codigoServico: config?.itemListaServico ?? "",
+      descricaoServico: agendamento.procedureId ? `Servi\xE7o de sa\xFAde #${agendamento.procedureId}` : "Servi\xE7o de sa\xFAde",
+      valorServicos: valorNum.toFixed(2),
+      aliquotaIss: String(aliquota),
+      dataCompetencia: agendamento.concluidoEm ?? null,
+      // concluidoEm = competência (§11)
+      nomeMedico: profissional?.fullName ?? null,
+      crmMedico: profissional?.councilNumber ?? null
+    } : null
+  };
+}
+var STATUS_ATIVOS = [
+  "RASCUNHO",
+  "VALIDADA",
+  "ENFILEIRADA",
+  "ENVIANDO",
+  "AUTORIZADA",
+  "REJEITADA",
+  "ERRO_TRANSITORIO",
+  "DENEGADA",
+  "EM_CONTINGENCIA"
+];
+async function emitirDoAgendamento(organizationId, agendamentoId, options = {}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  return db.transaction(async (tx) => {
+    const aptRows = await tx.select().from(appointments).where(and(eq2(appointments.id, agendamentoId), eq2(appointments.organizationId, organizationId))).for("update").limit(1);
+    const agendamento = aptRows[0];
+    if (!agendamento) throw new Error("Agendamento n\xE3o encontrado");
+    if (agendamento.status !== "atendido") {
+      throw new Error("S\xF3 \xE9 poss\xEDvel emitir nota para agendamento conclu\xEDdo");
+    }
+    const existentes = await tx.select().from(notasFiscais).where(
+      and(
+        eq2(notasFiscais.agendamentoId, agendamentoId),
+        inArray(notasFiscais.status, [...STATUS_ATIVOS])
+      )
+    ).limit(1);
+    const existente = existentes[0];
+    if (existente) {
+      if (!options.reemitir) {
+        return { status: "EXISTENTE", nota: existente };
+      }
+      await tx.update(notasFiscais).set({ status: "SUBSTITUIDA" }).where(eq2(notasFiscais.id, existente.id));
+    }
+    const cfgRows = await tx.select().from(configuracoesFiscais).where(
+      and(
+        eq2(configuracoesFiscais.organizationId, organizationId),
+        eq2(configuracoesFiscais.ativo, true)
+      )
+    ).limit(1);
+    const config = cfgRows[0];
+    if (!config) throw new Error("Configura\xE7\xE3o fiscal ausente para esta empresa");
+    if (!config.permiteEmissaoRetroativa && agendamento.concluidoEm) {
+      const dias = Math.floor((Date.now() - agendamento.concluidoEm.getTime()) / 864e5);
+      if (dias > config.diasLimiteRetroativo) {
+        throw new Error(
+          `Emiss\xE3o retroativa al\xE9m do limite de ${config.diasLimiteRetroativo} dia(s) para este munic\xEDpio`
+        );
+      }
+    }
+    const numRows = await tx.select().from(numeracaoFiscal).where(
+      and(
+        eq2(numeracaoFiscal.organizationId, organizationId),
+        eq2(numeracaoFiscal.tipoDocumento, config.tipoDocumento),
+        eq2(numeracaoFiscal.ambiente, config.ambiente),
+        eq2(numeracaoFiscal.serie, config.serie)
+      )
+    ).for("update").limit(1);
+    const numeracao = numRows[0];
+    if (!numeracao) throw new Error("Numera\xE7\xE3o fiscal n\xE3o inicializada para esta s\xE9rie");
+    const numero = numeracao.ultimoNumero + 1;
+    await tx.update(numeracaoFiscal).set({ ultimoNumero: numero }).where(eq2(numeracaoFiscal.id, numeracao.id));
+    const tomRows = await tx.select().from(tomadoresFiscais).where(
+      and(
+        eq2(tomadoresFiscais.id, agendamento.fiscalTomadorId ?? 0),
+        eq2(tomadoresFiscais.organizationId, organizationId)
+      )
+    ).limit(1);
+    const tomador = tomRows[0];
+    if (!tomador) throw new Error("Tomador fiscal n\xE3o encontrado para este agendamento");
+    const profRows = await tx.select().from(professionals).where(and(eq2(professionals.id, agendamento.professionalId), eq2(professionals.organizationId, organizationId))).limit(1);
+    const profissional = profRows[0];
+    if (!profissional?.councilNumber) {
+      throw new Error("Profissional sem CRM cadastrado \u2014 complete o cadastro antes de emitir");
+    }
+    const aliquota = String(config.aliquotaIssPadrao);
+    const valorServicos = Number(agendamento.valorConsulta ?? 0);
+    if (valorServicos <= 0) throw new Error("Valor da consulta deve ser maior que zero");
+    const valorIss = (valorServicos * Number(aliquota) / 100).toFixed(2);
+    const [nota] = await tx.insert(notasFiscais).values({
+      organizationId,
+      tipoDocumento: config.tipoDocumento,
+      ambiente: config.ambiente,
+      serie: config.serie,
+      numero,
+      status: "ENFILEIRADA",
+      agendamentoId,
+      notaSubstituidaId: options.reemitir && existente ? existente.id : null,
+      tomadorTipoPessoa: tomador.tipoPessoa,
+      tomadorNome: tomador.nomeParaNota,
+      tomadorCpfCnpj: tomador.cpfCnpj,
+      tomadorEmail: tomador.email,
+      tomadorCelular: tomador.celular,
+      tomadorLogradouro: tomador.logradouro,
+      tomadorNumero: tomador.numero,
+      tomadorComplemento: tomador.complemento,
+      tomadorBairro: tomador.bairro,
+      tomadorCidade: tomador.cidade,
+      tomadorUf: tomador.uf,
+      tomadorCep: tomador.cep,
+      nomeMedico: profissional.fullName,
+      crmMedico: profissional.councilNumber,
+      ufCrm: profissional.fiscalUfConselho,
+      tipoConselho: profissional.fiscalTipoConselho,
+      codigoServico: config.itemListaServico,
+      descricaoServico: `Servi\xE7o de sa\xFAde #${agendamento.procedureId}`,
+      dataCompetencia: agendamento.concluidoEm ?? /* @__PURE__ */ new Date(),
+      valorServicos: valorServicos.toFixed(2),
+      valorIss,
+      valorTotal: valorServicos.toFixed(2),
+      aliquotaIss: aliquota,
+      criadoPor: null,
+      enfileiradoEm: /* @__PURE__ */ new Date()
+    }).$returningId();
+    const notaCompleta = { ...(await tx.select().from(notasFiscais).where(eq2(notasFiscais.id, nota.id)).limit(1))[0] };
+    await tx.update(appointments).set({ fiscalStatus: "PENDENTE", fiscalNotaId: nota.id }).where(eq2(appointments.id, agendamentoId));
+    await tx.insert(filaFiscal).values({
+      destino: `fila:fiscal:${config.tipoDocumento.toLowerCase()}:${config.provedor}`,
+      notaId: nota.id,
+      organizationId,
+      operacao: "EMITIR"
+    });
+    return { status: "CRIADA", nota: notaCompleta };
+  });
+}
+async function emitirLote(organizationId, agendamentoIds, options = {}) {
+  const resultados = [];
+  for (const agendamentoId of agendamentoIds) {
+    try {
+      const r = await emitirDoAgendamento(organizationId, agendamentoId, options);
+      resultados.push({ agendamentoId, ok: true, notaId: r.nota.id });
+    } catch (err) {
+      resultados.push({
+        agendamentoId,
+        ok: false,
+        motivo: err instanceof Error ? err.message : "Erro desconhecido"
+      });
+    }
+  }
+  return resultados;
+}
+async function cancelarNota(organizationId, notaId, motivo) {
+  if (motivo.trim().length < 15) {
+    throw new Error("Motivo deve ter no m\xEDnimo 15 caracteres");
+  }
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const rows = await db.select().from(notasFiscais).where(and(eq2(notasFiscais.id, notaId), eq2(notasFiscais.organizationId, organizationId))).limit(1);
+  const nota = rows[0];
+  if (!nota) throw new Error("Nota n\xE3o encontrada");
+  if (nota.status !== "AUTORIZADA") {
+    throw new Error("S\xF3 notas AUTORIZADAs podem ser canceladas");
+  }
+  await db.transaction(async (tx) => {
+    await tx.update(notasFiscais).set({ status: "CANCELADA" }).where(eq2(notasFiscais.id, notaId));
+    await tx.insert(eventosFiscais).values({
+      notaId,
+      organizationId,
+      tipo: "CANCELAMENTO",
+      sequencia: 1,
+      motivo,
+      status: "ENFILEIRADO"
+    });
+    await tx.insert(filaFiscal).values({
+      destino: `fila:fiscal:eventos:${nota.ambiente.toLowerCase()}`,
+      notaId,
+      organizationId,
+      operacao: "EVENTO"
+    });
+    await tx.update(appointments).set({ fiscalStatus: "CANCELADA" }).where(eq2(appointments.id, nota.agendamentoId));
+  });
+}
+async function listarNotas(organizationId, filtros) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const conds = [eq2(notasFiscais.organizationId, organizationId)];
+  if (filtros.ambiente) conds.push(eq2(notasFiscais.ambiente, filtros.ambiente));
+  if (filtros.status?.length) {
+    conds.push(inArray(notasFiscais.status, filtros.status));
+  }
+  if (filtros.dataInicio) conds.push(gte(notasFiscais.criadoEm, filtros.dataInicio));
+  if (filtros.dataFim) conds.push(lte(notasFiscais.criadoEm, filtros.dataFim));
+  const offset = (filtros.pagina - 1) * filtros.porPagina;
+  const itens = await db.select().from(notasFiscais).where(and(...conds)).orderBy(desc(notasFiscais.criadoEm)).limit(filtros.porPagina).offset(offset);
+  const [{ total }] = await db.select({ total: sql`count(*)` }).from(notasFiscais).where(and(...conds));
+  return { itens, total: Number(total) };
+}
+
+// server/fiscal/cofre/index.ts
+import {
+  createCipheriv as createCipheriv2,
+  createDecipheriv as createDecipheriv2,
+  createHash as createHash3,
+  randomBytes as randomBytes4
+} from "node:crypto";
+import { and as and2, eq as eq3, isNull } from "drizzle-orm";
+var ALGORITHM2 = "aes-256-gcm";
+function kek() {
+  const explicit = process.env.FISCAL_KMS_KEY_ID?.trim();
+  if (explicit) return createHash3("sha256").update(`ollclin:fiscal-kek:${explicit}`).digest();
+  const fallback = process.env.SUPABASE_SECRET_KEY ?? process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_KEY;
+  if (!fallback) {
+    throw new Error(
+      "Configure FISCAL_KMS_KEY_ID (ou SUPABASE_SECRET_KEY) para cifrar credenciais fiscais."
+    );
+  }
+  return createHash3("sha256").update(`ollclin:fiscal-kek:${fallback}`).digest();
+}
+function cifrar(chave, plain) {
+  const iv = randomBytes4(12);
+  const cipher = createCipheriv2(ALGORITHM2, chave, iv);
+  const enc = Buffer.concat([cipher.update(plain), cipher.final()]);
+  return [
+    iv.toString("base64"),
+    cipher.getAuthTag().toString("base64"),
+    enc.toString("base64")
+  ].join(":");
+}
+function zerar(...bufs) {
+  for (const b of bufs) if (b) b.fill(0);
+}
+async function guardar(organizationId, material, senha) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const dataKey = randomBytes4(32);
+  try {
+    const payload = cifrar(
+      dataKey,
+      Buffer.concat([
+        Buffer.from(material, "utf8"),
+        Buffer.from([0]),
+        Buffer.from(senha ?? "", "utf8")
+      ])
+    );
+    const dataKeyCifrada = cifrar(kek(), dataKey);
+    const envelope = { dataKeyCifrada, payload };
+    const [row] = await db.insert(cofreFiscal).values({ organizationId, ciphertext: JSON.stringify(envelope) }).$returningId();
+    return row.id;
+  } finally {
+    zerar(dataKey);
+  }
+}
+async function status(organizationId) {
+  const db = await getDb();
+  if (!db) throw new Error("Database is not available");
+  const rows = await db.select().from(certificados).where(and2(eq3(certificados.organizationId, organizationId), eq3(certificados.ativo, true))).limit(1);
+  const cert = rows[0];
+  if (!cert) return { existe: false, valido: false };
+  const agora = /* @__PURE__ */ new Date();
+  const valido = cert.validoAte > agora && !cert.revogadoEm;
+  const diasRestantes = Math.ceil((cert.validoAte.getTime() - agora.getTime()) / 864e5);
+  return {
+    existe: true,
+    valido,
+    tipo: cert.tipo,
+    validoAte: cert.validoAte,
+    diasRestantes,
+    venceEm: diasRestantes <= 30 ? diasRestantes : void 0,
+    vencido: !valido
+  };
+}
+
+// shared/fiscal/schemas.ts
+import { z as z23 } from "zod";
+
+// shared/fiscal/tipos.ts
+import { z as z22 } from "zod";
+var TipoDocumento = {
+  NFS_E: "NFS_E",
+  NF_E: "NF_E",
+  NFC_E: "NFC_E"
+};
+var Ambiente = {
+  HOMOLOGACAO: "HOMOLOGACAO",
+  PRODUCAO: "PRODUCAO"
+};
+var TipoPessoa = {
+  FISICA: "FISICA",
+  JURIDICA: "JURIDICA"
+};
+var tipoPessoaSchema = z22.enum(["FISICA", "JURIDICA"]);
+var FormaPagamento = {
+  PIX: "PIX",
+  DINHEIRO: "DINHEIRO",
+  CARTAO_CREDITO: "CARTAO_CREDITO",
+  CARTAO_DEBITO: "CARTAO_DEBITO",
+  CONVENIO: "CONVENIO",
+  OUTRO: "OUTRO"
+};
+
+// shared/fiscal/schemas.ts
+function limparDocumento(v) {
+  return v.replace(/\D/g, "");
+}
+function cpfValido(v) {
+  const cpf = limparDocumento(v);
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  const dig = (len) => {
+    let soma = 0;
+    for (let i = 0; i < len; i++) soma += Number(cpf[i]) * (len + 1 - i);
+    const r = soma * 10 % 11;
+    return r === 10 ? 0 : r;
+  };
+  return dig(9) === Number(cpf[9]) && dig(10) === Number(cpf[10]);
+}
+function cnpjValido(v) {
+  const cnpj = limparDocumento(v);
+  if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+  const calc = (len) => {
+    const pesos = len === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    let soma = 0;
+    for (let i = 0; i < len; i++) soma += Number(cnpj[i]) * pesos[i];
+    const r = soma % 11;
+    return r < 2 ? 0 : 11 - r;
+  };
+  return calc(12) === Number(cnpj[12]) && calc(13) === Number(cnpj[13]);
+}
+var documentoBase = z23.string().trim().min(11).max(18);
+var documentoTomadorSchema = z23.discriminatedUnion("tipoPessoa", [
+  z23.object({
+    tipoPessoa: z23.literal(TipoPessoa.FISICA),
+    cpf: documentoBase.refine(cpfValido, { message: "CPF inv\xE1lido" })
+  }),
+  z23.object({
+    tipoPessoa: z23.literal(TipoPessoa.JURIDICA),
+    cnpj: documentoBase.refine(cnpjValido, { message: "CNPJ inv\xE1lido" })
+  })
+]);
+var tipoDocumentoSchema = z23.nativeEnum(TipoDocumento);
+var ambienteSchema = z23.nativeEnum(Ambiente);
+var tipoPessoaSchema2 = z23.nativeEnum(TipoPessoa);
+var formaPagamentoSchema = z23.nativeEnum(FormaPagamento);
+var tomadorFiscalSchema = z23.object({
+  id: z23.number().int().positive().optional(),
+  tipoPessoa: tipoPessoaSchema2,
+  cpfCnpj: documentoBase,
+  nomeParaNota: z23.string().trim().min(3).max(255),
+  email: z23.string().trim().email().max(320).optional().or(z23.literal("")),
+  celular: z23.string().trim().max(20).optional().or(z23.literal("")),
+  logradouro: z23.string().trim().max(255).optional().or(z23.literal("")),
+  numero: z23.string().trim().max(20).optional().or(z23.literal("")),
+  complemento: z23.string().trim().max(255).optional().or(z23.literal("")),
+  bairro: z23.string().trim().max(100).optional().or(z23.literal("")),
+  cidade: z23.string().trim().max(100).optional().or(z23.literal("")),
+  uf: z23.string().trim().length(2).optional().or(z23.literal("")),
+  cep: z23.string().trim().max(9).optional().or(z23.literal("")),
+  codigoIbge: z23.string().trim().regex(/^\d{7}$/, "C\xF3digo IBGE deve ter 7 d\xEDgitos").optional().or(z23.literal("")),
+  inscricaoEstadual: z23.string().trim().max(20).optional().or(z23.literal(""))
+});
+var configuracaoFiscalSchema = z23.object({
+  tipoDocumento: tipoDocumentoSchema,
+  ambiente: ambienteSchema,
+  provedor: z23.string().trim().min(2).max(50),
+  serie: z23.string().trim().min(1).max(10),
+  codigoMunicipio: z23.string().trim().regex(/^\d{7}$/),
+  itemListaServico: z23.string().trim().min(1).max(10),
+  aliquotaIssPadrao: z23.number().min(0).max(100).refine((v) => Number.isFinite(v), "Al\xEDquota inv\xE1lida"),
+  regimeEspecialTributacao: z23.number().int().min(0).max(9).optional(),
+  permiteEmissaoRetroativa: z23.boolean().default(false),
+  diasLimiteRetroativo: z23.number().int().min(0).max(365).default(0),
+  ativo: z23.boolean().default(true)
+});
+var empresaFiscalSchema = z23.object({
+  cnpj: documentoBase.refine(cnpjValido, { message: "CNPJ inv\xE1lido" }),
+  razaoSocial: z23.string().trim().min(3).max(255),
+  nomeFantasia: z23.string().trim().max(255).optional().or(z23.literal("")),
+  ie: z23.string().trim().max(20).optional().or(z23.literal("")),
+  im: z23.string().trim().max(20).optional().or(z23.literal("")),
+  regimeTributario: z23.string().trim().min(1).max(50),
+  cnaePrincipal: z23.string().trim().regex(/^\d{7}$/).optional().or(z23.literal("")),
+  enderecoCompleto: z23.record(z23.string(), z23.unknown()).optional(),
+  municipioIbge: z23.string().trim().regex(/^\d{7}$/),
+  uf: z23.string().trim().length(2),
+  emailFiscal: z23.string().trim().email().max(320)
+});
+var prepararNotaSchema = z23.object({
+  agendamentoId: z23.number().int().positive()
+});
+var emitirDoAgendamentoSchema = z23.object({
+  agendamentoId: z23.number().int().positive(),
+  /** Reemissão é AÇÃO EXPLÍCITA (V4.1) — clique duplo não reemite. */
+  reemitir: z23.boolean().default(false),
+  tomador: tomadorFiscalSchema.optional()
+});
+var emitirLoteSchema = z23.object({
+  agendamentoIds: z23.array(z23.number().int().positive()).min(1, "Selecione ao menos um agendamento").max(50, "M\xE1ximo de 50 agendamentos por lote"),
+  reemitir: z23.boolean().default(false)
+});
+var cancelarNotaSchema = z23.object({
+  notaId: z23.number().int().positive(),
+  /** V5: motivo mínimo 15 caracteres. */
+  motivo: z23.string().trim().min(15, "Motivo deve ter no m\xEDnimo 15 caracteres").max(255)
+});
+var listarNotasSchema = z23.object({
+  status: z23.array(z23.string()).optional(),
+  ambiente: ambienteSchema.optional(),
+  dataInicio: z23.string().optional(),
+  dataFim: z23.string().optional(),
+  profissionalId: z23.number().int().positive().optional(),
+  pagina: z23.number().int().min(1).default(1),
+  porPagina: z23.number().int().min(1).max(100).default(20)
+});
+var vincularTomadorSchema = z23.object({
+  agendamentoId: z23.number().int().positive(),
+  tomadorId: z23.number().int().positive()
+});
+
+// server/controllers/fiscal.controller.ts
+var ROLES_EMITIR = /* @__PURE__ */ new Set(["owner", "admin", "receptionist", "financial"]);
+function exigirPapelEmissao(role) {
+  if (!role || !ROLES_EMITIR.has(role)) {
+    throw new TRPCError21({
+      code: "FORBIDDEN",
+      message: "Somente ADMINISTRADOR ou RECEPCAO podem emitir nota fiscal."
+    });
+  }
+}
+function exigirTenant(ctx) {
+  const orgId = ctx.user?.organizationId;
+  if (typeof orgId !== "number" || orgId <= 0) {
+    throw new TRPCError21({ code: "FORBIDDEN", message: "Usu\xE1rio sem organiza\xE7\xE3o vinculada." });
+  }
+  return orgId;
+}
+var fiscalProcedure = protectedProcedure.use(async (opts) => {
+  exigirPapelEmissao(opts.ctx.user?.role ?? void 0);
+  return opts.next();
+});
+var fiscalRouter = router({
+  /* ---------------------------------------------------------------- */
+  /*  prepararNota — habilita o botão na UI; NUNCA envia (§14)         */
+  /* ---------------------------------------------------------------- */
+  prepararNota: fiscalProcedure.input(prepararNotaSchema).query(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    return prepararNota(organizationId, input.agendamentoId);
+  }),
+  /* ---------------------------------------------------------------- */
+  /*  emitirDoAgendamento — snapshot → ENFILEIRADA → fila (R11)        */
+  /* ---------------------------------------------------------------- */
+  emitirDoAgendamento: fiscalProcedure.input(emitirDoAgendamentoSchema).mutation(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    const resultado = await emitirDoAgendamento(organizationId, input.agendamentoId, {
+      reemitir: input.reemitir
+    });
+    return {
+      status: resultado.status,
+      notaId: resultado.nota.id,
+      numero: resultado.nota.numero
+    };
+  }),
+  /* ---------------------------------------------------------------- */
+  /*  emitirLote — máx 50, transação por item (V6)                     */
+  /* ---------------------------------------------------------------- */
+  emitirLote: fiscalProcedure.input(emitirLoteSchema).mutation(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    const resultados = await emitirLote(organizationId, input.agendamentoIds, {
+      reemitir: input.reemitir
+    });
+    return { itens: resultados };
+  }),
+  /* ---------------------------------------------------------------- */
+  /*  consultar — status atual da nota                                 */
+  /* ---------------------------------------------------------------- */
+  consultar: fiscalProcedure.input(z24.object({ notaId: z24.number().int().positive() })).query(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    const db = await getDb();
+    if (!db) throw new TRPCError21({ code: "INTERNAL_SERVER_ERROR", message: "Banco indispon\xEDvel" });
+    const rows = await db.select({
+      id: notasFiscais.id,
+      status: notasFiscais.status,
+      cStat: notasFiscais.cStat,
+      xMotivo: notasFiscais.xMotivo,
+      protocolo: notasFiscais.protocolo,
+      chaveAcesso: notasFiscais.chaveAcesso
+    }).from(notasFiscais).where(and3(eq4(notasFiscais.id, input.notaId), eq4(notasFiscais.organizationId, organizationId))).limit(1);
+    if (!rows[0]) throw new TRPCError21({ code: "NOT_FOUND", message: "Nota n\xE3o encontrada" });
+    return rows[0];
+  }),
+  /* ---------------------------------------------------------------- */
+  /*  cancelarNota — motivo mínimo 15 (V5)                             */
+  /* ---------------------------------------------------------------- */
+  cancelarNota: fiscalProcedure.input(cancelarNotaSchema).mutation(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    await cancelarNota(organizationId, input.notaId, input.motivo);
+    return { success: true };
+  }),
+  /* ---------------------------------------------------------------- */
+  /*  listar — paginado, SEMPRE por organizationId (R02)               */
+  /* ---------------------------------------------------------------- */
+  listar: fiscalProcedure.input(listarNotasSchema).query(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    return listarNotas(organizationId, {
+      ambiente: input.ambiente,
+      status: input.status,
+      profissionalId: input.profissionalId,
+      dataInicio: input.dataInicio ? new Date(input.dataInicio) : void 0,
+      dataFim: input.dataFim ? new Date(input.dataFim) : void 0,
+      pagina: input.pagina,
+      porPagina: input.porPagina
+    });
+  }),
+  /* ---------------------------------------------------------------- */
+  /*  baixarXml — documento legal (R26/R27)                            */
+  /* ---------------------------------------------------------------- */
+  baixarXml: fiscalProcedure.input(z24.object({ notaId: z24.number().int().positive() })).query(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    const db = await getDb();
+    if (!db) throw new TRPCError21({ code: "INTERNAL_SERVER_ERROR", message: "Banco indispon\xEDvel" });
+    const rows = await db.select({ xmlAutorizado: notasFiscais.xmlAutorizado, chaveAcesso: notasFiscais.chaveAcesso }).from(notasFiscais).where(and3(eq4(notasFiscais.id, input.notaId), eq4(notasFiscais.organizationId, organizationId))).limit(1);
+    const nota = rows[0];
+    if (!nota) throw new TRPCError21({ code: "NOT_FOUND", message: "Nota n\xE3o encontrada" });
+    if (!nota.xmlAutorizado) throw new TRPCError21({ code: "NOT_FOUND", message: "XML autorizado indispon\xEDvel" });
+    return { xml: nota.xmlAutorizado, chaveAcesso: nota.chaveAcesso };
+  }),
+  /* ---------------------------------------------------------------- */
+  /*  Painel — agendamentos por status FISCAL (§13)                    */
+  /* ---------------------------------------------------------------- */
+  painelAgendamentos: fiscalProcedure.input(
+    z24.object({
+      fiscalStatus: z24.enum(["PENDENTE", "EMITIDA", "ERRO", "CANCELADA", "NAO_EMITIDA"]).optional(),
+      ambiente: z24.enum(["HOMOLOGACAO", "PRODUCAO"]).optional(),
+      pagina: z24.number().int().min(1).default(1),
+      porPagina: z24.number().int().min(1).max(100).default(20)
+    })
+  ).query(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    const db = await getDb();
+    if (!db) throw new TRPCError21({ code: "INTERNAL_SERVER_ERROR", message: "Banco indispon\xEDvel" });
+    const conds = [eq4(appointments.organizationId, organizationId), eq4(appointments.status, "atendido")];
+    if (input.fiscalStatus) conds.push(eq4(appointments.fiscalStatus, input.fiscalStatus));
+    const itens = await db.select({
+      id: appointments.id,
+      startsAt: appointments.startsAt,
+      concluidoEm: appointments.concluidoEm,
+      fiscalStatus: appointments.fiscalStatus,
+      fiscalNotaId: appointments.fiscalNotaId,
+      valorConsulta: appointments.valorConsulta,
+      patientId: appointments.patientId,
+      professionalId: appointments.professionalId,
+      profissionalNome: professionals.fullName,
+      profissionalCrm: professionals.councilNumber
+    }).from(appointments).leftJoin(professionals, eq4(appointments.professionalId, professionals.id)).where(and3(...conds)).orderBy(desc2(appointments.concluidoEm)).limit(input.porPagina).offset((input.pagina - 1) * input.porPagina);
+    return { itens };
+  }),
+  /* ---------------------------------------------------------------- */
+  /*  tomadores — busca para o formulário (§12)                        */
+  /* ---------------------------------------------------------------- */
+  buscarTomadorPorDocumento: fiscalProcedure.input(z24.object({ cpfCnpj: z24.string().trim().min(11).max(18) })).query(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    const db = await getDb();
+    if (!db) throw new TRPCError21({ code: "INTERNAL_SERVER_ERROR", message: "Banco indispon\xEDvel" });
+    const rows = await db.select().from(tomadoresFiscais).where(
+      and3(
+        eq4(tomadoresFiscais.organizationId, organizationId),
+        eq4(tomadoresFiscais.cpfCnpj, input.cpfCnpj)
+      )
+    ).limit(1);
+    return rows[0] ?? null;
+  }),
+  salvarTomador: fiscalProcedure.input(
+    z24.object({
+      id: z24.number().int().positive().optional(),
+      tipoPessoa: tipoPessoaSchema,
+      cpfCnpj: z24.string().trim().min(11).max(18),
+      nomeParaNota: z24.string().trim().min(3).max(255),
+      email: z24.string().trim().max(320).optional(),
+      celular: z24.string().trim().max(20).optional(),
+      logradouro: z24.string().trim().max(255).optional(),
+      numero: z24.string().trim().max(20).optional(),
+      complemento: z24.string().trim().max(255).optional(),
+      bairro: z24.string().trim().max(100).optional(),
+      cidade: z24.string().trim().max(100).optional(),
+      uf: z24.string().trim().length(2).optional(),
+      cep: z24.string().trim().max(9).optional(),
+      codigoIbge: z24.string().trim().max(7).optional()
+    })
+  ).mutation(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    const db = await getDb();
+    if (!db) throw new TRPCError21({ code: "INTERNAL_SERVER_ERROR", message: "Banco indispon\xEDvel" });
+    if (input.id) {
+      await db.update(tomadoresFiscais).set({ ...input, organizationId }).where(
+        and3(eq4(tomadoresFiscais.id, input.id), eq4(tomadoresFiscais.organizationId, organizationId))
+      );
+      return { id: input.id };
+    }
+    const { id: _ignored, ...dadosTomador } = input;
+    void _ignored;
+    const [row] = await db.insert(tomadoresFiscais).values({ ...dadosTomador, tipoPessoa: input.tipoPessoa, organizationId }).$returningId();
+    return { id: row.id };
+  }),
+  vincularTomador: fiscalProcedure.input(vincularTomadorSchema).mutation(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    const db = await getDb();
+    if (!db) throw new TRPCError21({ code: "INTERNAL_SERVER_ERROR", message: "Banco indispon\xEDvel" });
+    const rows = await db.select({ id: tomadoresFiscais.id }).from(tomadoresFiscais).where(
+      and3(
+        eq4(tomadoresFiscais.id, input.tomadorId),
+        eq4(tomadoresFiscais.organizationId, organizationId)
+      )
+    ).limit(1);
+    if (!rows[0]) throw new TRPCError21({ code: "NOT_FOUND", message: "Tomador n\xE3o encontrado" });
+    await db.update(appointments).set({ fiscalTomadorId: input.tomadorId }).where(and3(eq4(appointments.id, input.agendamentoId), eq4(appointments.organizationId, organizationId)));
+    return { success: true };
+  }),
+  /* ---------------------------------------------------------------- */
+  /*  Configuração fiscal + credencial (§14, NUNCA expõe segredo)      */
+  /* ---------------------------------------------------------------- */
+  configurarEmpresa: fiscalProcedure.input(
+    z24.object({
+      cnpj: z24.string().trim().min(11).max(18),
+      razaoSocial: z24.string().trim().min(3).max(255),
+      municipioIbge: z24.string().trim().length(7),
+      uf: z24.string().trim().length(2),
+      emailFiscal: z24.string().trim().email(),
+      regimeTributario: z24.string().trim().min(1),
+      // Credencial — entra por aqui e nunca mais volta (R05)
+      credencialMaterial: z24.string().min(1),
+      credencialSenha: z24.string().optional(),
+      credencialTipo: z24.enum(["A1", "A3", "TOKEN_GATEWAY"]),
+      credencialValidade: z24.string()
+    })
+  ).mutation(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    const db = await getDb();
+    if (!db) throw new TRPCError21({ code: "INTERNAL_SERVER_ERROR", message: "Banco indispon\xEDvel" });
+    const [empresa] = await db.insert(empresasFiscais).values({
+      organizationId,
+      cnpj: input.cnpj,
+      razaoSocial: input.razaoSocial,
+      municipioIbge: input.municipioIbge,
+      uf: input.uf,
+      emailFiscal: input.emailFiscal,
+      regimeTributario: input.regimeTributario
+    }).onDuplicateKeyUpdate({
+      set: {
+        razaoSocial: input.razaoSocial,
+        municipioIbge: input.municipioIbge,
+        uf: input.uf,
+        emailFiscal: input.emailFiscal,
+        regimeTributario: input.regimeTributario
+      }
+    }).$returningId();
+    const segredoRef = await guardar(
+      organizationId,
+      input.credencialMaterial,
+      input.credencialSenha ?? null
+    );
+    const existing = await db.select({ id: certificados.id }).from(certificados).where(and3(eq4(certificados.organizationId, organizationId), eq4(certificados.ativo, true))).limit(1);
+    if (existing[0]) {
+      await db.update(certificados).set({ segredoRef: String(segredoRef), validoAte: new Date(input.credencialValidade), tipo: input.credencialTipo }).where(eq4(certificados.id, existing[0].id));
+    } else {
+      await db.insert(certificados).values({
+        organizationId,
+        tipo: input.credencialTipo,
+        titularCnpj: input.cnpj,
+        validoDe: /* @__PURE__ */ new Date(),
+        validoAte: new Date(input.credencialValidade),
+        segredoRef: String(segredoRef),
+        ambiente: "HOMOLOGACAO"
+      });
+    }
+    void empresa;
+    return { success: true };
+  }),
+  statusCredencial: fiscalProcedure.input(z24.object({})).query(async ({ ctx }) => {
+    const organizationId = exigirTenant(ctx);
+    return status(organizationId);
+  }),
+  /* ---------------------------------------------------------------- */
+  /*  Config de série/numeração + inicialização da numeração           */
+  /* ---------------------------------------------------------------- */
+  configurarSerie: fiscalProcedure.input(
+    z24.object({
+      tipoDocumento: z24.enum(["NFS_E", "NF_E", "NFC_E"]),
+      ambiente: z24.enum(["HOMOLOGACAO", "PRODUCAO"]),
+      provedor: z24.string().trim().min(2).max(50),
+      serie: z24.string().trim().min(1).max(10),
+      codigoMunicipio: z24.string().trim().length(7),
+      itemListaServico: z24.string().trim().min(1).max(10),
+      aliquotaIssPadrao: z24.number().min(0).max(100),
+      permiteEmissaoRetroativa: z24.boolean().default(false),
+      diasLimiteRetroativo: z24.number().int().min(0).max(365).default(0)
+    })
+  ).mutation(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    const db = await getDb();
+    if (!db) throw new TRPCError21({ code: "INTERNAL_SERVER_ERROR", message: "Banco indispon\xEDvel" });
+    const existing = await db.select({ id: configuracoesFiscais.id }).from(configuracoesFiscais).where(
+      and3(
+        eq4(configuracoesFiscais.organizationId, organizationId),
+        eq4(configuracoesFiscais.tipoDocumento, input.tipoDocumento),
+        eq4(configuracoesFiscais.ambiente, input.ambiente),
+        eq4(configuracoesFiscais.serie, input.serie)
+      )
+    ).limit(1);
+    if (existing[0]) {
+      await db.update(configuracoesFiscais).set({ ...input, aliquotaIssPadrao: input.aliquotaIssPadrao.toFixed(2) }).where(eq4(configuracoesFiscais.id, existing[0].id));
+    } else {
+      await db.insert(configuracoesFiscais).values({
+        organizationId,
+        ...input,
+        aliquotaIssPadrao: input.aliquotaIssPadrao.toFixed(2),
+        proximoNumero: 1,
+        ativo: true
+      });
+    }
+    const numeracao = await db.select({ id: numeracaoFiscal.id }).from(numeracaoFiscal).where(
+      and3(
+        eq4(numeracaoFiscal.organizationId, organizationId),
+        eq4(numeracaoFiscal.tipoDocumento, input.tipoDocumento),
+        eq4(numeracaoFiscal.ambiente, input.ambiente),
+        eq4(numeracaoFiscal.serie, input.serie)
+      )
+    ).limit(1);
+    if (!numeracao[0]) {
+      await db.insert(numeracaoFiscal).values({
+        organizationId,
+        tipoDocumento: input.tipoDocumento,
+        ambiente: input.ambiente,
+        serie: input.serie,
+        ultimoNumero: 0
+      });
+    }
+    return { success: true };
+  }),
+  /* ---------------------------------------------------------------- */
+  /*  Eventos fiscais da nota (cancelamentos, CCe...)                  */
+  /* ---------------------------------------------------------------- */
+  eventosDaNota: fiscalProcedure.input(z24.object({ notaId: z24.number().int().positive() })).query(async ({ ctx, input }) => {
+    const organizationId = exigirTenant(ctx);
+    const db = await getDb();
+    if (!db) throw new TRPCError21({ code: "INTERNAL_SERVER_ERROR", message: "Banco indispon\xEDvel" });
+    return db.select().from(eventosFiscais).where(and3(eq4(eventosFiscais.notaId, input.notaId), eq4(eventosFiscais.organizationId, organizationId))).orderBy(desc2(eventosFiscais.criadoEm));
+  })
+});
+
 // server/routers.ts
 var appRouter = router({
   // Sistema / Saúde
@@ -7907,7 +9055,9 @@ var appRouter = router({
   // Onboarding do owner (/primeiro-acesso) e aceite de convite (/aceitar-convite)
   onboarding: onboardingRouter,
   // Equipe (RBAC team.manage)
-  equipe: equipeRouter
+  equipe: equipeRouter,
+  // Fiscal — NFS-e / NF-e (FISCAL.md)
+  fiscal: fiscalRouter
   // TODO: Prontuário, Exames, Cirurgias, Despesas, Repasse, TISS, Telessaúde, Marketing, Relatórios
   // exemplo:
   // prontuario: prontuarioRouter,
@@ -8500,6 +9650,58 @@ function registerPaymentRoutes(app) {
   });
 }
 
+// server/routes/fiscal.ts
+import { and as and4, eq as eq5 } from "drizzle-orm";
+async function resolveUser(req) {
+  try {
+    return await sdk.authenticateRequest(req);
+  } catch {
+    return null;
+  }
+}
+function registerFiscalRoutes(app) {
+  app.get("/api/fiscal/:notaId/xml", async (req, res) => {
+    try {
+      const raw = await resolveUser(req);
+      if (!raw) return void res.status(401).json({ error: "N\xE3o autenticado" });
+      const tenant = await resolveTenantAccessByEmail(raw.email);
+      if (!tenant) return void res.status(403).json({ error: "Usu\xE1rio sem organiza\xE7\xE3o" });
+      const organizationId = tenant.organizationId;
+      if (typeof organizationId !== "number" || organizationId <= 0) {
+        return void res.status(403).json({ error: "Usu\xE1rio sem organiza\xE7\xE3o" });
+      }
+      const notaId = Number(req.params.notaId);
+      if (!Number.isInteger(notaId) || notaId <= 0) {
+        return void res.status(400).json({ error: "ID inv\xE1lido" });
+      }
+      const db = await getDb();
+      if (!db) return void res.status(500).json({ error: "Banco indispon\xEDvel" });
+      const rows = await db.select({
+        xmlAutorizado: notasFiscais.xmlAutorizado,
+        chaveAcesso: notasFiscais.chaveAcesso,
+        status: notasFiscais.status
+      }).from(notasFiscais).where(
+        and4(
+          eq5(notasFiscais.id, notaId),
+          eq5(notasFiscais.organizationId, organizationId)
+        )
+      ).limit(1);
+      const nota = rows[0];
+      if (!nota) return void res.status(404).json({ error: "Nota n\xE3o encontrada" });
+      if (!nota.xmlAutorizado) {
+        return void res.status(404).json({ error: "XML autorizado indispon\xEDvel" });
+      }
+      const filename = `nota-${nota.chaveAcesso ?? notaId}.xml`;
+      res.setHeader("Content-Type", "application/xml; charset=utf-8");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      return void res.send(nota.xmlAutorizado);
+    } catch (err) {
+      console.error("[fiscal:xml] erro:", err instanceof Error ? err.message : err);
+      return void res.status(500).json({ error: "Erro ao baixar XML" });
+    }
+  });
+}
+
 // server/_core/index.ts
 init_supabase_server();
 
@@ -8632,6 +9834,7 @@ async function createApp() {
   registerOAuthRoutes(app);
   registerGoogleCalendarRoutes(app);
   registerPaymentRoutes(app);
+  registerFiscalRoutes(app);
   if (!process.env.VERCEL) startGoogleSyncWorker();
   app.use(
     "/api/trpc",

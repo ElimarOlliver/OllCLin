@@ -74,6 +74,7 @@ const menuItems = [
   { icon: HandCoins, label: "Repasse", path: "/repasses" },
   { icon: Scale, label: "Extrato", path: "/extrato" },
   { icon: FileText, label: "Recibos", path: "/recibos" },
+  { icon: FileText, label: "Notas fiscais", path: "/notas-fiscais" },
   { icon: MapPin, label: "Configurações", path: "/configuracoes" },
   { icon: ShieldCheck, label: "Permissões", path: "/permissoes", ownerOnly: true },
   { icon: Users, label: "Equipe", path: "/equipe", ownerOnly: true },
