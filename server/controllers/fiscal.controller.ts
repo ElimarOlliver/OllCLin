@@ -414,6 +414,12 @@ export const fiscalRouter = router({
         codigoMunicipio: z.string().trim().length(7),
         itemListaServico: z.string().trim().min(1).max(10),
         aliquotaIssPadrao: z.number().min(0).max(100),
+        /** Etapa 1 — campos editáveis pelo administrador (migration 0013). */
+        opcaoSimplesNacional: z.boolean().default(false),
+        codigoTributacaoServico: z.string().trim().max(10).optional().or(z.literal("")),
+        descricaoServicoPadrao: z.string().trim().max(255).optional().or(z.literal("")),
+        issRetido: z.boolean().default(false),
+        modoCertificado: z.enum(["A1_SERVIDOR", "ASSINATURA_LOCAL", "MANUAL_DF"]).default("A1_SERVIDOR"),
         permiteEmissaoRetroativa: z.boolean().default(false),
         diasLimiteRetroativo: z.number().int().min(0).max(365).default(0),
       }),
@@ -438,13 +444,22 @@ export const fiscalRouter = router({
       if (existing[0]) {
         await db
           .update(configuracoesFiscais)
-          .set({ ...input, aliquotaIssPadrao: input.aliquotaIssPadrao.toFixed(2) })
+          .set({
+          ...input,
+          aliquotaIssPadrao: input.aliquotaIssPadrao.toFixed(2),
+          codigoTributacaoServico: input.codigoTributacaoServico || null,
+          descricaoServicoPadrao: input.descricaoServicoPadrao || null,
+        })
           .where(eq(configuracoesFiscais.id, existing[0].id));
       } else {
-        await db.insert(configuracoesFiscais).values({
+        await db
+          .insert(configuracoesFiscais)
+          .values({
           organizationId,
           ...input,
           aliquotaIssPadrao: input.aliquotaIssPadrao.toFixed(2),
+          codigoTributacaoServico: input.codigoTributacaoServico || null,
+          descricaoServicoPadrao: input.descricaoServicoPadrao || null,
           proximoNumero: 1,
           ativo: true,
         });
