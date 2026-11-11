@@ -38,6 +38,17 @@ export const TipoEvento = {
 } as const;
 export type TipoEvento = (typeof TipoEvento)[keyof typeof TipoEvento];
 
+/** Modo de assinatura/certificado (Etapa 6 do pedido — configurável por organização). */
+export const ModoCertificado = {
+  /** A1 (.pfx/.p12) no servidor — assinatura 100% no backend. */
+  A1_SERVIDOR: "A1_SERVIDOR",
+  /** A3 em token/cartão ou certificado instalado na máquina — assina no cliente. */
+  ASSINATURA_LOCAL: "ASSINATURA_LOCAL",
+  /** Contingência manual: dados da nota + emissão no portal da Fazenda do DF. */
+  MANUAL_DF: "MANUAL_DF",
+} as const;
+export type ModoCertificado = (typeof ModoCertificado)[keyof typeof ModoCertificado];
+
 export const TipoPessoa = {
   FISICA: "FISICA",
   JURIDICA: "JURIDICA",

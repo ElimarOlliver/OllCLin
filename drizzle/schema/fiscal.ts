@@ -164,6 +164,17 @@ export const configuracoesFiscais = mysqlTable(
     itemListaServico: varchar("item_lista_servico", { length: 10 }).notNull(),
     aliquotaIssPadrao: decimal("aliquota_iss_padrao", { precision: 5, scale: 2 }).notNull(),
     regimeEspecialTributacao: int("regime_especial_tributacao"),
+    /** Etapa 1: campos editáveis pelo administrador (migration 0013). */
+    opcaoSimplesNacional: boolean("opcao_simples_nacional").default(false).notNull(),
+    /** Código de tributação do serviço — configurável, NUNCA fixo no código. */
+    codigoTributacaoServico: varchar("codigo_tributacao_servico", { length: 10 }),
+    /** Descrição padrão que pré-preenche as notas (ex.: "Consulta médica"). */
+    descricaoServicoPadrao: varchar("descricao_servico_padrao", { length: 255 }),
+    issRetido: boolean("iss_retido").default(false).notNull(),
+    /** Modo de certificado padrão da organização (Etapa 6). */
+    modoCertificado: mysqlEnum("modo_certificado", ["A1_SERVIDOR", "ASSINATURA_LOCAL", "MANUAL_DF"])
+      .default("A1_SERVIDOR")
+      .notNull(),
     permiteEmissaoRetroativa: boolean("permite_emissao_retroativa").default(false).notNull(),
     diasLimiteRetroativo: int("dias_limite_retroativo").default(0).notNull(),
     ativo: boolean("ativo").default(true).notNull(),

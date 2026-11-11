@@ -102,6 +102,12 @@ export const configuracaoFiscalSchema = z.object({
     .max(100)
     .refine((v) => Number.isFinite(v), "Alíquota inválida"),
   regimeEspecialTributacao: z.number().int().min(0).max(9).optional(),
+  /** Etapa 1 — campos editáveis pelo administrador (migration 0013). */
+  opcaoSimplesNacional: z.boolean().default(false),
+  codigoTributacaoServico: z.string().trim().max(10).optional().or(z.literal("")),
+  descricaoServicoPadrao: z.string().trim().max(255).optional().or(z.literal("")),
+  issRetido: z.boolean().default(false),
+  modoCertificado: z.enum(["A1_SERVIDOR", "ASSINATURA_LOCAL", "MANUAL_DF"]).default("A1_SERVIDOR"),
   permiteEmissaoRetroativa: z.boolean().default(false),
   diasLimiteRetroativo: z.number().int().min(0).max(365).default(0),
   ativo: z.boolean().default(true),
@@ -142,14 +148,19 @@ export const emitirDoAgendamentoSchema = z.object({
   tomador: tomadorFiscalSchema.optional(),
 });
 
-/** Emissão em lote (V6): máximo 50, cada item transação própria. */
+/** Limite do pedido (Etapa 2): no máximo 10 notas por lote. */
+const LIMITE_LOTE = 10;
+
+/** Emissão em lote (V6): máximo 10, cada item transação própria. */
 export const emitirLoteSchema = z.object({
   agendamentoIds: z
     .array(z.number().int().positive())
     .min(1, "Selecione ao menos um agendamento")
-    .max(50, "Máximo de 50 agendamentos por lote"),
+    .max(LIMITE_LOTE, `Máximo de ${LIMITE_LOTE} agendamentos por lote`),
   reemitir: z.boolean().default(false),
 });
+
+export const LIMITE_LOTE_FISCAL = LIMITE_LOTE;
 
 export const cancelarNotaSchema = z.object({
   notaId: z.number().int().positive(),
