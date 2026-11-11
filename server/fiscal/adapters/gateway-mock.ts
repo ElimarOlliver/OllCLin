@@ -38,6 +38,16 @@ function comTimeout<T>(p: Promise<T>): Promise<T> {
 
 export class GatewayMockAdapter implements AdapterFiscal {
   async emitir(nota: NotaParaEmitir, _credencial: Credencial): Promise<RespostaEmissao> {
+    // Etapa 5: em produção o mock NUNCA pode emitir. Recusa explicitamente —
+    // nota fica ERRO_TRANSITORIO/REJEITADA em vez de virar "documento legal" falso.
+    if (nota.ambiente === "PRODUCAO") {
+      return {
+        status: "REJEITADA" as const,
+        cStat: "999",
+        xMotivo:
+          "gateway-mock não pode emitir em ambiente PRODUCAO. Configure um provedor fiscal real antes de emitir notas válidas.",
+      };
+    }
     return comTimeout(
       (async () => {
         const cStat = process.env.FISCAL_MOCK_CSTAT ?? "100";

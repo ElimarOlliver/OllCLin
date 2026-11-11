@@ -14,9 +14,12 @@ import type {
   TipoDocumento,
 } from "../../../shared/fiscal/tipos";
 import { GatewayMockAdapter } from "./gateway-mock";
+import { ProvedorRealStubAdapter } from "./gateway-provedor-real";
 
 const REGISTRO: Record<string, () => AdapterFiscal> = {
   mock: () => new GatewayMockAdapter(),
+  /** Etapa 5: stub documentado — lança erro claro até o provedor real ser escolhido. */
+  "provedor-real": () => new ProvedorRealStubAdapter(),
   // TODO: confirmar contrato com o provedor (pendência 2 do FISCAL.md) antes
   // de registrar gateways reais: focus, enotas, plugnotas, nfeio, tecnospeed.
 };
