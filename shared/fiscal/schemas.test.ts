@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { cpfValido, cnpjValido, emitirLoteSchema, cancelarNotaSchema, documentoTomadorSchema } from "./schemas";
+import { cpfValido, cnpjValido, emitirLoteSchema, cancelarNotaSchema, documentoTomadorSchema, LIMITE_LOTE_FISCAL } from "./schemas";
 import { interpretarCStat } from "./codigos-rejeicao";
 import { chaveIdempotenciaFiscal } from "./tipos";
 import { mascararDocumento } from "@serverlib/fiscal/nota.service";
@@ -91,11 +91,11 @@ describe("LGPD — mascaramento de documento nos logs", () => {
 });
 
 describe("schemas de emissão", () => {
-  it("lote aceita até 50 e rejeita 51", () => {
-    const ids50 = Array.from({ length: 50 }, (_, i) => i + 1);
-    expect(emitirLoteSchema.safeParse({ agendamentoIds: ids50 }).success).toBe(true);
-    const ids51 = Array.from({ length: 51 }, (_, i) => i + 1);
-    expect(emitirLoteSchema.safeParse({ agendamentoIds: ids51 }).success).toBe(false);
+  it(`lote aceita até ${LIMITE_LOTE_FISCAL} e rejeita acima`, () => {
+    const idsMax = Array.from({ length: LIMITE_LOTE_FISCAL }, (_, i) => i + 1);
+    expect(emitirLoteSchema.safeParse({ agendamentoIds: idsMax }).success).toBe(true);
+    const idsAcima = Array.from({ length: LIMITE_LOTE_FISCAL + 1 }, (_, i) => i + 1);
+    expect(emitirLoteSchema.safeParse({ agendamentoIds: idsAcima }).success).toBe(false);
   });
   it("cancelamento exige motivo ≥ 15 caracteres (V5)", () => {
     expect(cancelarNotaSchema.safeParse({ notaId: 1, motivo: "curto demais" }).success).toBe(false);
