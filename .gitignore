@@ -16,6 +16,8 @@ build/
 
 # Configuração local de ferramentas (pode conter caminhos/tokens locais)
 .mcp.json
+# Binarios locais de ferramentas (ex.: GitHub MCP Server) - nao versionar
+.tools/
 
 # Arquivos temporários de teste
 *.tmp
