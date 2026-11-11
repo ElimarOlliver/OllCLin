@@ -53,7 +53,9 @@ const AMBIENTE_PADRAO = "PRODUCAO";
 
 export default function NotasFiscaisView() {
   const [ambiente, setAmbiente] = useState<"HOMOLOGACAO" | "PRODUCAO">(AMBIENTE_PADRAO);
-  const [fiscalStatus, setFiscalStatus] = useState<string>("PENDENTE");
+  // Consultas já atendidas entram inicialmente como NAO_EMITIDA.
+  // PENDENTE é usado depois que a nota foi preparada/enfileirada.
+  const [fiscalStatus, setFiscalStatus] = useState<string>("NAO_EMITIDA");
   const [selecionados, setSelecionados] = useState<number[]>([]);
   const [bloqueiosPor, setBloqueiosPor] = useState<Record<number, string[]>>({});
 
@@ -100,7 +102,9 @@ export default function NotasFiscaisView() {
 
   // Pré-visualiza o que falta para os agendamentos pendentes visíveis
   useEffect(() => {
-    const pendentes = (painel.data?.itens ?? []).filter((i) => i.fiscalStatus === "PENDENTE");
+    const pendentes = (painel.data?.itens ?? []).filter(
+      (i) => i.fiscalStatus === "PENDENTE" || i.fiscalStatus === "NAO_EMITIDA",
+    );
     for (const item of pendentes) {
       utils.fiscal.prepararNota
         .fetch({ agendamentoId: item.id })
@@ -198,7 +202,9 @@ export default function NotasFiscaisView() {
             )}
             {itens.map((item) => {
               const bloqueios = bloqueiosPor[item.id] ?? [];
-              const podeEmitir = item.fiscalStatus === "PENDENTE" && bloqueios.length === 0;
+              const podeEmitir =
+                (item.fiscalStatus === "PENDENTE" || item.fiscalStatus === "NAO_EMITIDA") &&
+                bloqueios.length === 0;
               return (
                 <TableRow key={item.id}>
                   <TableCell>
@@ -236,7 +242,7 @@ export default function NotasFiscaisView() {
                         onClick={() => emitir.mutate({ agendamentoId: item.id })}
                         title={bloqueios.length > 0 ? bloqueios.join("; ") : "Emitir nota"}
                       >
-                        {emitir.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Emitir"}
+                        {emitir.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Gerar nota"}
                       </Button>
                       {item.fiscalNotaId && item.fiscalStatus === "EMITIDA" && (
                         <>
