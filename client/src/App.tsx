@@ -117,7 +117,7 @@ function HomeView() {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6">
-      <section className="relative overflow-hidden rounded-2xl bg-[#075e63] px-6 py-8 text-white shadow-sm sm:px-8">
+      <section className="relative overflow-hidden rounded-2xl bg-primary px-6 py-8 text-primary-foreground shadow-sm sm:px-8">
         <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px)] [background-size:32px_32px]" />
         <div className="relative max-w-2xl">
           <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-teal-100">Visão geral da clínica</p>
@@ -128,7 +128,7 @@ function HomeView() {
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3" aria-label="Resumo da clínica">
         {[
-          { label: "Agenda de hoje", value: "—", helper: "Consulte seus atendimentos", Icon: CalendarDays, color: "text-[#075e63]" },
+          { label: "Agenda de hoje", value: "—", helper: "Consulte seus atendimentos", Icon: CalendarDays, color: "text-primary" },
           { label: "Pacientes ativos", value: "—", helper: "Gerencie seus cadastros", Icon: Users, color: "text-emerald-700" },
           { label: "Saldo do período", value: "—", helper: "Acompanhe suas receitas", Icon: Wallet, color: "text-amber-700" },
         ].map(({ label, value, helper, Icon, color }) => {
@@ -141,9 +141,9 @@ function HomeView() {
       </section>
 
       <section>
-        <div className="mb-3 flex items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#075e63]">Atalhos</p><h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">O que você precisa fazer?</h2></div></div>
+        <div className="mb-3 flex items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Atalhos</p><h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">O que você precisa fazer?</h2></div></div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {shortcuts.map(({ label, description, path, icon: Icon }) => <button key={path} type="button" onClick={() => setLocation(path)} className="group flex min-h-[138px] flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#075e63] focus-visible:ring-offset-2"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-50 text-[#075e63]"><Icon className="h-5 w-5" /></span><span><span className="flex items-center justify-between gap-3 font-semibold text-slate-900"><span>{label}</span><ArrowRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-1" /></span><span className="mt-1 block text-sm text-slate-500">{description}</span></span></button>)}
+          {shortcuts.map(({ label, description, path, icon: Icon }) => <button key={path} type="button" onClick={() => setLocation(path)} className="group flex min-h-[138px] flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary"><Icon className="h-5 w-5" /></span><span><span className="flex items-center justify-between gap-3 font-semibold text-slate-900"><span>{label}</span><ArrowRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-1" /></span><span className="mt-1 block text-sm text-slate-500">{description}</span></span></button>)}
         </div>
       </section>
     </div>
@@ -170,13 +170,13 @@ function DashboardShell() {
   // sem sidebar e sem chat corporativo.
   if (PUBLIC_ROUTES.includes(location)) {
     return (
-      <main className="min-h-screen w-full bg-[#f7f8f5]">
+      <main className="min-h-screen w-full bg-background">
         <Switch>
           <Route path="/landing" component={() => <LandingPageView onEnter={() => setLocation("/entrar")} />} />
-          <Route path="/entrar" component={() => <div className="flex min-h-screen w-full items-center justify-center bg-[#f7f8f5]"><LoginView /></div>} />
-          <Route path="/cadastro" component={() => <div className="flex min-h-screen w-full items-center justify-center bg-[#f7f8f5]"><CadastroView /></div>} />
-          <Route path="/primeiro-acesso" component={() => <div className="flex min-h-screen w-full items-center justify-center bg-[#f7f8f5]"><PrimeiroAcessoView token={new URLSearchParams(window.location.search).get("token") ?? ""} /></div>} />
-          <Route path="/aceitar-convite" component={() => <div className="flex min-h-screen w-full items-center justify-center bg-[#f7f8f5]"><AceitarConviteView token={new URLSearchParams(window.location.search).get("token") ?? ""} /></div>} />
+          <Route path="/entrar" component={() => <div className="flex min-h-screen w-full items-center justify-center bg-background"><LoginView /></div>} />
+          <Route path="/cadastro" component={() => <div className="flex min-h-screen w-full items-center justify-center bg-background"><CadastroView /></div>} />
+          <Route path="/primeiro-acesso" component={() => <div className="flex min-h-screen w-full items-center justify-center bg-background"><PrimeiroAcessoView token={new URLSearchParams(window.location.search).get("token") ?? ""} /></div>} />
+          <Route path="/aceitar-convite" component={() => <div className="flex min-h-screen w-full items-center justify-center bg-background"><AceitarConviteView token={new URLSearchParams(window.location.search).get("token") ?? ""} /></div>} />
           <Route component={NotFound} />
         </Switch>
       </main>
@@ -186,14 +186,14 @@ function DashboardShell() {
   // Fluxo de login: sessão carregada sem usuário em rota privada → landing.
   const activeLabel = menuItems.find((item) => item.path === location)?.label ?? "Menu";
 
-  if (loading) return <div className="flex min-h-screen w-full items-center justify-center bg-[#f7f8f5]"><div className="flex flex-col items-center gap-3"><div className="h-8 w-8 animate-pulse rounded-full bg-[#075e63]" /><p className="text-sm text-slate-500">Carregando sessão...</p></div></div>;
+  if (loading) return <div className="flex min-h-screen w-full items-center justify-center bg-background"><div className="flex flex-col items-center gap-3"><div className="h-8 w-8 animate-pulse rounded-full bg-primary" /><p className="text-sm text-slate-500">Carregando sessão...</p></div></div>;
   if (!user) return <LandingPageView onEnter={() => setLocation("/entrar")} />;
 
   // "Permissões" é área exclusiva do titular da conta (contratante).
   const isOwner = user.role === "owner" || user.role === "admin" || (user as { role?: string }).role === "owner";
   const visibleMenuItems = menuItems.filter((item) => !item.ownerOnly || isOwner);
 
-  return <><Sidebar collapsible="icon" className="border-r border-slate-200 bg-white"><SidebarHeader className="h-16 justify-center px-4"><div className="flex items-center gap-3"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#075e63] text-white"><Stethoscope className="h-5 w-5" /></div>{!isCollapsed && <div><div className="font-bold tracking-tight text-slate-900">OllCLin</div><div className="text-[10px] uppercase tracking-wider text-slate-400">Gestão clínica</div></div>}</div></SidebarHeader><SidebarContent><SidebarMenu className="px-2 py-2">{visibleMenuItems.map(({ icon: Icon, label, path }) => <SidebarMenuItem key={path}><SidebarMenuButton isActive={location === path} onClick={() => setLocation(path)} tooltip={label} className="h-10 transition-colors data-[active=true]:bg-teal-50 data-[active=true]:text-[#075e63]"><Icon className="h-4 w-4" /><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}<SidebarSeparator className="my-2" /></SidebarMenu></SidebarContent><SidebarFooter className="p-3"><DropdownMenu><DropdownMenuTrigger asChild><button className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#075e63]"><Avatar className="h-9 w-9 shrink-0 border"><AvatarFallback className="bg-teal-50 text-xs font-semibold text-[#075e63]">{user.name?.charAt(0).toUpperCase() ?? "U"}</AvatarFallback></Avatar><div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-medium leading-none text-slate-900">{user.name || "Usuário"}</p><p className="mt-1.5 truncate text-xs text-slate-500">{user.email || "—"}</p></div></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48"><DropdownMenuItem onClick={() => logout()}><LogOut className="mr-2 h-4 w-4" /><span>Sair</span></DropdownMenuItem></DropdownMenuContent></DropdownMenu></SidebarFooter></Sidebar><SidebarInset className="min-w-0 bg-[#f7f8f5]"><header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6"><div className="flex items-center gap-3"><SidebarTrigger className="h-9 w-9 rounded-lg bg-slate-50" /><div><p className="text-sm font-semibold text-slate-900">{activeLabel}</p><p className="hidden text-xs text-slate-500 sm:block">OllCLin · gestão simples e segura</p></div></div></header><main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24"><Router /></main></SidebarInset><CorporateChatWidget /></>;
+  return <><Sidebar collapsible="icon" className="border-r border-border bg-card"><SidebarHeader className="h-16 justify-center px-4"><div className="flex items-center gap-3"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Stethoscope className="h-5 w-5" /></div>{!isCollapsed && <div><div className="font-bold tracking-tight text-slate-900">OllCLin</div><div className="text-[10px] uppercase tracking-wider text-slate-400">Gestão clínica</div></div>}</div></SidebarHeader><SidebarContent><SidebarMenu className="px-2 py-2">{visibleMenuItems.map(({ icon: Icon, label, path }) => <SidebarMenuItem key={path}><SidebarMenuButton isActive={location === path} onClick={() => setLocation(path)} tooltip={label} className="h-10 transition-colors data-[active=true]:bg-primary/10 data-[active=true]:text-primary"><Icon className="h-4 w-4" /><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}<SidebarSeparator className="my-2" /></SidebarMenu></SidebarContent><SidebarFooter className="p-3"><DropdownMenu><DropdownMenuTrigger asChild><button className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Avatar className="h-9 w-9 shrink-0 border"><AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">{user.name?.charAt(0).toUpperCase() ?? "U"}</AvatarFallback></Avatar><div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-medium leading-none text-slate-900">{user.name || "Usuário"}</p><p className="mt-1.5 truncate text-xs text-slate-500">{user.email || "—"}</p></div></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48"><DropdownMenuItem onClick={() => logout()}><LogOut className="mr-2 h-4 w-4" /><span>Sair</span></DropdownMenuItem></DropdownMenuContent></DropdownMenu></SidebarFooter></Sidebar><SidebarInset className="min-w-0 bg-background"><header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-slate-200 bg-white/90 px-4 backdrop-blur sm:px-6"><div className="flex items-center gap-3"><SidebarTrigger className="h-9 w-9 rounded-lg bg-slate-50" /><div><p className="text-sm font-semibold text-slate-900">{activeLabel}</p><p className="hidden text-xs text-slate-500 sm:block">OllCLin · gestão simples e segura</p></div></div></header><main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24"><Router /></main></SidebarInset><CorporateChatWidget /></>;
 }
 
 export default App;

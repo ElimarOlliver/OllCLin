@@ -82,7 +82,7 @@ export default function CorporateChatWidget() {
       {open && (
         <section
           aria-label="Chat corporativo"
-          className="fixed bottom-20 right-3 z-[70] flex h-[min(680px,calc(100vh-6rem))] w-[min(92vw,420px)] min-w-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:right-5"
+          className="fixed bottom-20 right-3 z-fab flex h-[min(680px,calc(100vh-6rem))] w-[min(92vw,420px)] min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-popover shadow-2xl sm:right-5"
         >
           <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-[#075e63] px-4 py-3 text-white">
             <div className="flex min-w-0 items-center gap-3">
@@ -148,7 +148,7 @@ export default function CorporateChatWidget() {
           )}
         </section>
       )}
-      <Button type="button" onClick={() => setOpen((value) => !value)} aria-label={open ? "Fechar chat corporativo" : "Abrir chat corporativo"} className={cn("fixed bottom-4 right-3 z-[71] h-12 rounded-full bg-[#075e63] px-4 text-white shadow-lg hover:bg-[#064f53] sm:right-5", unreadCount > 0 && !open && "animate-pulse ring-4 ring-teal-100")}>
+      <Button type="button" onClick={() => setOpen((value) => !value)} aria-label={open ? "Fechar chat corporativo" : "Abrir chat corporativo"} className={cn("fixed bottom-4 right-3 z-fab h-12 rounded-full bg-primary px-4 text-primary-foreground shadow-lg hover:bg-primary-hover sm:right-5", unreadCount > 0 && !open && "animate-pulse ring-4 ring-primary/10")}>
         <MessageCircle className="h-5 w-5" />
         <span className="hidden sm:inline">Chat da equipe</span>
         {unreadCount > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[10px] font-bold text-[#075e63]">{unreadCount}</span>}

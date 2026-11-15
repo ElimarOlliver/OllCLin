@@ -1305,7 +1305,7 @@ export default function AgendaView() {
 
       {/* Toast para Google Calendar não conectado */}
       {!googleConnected && showConnectBanner && (
-        <div className="fixed bottom-4 right-4 max-w-sm bg-white border border-slate-200 shadow-lg rounded-lg p-4 z-50">
+        <div className="fixed bottom-4 right-4 max-w-sm bg-popover text-foreground border border-border shadow-lg rounded-lg p-4 z-fab">
           <div className="flex items-start gap-3">
             <Cloud className="h-5 w-5 text-slate-500 mt-0.5" />
             <div>

@@ -212,7 +212,7 @@ export default function LandingPageView({ onEnter }: { onEnter: () => void }) {
   return (
     <div className="min-h-screen w-full bg-[#f7f8f5]">
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+      <header className="sticky top-0 z-sticky border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
           <div className="flex items-center gap-3">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#075e63] text-white">
