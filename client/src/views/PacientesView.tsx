@@ -536,7 +536,7 @@ export default function PacientesView() {
           if (!open) setImportPreview(null);
         }}
       >
-        <DialogContent className="max-h-[92vh] overflow-y-auto border-slate-200 bg-[#fbfcfa] sm:max-w-4xl">
+        <DialogContent className="max-h-[92vh] overflow-y-auto border-border bg-popover sm:max-w-4xl">
           <DialogHeader>
             <DialogTitle>Importar pacientes</DialogTitle>
             <DialogDescription>
@@ -672,7 +672,7 @@ export default function PacientesView() {
 
       {/* Dialog: Novo/Editar Paciente */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto border-slate-200 bg-[#fbfcfa] sm:max-w-3xl">
+        <DialogContent className="max-h-[92vh] overflow-y-auto border-border bg-popover sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Paciente" : "Novo Paciente"}</DialogTitle>
             <DialogDescription>
@@ -909,7 +909,7 @@ export default function PacientesView() {
               </div>
             </div>
 
-            <DialogFooter className="sticky bottom-0 -mx-1 gap-2 border-t border-slate-200 bg-[#fbfcfa]/95 pt-4 backdrop-blur sm:justify-between">
+            <DialogFooter className="sticky bottom-0 -mx-1 gap-2 border-t border-border bg-popover/95 pt-4 backdrop-blur sm:justify-between">
               <p className="hidden items-center gap-1 text-xs text-slate-500 sm:flex"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Seus dados ficam protegidos</p>
               <Button
                 type="button"
