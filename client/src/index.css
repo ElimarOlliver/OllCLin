@@ -2,14 +2,39 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Tailwind v4 só gera o utilitário (bg-popover, bg-card, text-primary-foreground…)
+   quando o token --color-* correspondente existe. Sem este mapa, a classe é
+   descartada e o elemento fica transparente. */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--surface-muted);
+  --color-muted-foreground: var(--muted);
+  --color-accent: var(--accent-soft);
+  --color-accent-foreground: var(--foreground);
+  --color-destructive: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
   --color-border: var(--border);
   --color-input: var(--border);
   --color-ring: var(--primary);
-  --color-muted-foreground: var(--muted);
+
+  /* Raios: uma escala só para todo o sistema (8/10/12/16). */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 }
 
 :root {
@@ -26,7 +51,7 @@
   --success-hover: #087A55;
   --white: #FFFFFF;
   --border: #DCE5E2;
-  --radius: 8px;
+  --radius: 12px;
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
@@ -37,12 +62,45 @@
   --observed: #d7f0e8;
   --recommended: #e2e2ff;
   --undocumented: #f9e6c9;
+
+  /* Superfícies e textos semânticos (base para o design system) */
+  --card: #FFFFFF;
+  --card-foreground: #172121;
+  --popover: #FFFFFF;
+  --popover-foreground: #172121;
+  --primary-foreground: #FFFFFF;
+  --secondary: #E6EDEB;
+  --secondary-foreground: #172121;
+  --surface-muted: #F1F5F9;
+  --accent-soft: #E6F4F2;
+  --danger: #DC2626;
+  --warning: #D97706;
+  --info: #0284C7;
+  /* Fundos suaves usados em toasts, badges e alertas */
+  --success-soft: #DCFCE7;
+  --danger-soft: #FEE2E2;
+  --warning-soft: #FEF3C7;
+  --info-soft: #E0F2FE;
+
+  /* Overlay único dos modais (briefing: rgba(15,23,42,.5) + blur 4px) */
+  --overlay: rgba(15, 23, 42, .5);
+  --overlay-blur: 4px;
+
+  /* Escala fixa de camadas. "popover" fica acima de "modal" porque o Radix
+     portaliza menus/Select para o <body> — com z menor, o menu abriria atrás
+     do modal. */
+  --z-fab: 90;
+  --z-sticky: 100;
+  --z-overlay: 200;
+  --z-modal: 300;
+  --z-popover: 350;
+  --z-toast: 400;
 }
 
 * { box-sizing: border-box; }
 html, body, #root { width: 100%; min-width: 0; }
 html { scroll-behavior: smooth; }
-body { margin: 0; overflow-x: hidden; background: var(--background); color: var(--foreground); font-family: var(--font-sans); }
+body { margin: 0; overflow-x: hidden; background: var(--background); color: var(--foreground); font-family: var(--font-sans); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 [data-slot="sidebar-inset"], [data-slot="table-container"] { min-width: 0; max-width: 100%; }
 button { font: inherit; }
 button:focus-visible, a:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
@@ -1281,16 +1339,35 @@ button:focus-visible, a:focus-visible { outline: 3px solid var(--primary); outli
   }
 }
 
-/* === Utility Classes for OllCLin === */
-.bg-primary { background-color: var(--primary); }
-.text-primary { color: var(--primary); }
-.text-foreground { color: var(--foreground); }
-.text-muted { color: var(--muted); }
-.bg-success { background-color: var(--success); }
-.text-success { color: var(--success); }
-.bg-surface { background-color: var(--surface); }
-.border-line { border-color: var(--line); }
-.rounded-md { border-radius: var(--radius); }
-.shadow-sm { box-shadow: var(--shadow-sm); }
-.shadow { box-shadow: var(--shadow); }
-.shadow-md { box-shadow: var(--shadow-md); }
+/* === Camadas (z-index) ===
+   Escala única: fab 90 < sticky 100 < overlay 200 < modal 300 < popover 350 < toast 400.
+   Utilitários gerados a partir dos tokens de :root. */
+@utility z-fab { z-index: var(--z-fab); }
+@utility z-sticky { z-index: var(--z-sticky); }
+@utility z-overlay { z-index: var(--z-overlay); }
+@utility z-modal { z-index: var(--z-modal); }
+@utility z-popover { z-index: var(--z-popover); }
+@utility z-toast { z-index: var(--z-toast); }
+
+/* === Modais no iOS (iPhone/iPad) ===
+   - dvh acompanha a barra de endereço do Safari (vh corta o rodapé do modal);
+   - overscroll-behavior contém o scroll dentro do modal, sem "vazar" para a página;
+   - momentum nativo do iOS preservado no conteúdo rolável. */
+[data-slot="dialog-content"],
+[data-slot="alert-dialog-content"],
+[data-slot="drawer-content"] {
+  max-height: 92vh;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+@supports (height: 100dvh) {
+  [data-slot="dialog-content"],
+  [data-slot="alert-dialog-content"],
+  [data-slot="drawer-content"] {
+    max-height: 92dvh;
+  }
+}
+[data-slot="sheet-content"] {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
