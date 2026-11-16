@@ -40,6 +40,8 @@ import {
 } from "@/components/ui/select";
 import { User, Search, Plus, Loader2, Pencil, AlertCircle, CheckCircle2, Upload, Download, MoreVertical } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useOrganizationId } from "@/hooks/useOrganizationId";
@@ -406,7 +408,7 @@ export default function PacientesView() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Núcleo clínico</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">Pacientes</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Pacientes</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Cadastre, busque e gerencie o histórico dos pacientes da clínica.
           </p>
@@ -448,14 +450,39 @@ export default function PacientesView() {
       {/* Mobile: mesma lista em cards (a tabela só aparece a partir de md) */}
       <div className="space-y-3 md:hidden">
         {isLoading ? (
-          <div className="flex items-center justify-center gap-2 rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            Carregando pacientes...
-          </div>
+          <>
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-full" />
+                </div>
+              </div>
+            ))}
+          </>
         ) : filteredPatients.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground shadow-sm">
-            Nenhum paciente encontrado.
-          </div>
+          <Empty className="rounded-xl border border-dashed bg-card p-8 shadow-sm">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <User className="text-primary" />
+              </EmptyMedia>
+              <EmptyTitle>Nenhum paciente encontrado</EmptyTitle>
+              <EmptyDescription>Ajuste a busca acima ou cadastre um novo paciente para começar.</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button variant="outline" onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Paciente
+              </Button>
+            </EmptyContent>
+          </Empty>
         ) : (
           filteredPatients.map((patient) => (
             <article key={patient.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">

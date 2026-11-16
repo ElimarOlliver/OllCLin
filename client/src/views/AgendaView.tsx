@@ -155,12 +155,12 @@ const STATUS_CONFIG: Record<
   { label: string; variant: BadgeVariant }
 > = {
   solicitado: { label: "Solicitado", variant: "secondary" },
-  confirmado: { label: "Confirmado", variant: "default" },
-  em_espera: { label: "Em Espera", variant: "warning" },
-  em_atendimento: { label: "Em Atendimento", variant: "primary" },
-  atendido: { label: "Atendido", variant: "success" },
-  faltou: { label: "Faltou", variant: "destructive" },
-  desmarcado: { label: "Desmarcado", variant: "outline" },
+  confirmado: { label: "Confirmado", variant: "success-soft" },
+  em_espera: { label: "Aguardando", variant: "warning-soft" },
+  em_atendimento: { label: "Em Atendimento", variant: "info-soft" },
+  atendido: { label: "Atendido", variant: "info-soft" },
+  faltou: { label: "Faltou", variant: "danger-soft" },
+  desmarcado: { label: "Cancelado", variant: "danger-soft" },
 };
 
 export default function AgendaView() {
@@ -623,7 +623,7 @@ export default function AgendaView() {
       {/* Cabeçalho da Agenda */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Agenda</h1>
           <p className="text-muted-foreground text-sm">
             Gerencie agendamentos, visualize disponibilidade e sincronize com o Google Calendar.
           </p>
@@ -1296,7 +1296,7 @@ export default function AgendaView() {
                 disabled={savingAppointment}
               >
                 {savingAppointment && <Loader2 className="h-4 w-4 animate-spin" />}
-                Salvar Agendamento
+                {savingAppointment ? "Salvando..." : "Salvar Agendamento"}
               </Button>
             </div>
           </form>
