@@ -70,7 +70,7 @@ export default function PermissoesView() {
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Conta titular</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">Permissões</h1>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Permissões</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Defina o acesso de cada colaborador às áreas do sistema: sem acesso, parcial (somente leitura) ou total.
           </p>

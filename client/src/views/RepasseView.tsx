@@ -327,7 +327,7 @@ export default function RepasseView() {
     <div className="p-2 space-y-4">
       <div className="bg-card rounded-xl border border-border shadow-sm p-6">
         <div className="mb-4">
-          <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+          <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             <HandCoins className="h-5 w-5 text-primary" />
             Repasse
           </h1>

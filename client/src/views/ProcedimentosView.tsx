@@ -124,7 +124,7 @@ export default function ProcedimentosView() {
     <div className="min-w-0 space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Procedimentos</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Procedimentos</h1>
           <p className="text-muted-foreground text-sm">
             Catálogo de procedimentos da clínica com duração e preço.
           </p>

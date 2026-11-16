@@ -81,7 +81,7 @@ export default function EquipeView() {
     <div className="mx-auto w-full max-w-5xl space-y-6">
       <header>
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Conta</p>
-        <h1 className="mt-1 flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="mt-1 flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
           <Users className="h-6 w-6" /> Equipe
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">

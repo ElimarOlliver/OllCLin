@@ -127,15 +127,16 @@ function HomeView() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-3" aria-label="Resumo da clínica">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-label="Resumo da clínica">
         {[
-          { label: "Agenda de hoje", value: "—", helper: "Consulte seus atendimentos", Icon: CalendarDays, color: "text-primary" },
-          { label: "Pacientes ativos", value: "—", helper: "Gerencie seus cadastros", Icon: Users, color: "text-emerald-700" },
-          { label: "Saldo do período", value: "—", helper: "Acompanhe suas receitas", Icon: Wallet, color: "text-amber-700" },
-        ].map(({ label, value, helper, Icon, color }) => {
+          { label: "Agenda de hoje", value: "—", helper: "Consulte seus atendimentos", Icon: CalendarDays, color: "text-primary", bg: "bg-primary-soft" },
+          { label: "Pacientes ativos", value: "—", helper: "Gerencie seus cadastros", Icon: Users, color: "text-success-strong", bg: "bg-success-soft" },
+          { label: "Saldo do período", value: "—", helper: "Acompanhe suas receitas", Icon: Wallet, color: "text-warning-strong", bg: "bg-warning-soft" },
+          { label: "Procedimentos", value: "—", helper: "Catálogo e preços", Icon: ClipboardList, color: "text-info", bg: "bg-info-soft" },
+        ].map(({ label, value, helper, Icon, color, bg }) => {
           const StatIcon = Icon;
-          return <article key={label as string} className="rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
-            <div className="flex items-start justify-between gap-4"><div><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-bold tracking-tight text-foreground">{value}</p></div><span className={`rounded-lg bg-muted p-2.5 ${color}`}><StatIcon className="h-5 w-5" /></span></div>
+          return <article key={label as string} className="rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow duration-200 ease-out hover:shadow-md max-sm:p-4">
+            <div className="flex items-start justify-between gap-4"><div><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-bold tracking-tight text-foreground">{value}</p></div><span className={`rounded-lg p-2.5 ${bg} ${color}`}><StatIcon className="h-5 w-5" strokeWidth={1.75} /></span></div>
             <p className="mt-3 text-xs text-muted-foreground">{helper}</p>
           </article>;
         })}

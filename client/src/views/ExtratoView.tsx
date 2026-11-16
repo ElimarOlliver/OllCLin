@@ -129,7 +129,7 @@ export default function ExtratoView() {
       <div className="bg-card rounded-xl border border-border shadow-sm p-6">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div>
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               <Scale className="h-5 w-5 text-primary" />
               Extrato
             </h1>

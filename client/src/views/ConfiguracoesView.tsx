@@ -206,7 +206,7 @@ export default function ConfiguracoesView() {
       <div className="bg-card rounded-xl border border-border shadow-sm p-6">
         <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
           <div>
-            <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
+            <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               <MapPin className="h-5 w-5 text-primary" />
               Locais de Atendimento
             </h1>
