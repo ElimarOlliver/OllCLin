@@ -340,25 +340,25 @@ export default function VendasView() {
 
   return (
     <div className="p-2 space-y-4">
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <div className="bg-card rounded-xl border border-border shadow-sm p-6">
         <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
           <div>
             <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
               <ShoppingCart className="h-5 w-5 text-primary" />
               Vendas
             </h1>
-            <p className="text-slate-500 text-sm mt-1">
+            <p className="text-muted-foreground text-sm mt-1">
               Registre vendas de procedimentos e acompanhe o que falta receber.
             </p>
           </div>
-          <Button onClick={openCreate} className="bg-primary text-white hover:bg-primary/90">
+          <Button onClick={openCreate} className="bg-primary text-primary-foreground hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-1" /> Nova venda
           </Button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -380,11 +380,11 @@ export default function VendasView() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-slate-500">
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando...
           </div>
         ) : sales.length === 0 ? (
-          <p className="text-slate-500 text-sm py-8 text-center">Nenhuma venda registrada.</p>
+          <p className="text-muted-foreground text-sm py-8 text-center">Nenhuma venda registrada.</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
@@ -450,17 +450,17 @@ export default function VendasView() {
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
           <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2">
             <Clock className="h-4 w-4 text-amber-600" />
-            <span className="text-slate-500">A receber:</span>
+            <span className="text-muted-foreground">A receber:</span>
             <span className="font-bold text-amber-700 ml-auto">{brl(summary.toReceiveTotal)}</span>
           </div>
           <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            <span className="text-slate-500">Recebido:</span>
+            <span className="text-muted-foreground">Recebido:</span>
             <span className="font-bold text-emerald-700 ml-auto">{brl(summary.receivedTotal)}</span>
           </div>
           <div className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2">
             <ShoppingCart className="h-4 w-4 text-primary" />
-            <span className="text-slate-500">Total geral:</span>
+            <span className="text-muted-foreground">Total geral:</span>
             <span className="font-bold text-foreground ml-auto">{brl(summary.generalTotal)}</span>
           </div>
         </div>
@@ -637,7 +637,7 @@ export default function VendasView() {
               {form.items.map((item, index) => (
                 <div
                   key={index}
-                  className="grid grid-cols-1 sm:grid-cols-12 gap-2 rounded-lg border border-slate-200 p-2"
+                  className="grid grid-cols-1 sm:grid-cols-12 gap-2 rounded-lg border border-border p-2"
                 >
                   <div className="sm:col-span-4">
                     <Select
@@ -714,7 +714,7 @@ export default function VendasView() {
             </div>
 
             <div className="flex items-center justify-end gap-3 border-t pt-3">
-              <span className="text-sm text-slate-500">Total</span>
+              <span className="text-sm text-muted-foreground">Total</span>
               <span className="text-lg font-bold text-foreground">{brl(total)}</span>
             </div>
           </div>
@@ -725,7 +725,7 @@ export default function VendasView() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-primary text-white hover:bg-primary/90"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
               Salvar venda
@@ -741,14 +741,14 @@ export default function VendasView() {
             <DialogTitle>Histórico da venda</DialogTitle>
           </DialogHeader>
           {historyRows.length === 0 ? (
-            <p className="text-slate-500 text-sm py-4 text-center">Sem registros.</p>
+            <p className="text-muted-foreground text-sm py-4 text-center">Sem registros.</p>
           ) : (
             <ul className="space-y-2 py-2 text-sm">
               {historyRows.map((h) => (
                 <li key={h.id} className="border-b pb-2">
                   <span className="font-medium">{h.action}</span>
-                  {h.reason ? <span className="text-slate-500"> — {h.reason}</span> : null}
-                  <div className="text-xs text-slate-500">
+                  {h.reason ? <span className="text-muted-foreground"> — {h.reason}</span> : null}
+                  <div className="text-xs text-muted-foreground">
                     {h.createdAt ? new Date(h.createdAt).toLocaleString("pt-BR") : ""}
                   </div>
                 </li>
@@ -765,7 +765,7 @@ export default function VendasView() {
             <DialogTitle>Cancelar venda</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-2">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               A venda cancelada sai dos totais. O motivo fica registrado no histórico.
             </p>
             <div className="grid gap-2">
@@ -782,7 +782,7 @@ export default function VendasView() {
             <Button variant="outline" onClick={() => setCancelTarget(null)}>
               Voltar
             </Button>
-            <Button onClick={handleCancel} className="bg-red-600 text-white hover:bg-red-700">
+            <Button onClick={handleCancel} className="bg-red-600 text-primary-foreground hover:bg-red-700">
               Confirmar cancelamento
             </Button>
           </DialogFooter>

@@ -43,6 +43,7 @@ import {
   LayoutDashboard,
   LogOut,
   MapPin,
+  Menu,
   ReceiptText,
   Scale,
   ShieldCheck,
@@ -120,7 +121,7 @@ function HomeView() {
       <section className="relative overflow-hidden rounded-2xl bg-primary px-6 py-8 text-primary-foreground shadow-sm sm:px-8">
         <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.18)_1px,transparent_1px)] [background-size:32px_32px]" />
         <div className="relative max-w-2xl">
-          <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-teal-100">Visão geral da clínica</p>
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.18em] text-primary-soft">Visão geral da clínica</p>
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Bom dia, vamos cuidar da operação?</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-teal-50 sm:text-base">Acesse rapidamente os fluxos mais importantes e mantenha pacientes, agenda e financeiro em um só lugar.</p>
         </div>
@@ -133,17 +134,17 @@ function HomeView() {
           { label: "Saldo do período", value: "—", helper: "Acompanhe suas receitas", Icon: Wallet, color: "text-amber-700" },
         ].map(({ label, value, helper, Icon, color }) => {
           const StatIcon = Icon;
-          return <article key={label as string} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-            <div className="flex items-start justify-between gap-4"><div><p className="text-sm text-slate-500">{label}</p><p className="mt-2 text-3xl font-bold tracking-tight text-slate-900">{value}</p></div><span className={`rounded-lg bg-slate-50 p-2.5 ${color}`}><StatIcon className="h-5 w-5" /></span></div>
-            <p className="mt-3 text-xs text-slate-500">{helper}</p>
+          return <article key={label as string} className="rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md">
+            <div className="flex items-start justify-between gap-4"><div><p className="text-sm text-muted-foreground">{label}</p><p className="mt-2 text-3xl font-bold tracking-tight text-foreground">{value}</p></div><span className={`rounded-lg bg-muted p-2.5 ${color}`}><StatIcon className="h-5 w-5" /></span></div>
+            <p className="mt-3 text-xs text-muted-foreground">{helper}</p>
           </article>;
         })}
       </section>
 
       <section>
-        <div className="mb-3 flex items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Atalhos</p><h2 className="mt-1 text-xl font-bold tracking-tight text-slate-900">O que você precisa fazer?</h2></div></div>
+        <div className="mb-3 flex items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Atalhos</p><h2 className="mt-1 text-xl font-bold tracking-tight text-foreground">O que você precisa fazer?</h2></div></div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {shortcuts.map(({ label, description, path, icon: Icon }) => <button key={path} type="button" onClick={() => setLocation(path)} className="group flex min-h-[138px] flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary"><Icon className="h-5 w-5" /></span><span><span className="flex items-center justify-between gap-3 font-semibold text-slate-900"><span>{label}</span><ArrowRight className="h-4 w-4 text-slate-400 transition-transform group-hover:translate-x-1" /></span><span className="mt-1 block text-sm text-slate-500">{description}</span></span></button>)}
+          {shortcuts.map(({ label, description, path, icon: Icon }) => <button key={path} type="button" onClick={() => setLocation(path)} className="group flex min-h-[138px] flex-col justify-between rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"><span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary"><Icon className="h-5 w-5" /></span><span><span className="flex items-center justify-between gap-3 font-semibold text-foreground"><span>{label}</span><ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" /></span><span className="mt-1 block text-sm text-muted-foreground">{description}</span></span></button>)}
         </div>
       </section>
     </div>
@@ -155,7 +156,67 @@ function App() {
 }
 
 function DashboardLayout() {
-  return <SidebarProvider style={{ "--sidebar-width": "280px" } as CSSProperties}><DashboardShell /></SidebarProvider>;
+  // 260px aberta / 72px recolhida: o rótulo do menu cabe sem corte e o
+  // trilho recolhido continua com alvo de toque confortável.
+  return <SidebarProvider style={{ "--sidebar-width": "260px", "--sidebar-width-icon": "72px" } as CSSProperties}><DashboardShell /></SidebarProvider>;
+}
+
+// Navegação inferior (mobile). Os quatro destinos mais usados + "Mais" abrindo
+// o drawer com o menu completo — em telas pequenas a sidebar não cabe.
+const MOBILE_NAV_ITEMS = [
+  { icon: CalendarDays, label: "Agenda", path: "/agenda" },
+  { icon: Users, label: "Pacientes", path: "/pacientes" },
+  { icon: LayoutDashboard, label: "Início", path: "/" },
+  { icon: Wallet, label: "Financeiro", path: "/receitas" },
+];
+
+function MobileBottomNav({
+  location,
+  onNavigate,
+  onMore,
+}: {
+  location: string;
+  onNavigate: (path: string) => void;
+  onMore: () => void;
+}) {
+  return (
+    <nav
+      aria-label="Navegação principal"
+      className="fixed inset-x-0 bottom-0 z-sticky border-t border-border bg-card/95 backdrop-blur md:hidden"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <ul className="flex h-16 items-stretch">
+        {MOBILE_NAV_ITEMS.map(({ icon: Icon, label, path }) => {
+          const active = location === path;
+          return (
+            <li key={path} className="min-w-0 flex-1">
+              <button
+                type="button"
+                onClick={() => onNavigate(path)}
+                aria-current={active ? "page" : undefined}
+                className={`flex h-full min-h-11 w-full min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-[10px] font-medium leading-tight tracking-tight transition-colors ${
+                  active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-5 w-5" strokeWidth={1.75} />
+                <span className="w-full truncate text-center">{label}</span>
+              </button>
+            </li>
+          );
+        })}
+        <li className="min-w-0 flex-1">
+          <button
+            type="button"
+            onClick={onMore}
+            className="flex h-full min-h-11 w-full min-w-0 flex-col items-center justify-center gap-1 px-0.5 text-[10px] font-medium leading-tight tracking-tight text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <Menu className="h-5 w-5" strokeWidth={1.75} />
+            <span className="w-full truncate text-center">Mais</span>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  );
 }
 
 const PUBLIC_ROUTES = ["/landing", "/entrar", "/cadastro", "/primeiro-acesso", "/aceitar-convite"];
@@ -163,7 +224,7 @@ const PUBLIC_ROUTES = ["/landing", "/entrar", "/cadastro", "/primeiro-acesso", "
 function DashboardShell() {
   const { loading, user, logout } = useAuth();
   const [location, setLocation] = useLocation();
-  const { state } = useSidebar();
+  const { state, setOpenMobile } = useSidebar();
   const isCollapsed = state === "collapsed";
 
   // Rotas públicas (landing comercial / login) renderizam em tela cheia,
@@ -186,14 +247,14 @@ function DashboardShell() {
   // Fluxo de login: sessão carregada sem usuário em rota privada → landing.
   const activeLabel = menuItems.find((item) => item.path === location)?.label ?? "Menu";
 
-  if (loading) return <div className="flex min-h-screen w-full items-center justify-center bg-background"><div className="flex flex-col items-center gap-3"><div className="h-8 w-8 animate-pulse rounded-full bg-primary" /><p className="text-sm text-slate-500">Carregando sessão...</p></div></div>;
+  if (loading) return <div className="flex min-h-screen w-full items-center justify-center bg-background"><div className="flex flex-col items-center gap-3"><div className="h-8 w-8 animate-pulse rounded-full bg-primary" /><p className="text-sm text-muted-foreground">Carregando sessão...</p></div></div>;
   if (!user) return <LandingPageView onEnter={() => setLocation("/entrar")} />;
 
   // "Permissões" é área exclusiva do titular da conta (contratante).
   const isOwner = user.role === "owner" || user.role === "admin" || (user as { role?: string }).role === "owner";
   const visibleMenuItems = menuItems.filter((item) => !item.ownerOnly || isOwner);
 
-  return <><Sidebar collapsible="icon" className="border-r border-border bg-card"><SidebarHeader className="h-16 justify-center px-4"><div className="flex items-center gap-3"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Stethoscope className="h-5 w-5" /></div>{!isCollapsed && <div><div className="font-bold tracking-tight text-slate-900">OllCLin</div><div className="text-[10px] uppercase tracking-wider text-slate-400">Gestão clínica</div></div>}</div></SidebarHeader><SidebarContent><SidebarMenu className="px-2 py-2">{visibleMenuItems.map(({ icon: Icon, label, path }) => <SidebarMenuItem key={path}><SidebarMenuButton isActive={location === path} onClick={() => setLocation(path)} tooltip={label} className="h-10 transition-colors data-[active=true]:bg-primary/10 data-[active=true]:text-primary"><Icon className="h-4 w-4" /><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}<SidebarSeparator className="my-2" /></SidebarMenu></SidebarContent><SidebarFooter className="p-3"><DropdownMenu><DropdownMenuTrigger asChild><button className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Avatar className="h-9 w-9 shrink-0 border"><AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">{user.name?.charAt(0).toUpperCase() ?? "U"}</AvatarFallback></Avatar><div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-medium leading-none text-slate-900">{user.name || "Usuário"}</p><p className="mt-1.5 truncate text-xs text-slate-500">{user.email || "—"}</p></div></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48"><DropdownMenuItem onClick={() => logout()}><LogOut className="mr-2 h-4 w-4" /><span>Sair</span></DropdownMenuItem></DropdownMenuContent></DropdownMenu></SidebarFooter></Sidebar><SidebarInset className="min-w-0 bg-background"><header className="sticky top-0 z-sticky flex h-14 items-center justify-between border-b border-border bg-card/90 px-4 backdrop-blur sm:px-6"><div className="flex items-center gap-3"><SidebarTrigger className="h-9 w-9 rounded-lg bg-slate-50" /><div><p className="text-sm font-semibold text-slate-900">{activeLabel}</p><p className="hidden text-xs text-slate-500 sm:block">OllCLin · gestão simples e segura</p></div></div></header><main className="min-w-0 flex-1 p-4 pb-24 sm:p-6 sm:pb-24"><Router /></main></SidebarInset><CorporateChatWidget /></>;
+  return <><Sidebar collapsible="icon" className="border-r border-border bg-card"><SidebarHeader className="h-16 justify-center px-4"><div className="flex items-center gap-3"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground"><Stethoscope className="h-5 w-5" /></div>{!isCollapsed && <div><div className="font-bold tracking-tight text-foreground">OllCLin</div><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Gestão clínica</div></div>}</div></SidebarHeader><SidebarContent><SidebarMenu className="px-2 py-2">{visibleMenuItems.map(({ icon: Icon, label, path }) => <SidebarMenuItem key={path}><SidebarMenuButton isActive={location === path} onClick={() => setLocation(path)} tooltip={label} className="h-11 transition-colors data-[active=true]:bg-primary-soft data-[active=true]:text-primary md:h-10"><Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} /><span>{label}</span></SidebarMenuButton></SidebarMenuItem>)}<SidebarSeparator className="my-2" /></SidebarMenu></SidebarContent><SidebarFooter className="p-3"><DropdownMenu><DropdownMenuTrigger asChild><button className="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left hover:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"><Avatar className="h-9 w-9 shrink-0 border"><AvatarFallback className="bg-primary/10 text-xs font-semibold text-primary">{user.name?.charAt(0).toUpperCase() ?? "U"}</AvatarFallback></Avatar><div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"><p className="truncate text-sm font-medium leading-none text-foreground">{user.name || "Usuário"}</p><p className="mt-1.5 truncate text-xs text-muted-foreground">{user.email || "—"}</p></div></button></DropdownMenuTrigger><DropdownMenuContent align="end" className="w-48"><DropdownMenuItem onClick={() => logout()}><LogOut className="mr-2 h-4 w-4" /><span>Sair</span></DropdownMenuItem></DropdownMenuContent></DropdownMenu></SidebarFooter></Sidebar><SidebarInset className="min-w-0 bg-background"><header className="sticky top-0 z-sticky flex h-14 items-center justify-between gap-3 border-b border-border bg-card/90 px-4 backdrop-blur sm:px-6"><div className="flex min-w-0 items-center gap-3"><SidebarTrigger className="hidden h-9 w-9 rounded-lg bg-muted md:inline-flex" /><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground md:hidden"><Stethoscope className="h-4 w-4" /></div><div className="min-w-0"><p className="truncate text-sm font-semibold text-foreground">{activeLabel}</p><p className="hidden text-xs text-muted-foreground sm:block">OllCLin · gestão simples e segura</p></div></div></header><main className="min-w-0 flex-1 p-4 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:p-6 md:pb-6"><Router /></main></SidebarInset><MobileBottomNav location={location} onNavigate={(path) => setLocation(path)} onMore={() => setOpenMobile(true)} /><CorporateChatWidget /></>;
 }
 
 export default App;

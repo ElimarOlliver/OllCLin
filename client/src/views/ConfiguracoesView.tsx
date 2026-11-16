@@ -203,28 +203,28 @@ export default function ConfiguracoesView() {
   return (
     <div className="p-2 space-y-4">
       {/* Locais de Atendimento */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <div className="bg-card rounded-xl border border-border shadow-sm p-6">
         <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
           <div>
             <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
               <MapPin className="h-5 w-5 text-primary" />
               Locais de Atendimento
             </h1>
-            <p className="text-slate-500 text-sm mt-1">
+            <p className="text-muted-foreground text-sm mt-1">
               Quantidade ilimitada; apenas o nome do local é obrigatório.
             </p>
           </div>
-          <Button onClick={() => setLocDialogOpen(true)} className="bg-primary text-white hover:bg-primary/90">
+          <Button onClick={() => setLocDialogOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-1" /> Adicionar local
           </Button>
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-10 text-slate-500">
+          <div className="flex items-center justify-center py-10 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando...
           </div>
         ) : locations.length === 0 ? (
-          <p className="text-slate-500 text-sm py-6 text-center">Nenhum local cadastrado.</p>
+          <p className="text-muted-foreground text-sm py-6 text-center">Nenhum local cadastrado.</p>
         ) : (
           <Table>
             <TableHeader>
@@ -275,7 +275,7 @@ export default function ConfiguracoesView() {
               </Button>
             </div>
             {rooms.length === 0 ? (
-              <p className="text-slate-500 text-sm py-3 text-center">Nenhuma sala neste local.</p>
+              <p className="text-muted-foreground text-sm py-3 text-center">Nenhuma sala neste local.</p>
             ) : (
               <ul className="space-y-1">
                 {rooms.map((room) => (
@@ -293,12 +293,12 @@ export default function ConfiguracoesView() {
       </div>
 
       {/* Campos Obrigatórios */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <div className="bg-card rounded-xl border border-border shadow-sm p-6">
         <h2 className="text-lg font-bold text-foreground flex items-center gap-2 mb-1">
           <ListChecks className="h-5 w-5 text-primary" />
           Campos Obrigatórios — Pacientes
         </h2>
-        <p className="text-slate-500 text-sm mb-4">
+        <p className="text-muted-foreground text-sm mb-4">
           A alteração é salva automaticamente. O campo <strong>Nome</strong> não pode ser desabilitado.
         </p>
         <div className="grid gap-2 max-w-md">
@@ -308,7 +308,7 @@ export default function ConfiguracoesView() {
               <div key={field} className="flex items-center justify-between border rounded-lg px-3 py-2">
                 <Label htmlFor={`field-${field}`} className="font-normal">
                   {label}
-                  {locked ? <span className="ml-2 text-xs text-slate-500">(sempre obrigatório)</span> : null}
+                  {locked ? <span className="ml-2 text-xs text-muted-foreground">(sempre obrigatório)</span> : null}
                 </Label>
                 <Switch
                   id={`field-${field}`}
@@ -336,7 +336,7 @@ export default function ConfiguracoesView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setLocDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreateLocation} disabled={saving} className="bg-primary text-white hover:bg-primary/90">
+            <Button onClick={handleCreateLocation} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Salvar
             </Button>
           </DialogFooter>
@@ -357,7 +357,7 @@ export default function ConfiguracoesView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRoomDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleCreateRoom} disabled={saving} className="bg-primary text-white hover:bg-primary/90">
+            <Button onClick={handleCreateRoom} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null} Salvar
             </Button>
           </DialogFooter>

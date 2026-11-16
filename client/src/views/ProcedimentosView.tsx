@@ -125,7 +125,7 @@ export default function ProcedimentosView() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Procedimentos</h1>
-          <p className="text-slate-500 text-sm">
+          <p className="text-muted-foreground text-sm">
             Catálogo de procedimentos da clínica com duração e preço.
           </p>
         </div>
@@ -137,7 +137,7 @@ export default function ProcedimentosView() {
 
       <div className="flex max-w-md">
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome ou descrição..."
             value={search}
@@ -147,7 +147,7 @@ export default function ProcedimentosView() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -169,7 +169,7 @@ export default function ProcedimentosView() {
               </TableRow>
             ) : filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   Nenhum procedimento encontrado.
                 </TableCell>
               </TableRow>
@@ -177,7 +177,7 @@ export default function ProcedimentosView() {
               filtered.map((proc) => (
                 <TableRow
                   key={proc.id}
-                  className="hover:bg-slate-50 transition-colors border-b border-slate-200 last:border-0"
+                  className="hover:bg-muted transition-colors border-b border-border last:border-0"
                 >
                   <TableCell className="font-medium text-foreground">
                     {proc.name}

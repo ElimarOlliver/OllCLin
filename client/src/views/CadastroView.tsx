@@ -51,13 +51,13 @@ export default function CadastroView({ onDone }: { onDone?: () => void }) {
     <div className="flex items-center justify-center min-h-screen w-full">
       <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
         <div className="flex flex-col items-center gap-6">
-          <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center text-white">
+          <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground">
             <Stethoscope className="h-6 w-6" />
           </div>
           <h1 className="text-2xl font-bold text-foreground text-center">Crie sua conta</h1>
-          <p className="text-slate-500 text-sm text-center">
+          <p className="text-muted-foreground text-sm text-center">
             Você será o <strong>titular</strong> desta conta — o único com acesso master.
-            <span className="mt-2 flex items-center justify-center gap-1 text-[#075e63] font-medium">
+            <span className="mt-2 flex items-center justify-center gap-1 text-primary font-medium">
               <Sparkles className="h-4 w-4" /> 10 dias grátis após o cadastro
             </span>
           </p>
@@ -118,7 +118,7 @@ export default function CadastroView({ onDone }: { onDone?: () => void }) {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-primary text-white hover:bg-primary/90"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {isSubmitting ? "Criando conta..." : "Criar conta (10 dias grátis)"}
           </Button>

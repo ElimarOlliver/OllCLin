@@ -269,24 +269,24 @@ export default function ReceitasView() {
 
   return (
     <div className="p-2 space-y-4">
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <div className="bg-card rounded-xl border border-border shadow-sm p-6">
         <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
           <div>
             <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
               <Wallet className="h-5 w-5 text-primary" />
               Receitas
             </h1>
-            <p className="text-slate-500 text-sm mt-1">
+            <p className="text-muted-foreground text-sm mt-1">
               Registre e acompanhe os recebimentos da clínica.
             </p>
           </div>
-          <Button onClick={openCreate} className="bg-primary text-white hover:bg-primary/90">
+          <Button onClick={openCreate} className="bg-primary text-primary-foreground hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-1" /> Novo recebimento
           </Button>
         </div>
 
         <div className="relative mb-4 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -296,11 +296,11 @@ export default function ReceitasView() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-slate-500">
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando...
           </div>
         ) : visible.length === 0 ? (
-          <p className="text-slate-500 text-sm py-8 text-center">
+          <p className="text-muted-foreground text-sm py-8 text-center">
             Nenhuma receita registrada.
           </p>
         ) : (
@@ -377,12 +377,12 @@ export default function ReceitasView() {
         <div className="mt-4 flex gap-6 justify-end text-sm">
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-amber-600" />
-            <span className="text-slate-500">A receber:</span>
+            <span className="text-muted-foreground">A receber:</span>
             <span className="font-bold text-amber-700">{brl(summary.toReceiveTotal)}</span>
           </div>
           <div className="flex items-center gap-2">
             <Wallet className="h-4 w-4 text-emerald-600" />
-            <span className="text-slate-500">Recebido:</span>
+            <span className="text-muted-foreground">Recebido:</span>
             <span className="font-bold text-emerald-700">{brl(summary.receivedTotal)}</span>
           </div>
         </div>
@@ -543,7 +543,7 @@ export default function ReceitasView() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-primary text-white hover:bg-primary/90">
+            <Button onClick={handleSave} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
               Salvar
             </Button>
@@ -558,14 +558,14 @@ export default function ReceitasView() {
             <DialogTitle>Histórico da receita</DialogTitle>
           </DialogHeader>
           {historyRows.length === 0 ? (
-            <p className="text-slate-500 text-sm py-4 text-center">Sem registros.</p>
+            <p className="text-muted-foreground text-sm py-4 text-center">Sem registros.</p>
           ) : (
             <ul className="space-y-2 py-2 text-sm">
               {historyRows.map((h) => (
                 <li key={h.id} className="border-b pb-2">
                   <span className="font-medium">{h.action}</span>
-                  {h.reason ? <span className="text-slate-500"> — {h.reason}</span> : null}
-                  <div className="text-xs text-slate-500">
+                  {h.reason ? <span className="text-muted-foreground"> — {h.reason}</span> : null}
+                  <div className="text-xs text-muted-foreground">
                     {h.createdAt ? new Date(h.createdAt).toLocaleString("pt-BR") : ""}
                   </div>
                 </li>
@@ -582,7 +582,7 @@ export default function ReceitasView() {
             <DialogTitle>Cancelar receita</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-2">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               Somente receitas com status <strong>A Receber</strong> podem ser canceladas.
               O motivo fica registrado no histórico.
             </p>
@@ -600,7 +600,7 @@ export default function ReceitasView() {
             <Button variant="outline" onClick={() => setCancelTarget(null)}>
               Voltar
             </Button>
-            <Button onClick={handleCancel} className="bg-red-600 text-white hover:bg-red-700">
+            <Button onClick={handleCancel} className="bg-red-600 text-primary-foreground hover:bg-red-700">
               Confirmar cancelamento
             </Button>
           </DialogFooter>

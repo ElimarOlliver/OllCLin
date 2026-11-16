@@ -126,14 +126,14 @@ export default function ExtratoView() {
 
   return (
     <div className="p-2 space-y-4">
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <div className="bg-card rounded-xl border border-border shadow-sm p-6">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div>
             <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
               <Scale className="h-5 w-5 text-primary" />
               Extrato
             </h1>
-            <p className="text-slate-500 text-sm mt-1">
+            <p className="text-muted-foreground text-sm mt-1">
               Entradas e saídas do período, reunindo receitas, vendas, despesas e repasses.
             </p>
           </div>
@@ -224,7 +224,7 @@ export default function ExtratoView() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-slate-500">
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando extrato...
           </div>
         ) : error ? (
@@ -232,7 +232,7 @@ export default function ExtratoView() {
             Não foi possível gerar o extrato. Verifique se a migração 0003 já foi aplicada.
           </p>
         ) : entries.length === 0 ? (
-          <p className="text-slate-500 text-sm py-8 text-center">
+          <p className="text-muted-foreground text-sm py-8 text-center">
             Nenhum lançamento no período selecionado.
           </p>
         ) : (

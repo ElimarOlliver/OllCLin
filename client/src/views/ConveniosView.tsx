@@ -162,24 +162,24 @@ export default function ConveniosView() {
 
   return (
     <div className="p-2 space-y-4">
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <div className="bg-card rounded-xl border border-border shadow-sm p-6">
         <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
           <div>
             <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-primary" />
               Convênios
             </h1>
-            <p className="text-slate-500 text-sm mt-1">
+            <p className="text-muted-foreground text-sm mt-1">
               Cadastre operadoras para uso em agendamentos e faturamento TISS.
             </p>
           </div>
-          <Button onClick={openCreate} className="bg-primary text-white hover:bg-primary/90">
+          <Button onClick={openCreate} className="bg-primary text-primary-foreground hover:bg-primary/90">
             <Plus className="h-4 w-4 mr-1" /> Adicionar novo convênio
           </Button>
         </div>
 
         <div className="relative mb-4 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -189,11 +189,11 @@ export default function ConveniosView() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-12 text-slate-500">
+          <div className="flex items-center justify-center py-12 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando...
           </div>
         ) : plans.length === 0 ? (
-          <p className="text-slate-500 text-sm py-8 text-center">
+          <p className="text-muted-foreground text-sm py-8 text-center">
             Nenhum convênio cadastrado.
           </p>
         ) : (
@@ -310,7 +310,7 @@ export default function ConveniosView() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving} className="bg-primary text-white hover:bg-primary/90">
+            <Button onClick={handleSave} disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
               {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
               Salvar
             </Button>

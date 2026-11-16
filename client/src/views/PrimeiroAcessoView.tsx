@@ -33,17 +33,17 @@ export default function PrimeiroAcessoView({ token }: { token: string }) {
   });
 
   if (validation.isLoading) {
-    return <p className="text-sm text-slate-500">Validando link...</p>;
+    return <p className="text-sm text-muted-foreground">Validando link...</p>;
   }
 
   if (!validation.data?.valid) {
     return (
       <div className="flex flex-col items-center gap-4 text-center">
-        <h1 className="text-xl font-bold text-slate-900">Link inválido</h1>
-        <p className="text-sm text-slate-500 max-w-sm">
+        <h1 className="text-xl font-bold text-foreground">Link inválido</h1>
+        <p className="text-sm text-muted-foreground max-w-sm">
           {validation.data?.reason ?? "Este link de ativação não é mais válido."}
         </p>
-        <a href="/entrar" className="text-sm font-semibold text-[#075e63] hover:underline">
+        <a href="/entrar" className="text-sm font-semibold text-primary hover:underline">
           Voltar ao login
         </a>
       </div>
@@ -56,9 +56,9 @@ export default function PrimeiroAcessoView({ token }: { token: string }) {
     return (
       <div className="flex flex-col items-center gap-4 text-center">
         <ShieldCheck className="h-10 w-10 text-emerald-600" />
-        <h1 className="text-xl font-bold text-slate-900">Conta ativada!</h1>
-        <p className="text-sm text-slate-500">Faça login com a senha que você definiu.</p>
-        <a href="/entrar" className="font-semibold text-[#075e63] hover:underline">
+        <h1 className="text-xl font-bold text-foreground">Conta ativada!</h1>
+        <p className="text-sm text-muted-foreground">Faça login com a senha que você definiu.</p>
+        <a href="/entrar" className="font-semibold text-primary hover:underline">
           Ir para o login →
         </a>
       </div>
@@ -83,8 +83,8 @@ export default function PrimeiroAcessoView({ token }: { token: string }) {
       }}
     >
       <div className="text-center space-y-1">
-        <h1 className="text-xl font-bold text-slate-900">Ative sua conta</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-xl font-bold text-foreground">Ative sua conta</h1>
+        <p className="text-sm text-muted-foreground">
           {validation.data.organizationName} · {validation.data.email}
         </p>
       </div>
@@ -129,11 +129,11 @@ export default function PrimeiroAcessoView({ token }: { token: string }) {
 
       {error && <p className="text-sm text-red-600 text-center">{error}</p>}
 
-      <Button type="submit" disabled={submitting || !strong} className="w-full bg-primary text-white hover:bg-primary/90">
+      <Button type="submit" disabled={submitting || !strong} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
         {submitting ? "Ativando..." : "Ativar conta"}
       </Button>
 
-      <p className="flex items-center justify-center gap-1 text-xs text-slate-400">
+      <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
         <Stethoscope className="h-3 w-3" /> OllCLin · link válido por 72h
       </p>
     </form>

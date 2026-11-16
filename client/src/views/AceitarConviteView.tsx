@@ -27,16 +27,16 @@ export default function AceitarConviteView({ token }: { token: string }) {
     onError: (e) => setError(e.message),
   });
 
-  if (validation.isLoading) return <p className="text-sm text-slate-500">Validando convite...</p>;
+  if (validation.isLoading) return <p className="text-sm text-muted-foreground">Validando convite...</p>;
 
   if (!validation.data?.valid) {
     return (
       <div className="flex flex-col items-center gap-4 text-center">
-        <h1 className="text-xl font-bold text-slate-900">Convite inválido</h1>
-        <p className="text-sm text-slate-500 max-w-sm">
+        <h1 className="text-xl font-bold text-foreground">Convite inválido</h1>
+        <p className="text-sm text-muted-foreground max-w-sm">
           {validation.data?.reason ?? "Peça um reenvio ao titular da conta."}
         </p>
-        <a href="/entrar" className="text-sm font-semibold text-[#075e63] hover:underline">
+        <a href="/entrar" className="text-sm font-semibold text-primary hover:underline">
           Voltar ao login
         </a>
       </div>
@@ -46,9 +46,9 @@ export default function AceitarConviteView({ token }: { token: string }) {
   if (done) {
     return (
       <div className="flex flex-col items-center gap-4 text-center">
-        <h1 className="text-xl font-bold text-slate-900">Convite aceito!</h1>
-        <p className="text-sm text-slate-500">Faça login com a senha que você definiu.</p>
-        <a href="/entrar" className="font-semibold text-[#075e63] hover:underline">
+        <h1 className="text-xl font-bold text-foreground">Convite aceito!</h1>
+        <p className="text-sm text-muted-foreground">Faça login com a senha que você definiu.</p>
+        <a href="/entrar" className="font-semibold text-primary hover:underline">
           Ir para o login →
         </a>
       </div>
@@ -70,8 +70,8 @@ export default function AceitarConviteView({ token }: { token: string }) {
       }}
     >
       <div className="text-center space-y-1">
-        <h1 className="text-xl font-bold text-slate-900">Aceitar convite</h1>
-        <p className="text-sm text-slate-500">
+        <h1 className="text-xl font-bold text-foreground">Aceitar convite</h1>
+        <p className="text-sm text-muted-foreground">
           {validation.data.organizationName} · {validation.data.email}
         </p>
       </div>
@@ -102,7 +102,7 @@ export default function AceitarConviteView({ token }: { token: string }) {
 
       {error && <p className="text-sm text-red-600 text-center">{error}</p>}
 
-      <Button type="submit" disabled={submitting} className="w-full bg-primary text-white hover:bg-primary/90">
+      <Button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
         {submitting ? "Salvando..." : "Aceitar convite"}
       </Button>
     </form>

@@ -39,16 +39,16 @@ export default function PermissoesView() {
   });
 
   if (overviewQuery.isLoading) {
-    return <div className="p-8 text-sm text-slate-500">Carregando permissões...</div>;
+    return <div className="p-8 text-sm text-muted-foreground">Carregando permissões...</div>;
   }
 
   if (overviewQuery.isError) {
     return (
       <div className="mx-auto w-full max-w-5xl p-8">
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-slate-200 bg-white p-10 text-center shadow-sm">
-          <Lock className="h-8 w-8 text-slate-400" />
-          <h2 className="text-lg font-semibold text-slate-900">Área restrita ao titular</h2>
-          <p className="max-w-md text-sm text-slate-500">
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-10 text-center shadow-sm">
+          <Lock className="h-8 w-8 text-muted-foreground" />
+          <h2 className="text-lg font-semibold text-foreground">Área restrita ao titular</h2>
+          <p className="max-w-md text-sm text-muted-foreground">
             Somente o titular da conta (contratante) pode visualizar e configurar as
             permissões de acesso da equipe.
           </p>
@@ -69,15 +69,15 @@ export default function PermissoesView() {
     <div className="mx-auto w-full max-w-6xl space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#075e63]">Conta titular</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Permissões</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Conta titular</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">Permissões</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Defina o acesso de cada colaborador às áreas do sistema: sem acesso, parcial (somente leitura) ou total.
           </p>
         </div>
         {overviewQuery.data?.trial && (
-          <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm">
-            <span className="font-semibold text-[#075e63]">
+          <div className="rounded-xl border border-primary/30 bg-primary-soft px-4 py-3 text-sm">
+            <span className="font-semibold text-primary">
               {overviewQuery.data.trial.trialExpired
                 ? "Trial encerrado"
                 : `Trial: ${overviewQuery.data.trial.trialDaysLeft} dia(s) restantes`}
@@ -86,10 +86,10 @@ export default function PermissoesView() {
         )}
       </header>
 
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
         <table className="w-full min-w-[860px] text-sm">
           <thead>
-            <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+            <tr className="border-b border-border bg-muted text-left text-xs uppercase tracking-wide text-muted-foreground">
               <th className="px-4 py-3 font-semibold">Colaborador</th>
               {areas.map((area) => (
                 <th key={area.key} className="px-3 py-3 font-semibold text-center" title={area.description ?? area.label}>
@@ -100,20 +100,20 @@ export default function PermissoesView() {
           </thead>
           <tbody>
             {members.map((member) => (
-              <tr key={member.userId} className="border-b border-slate-100 last:border-0">
+              <tr key={member.userId} className="border-b border-border last:border-0">
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-slate-900">{member.name ?? member.email ?? `#${member.userId}`}</span>
+                    <span className="font-medium text-foreground">{member.name ?? member.email ?? `#${member.userId}`}</span>
                     {member.isOwner && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
                         <Crown className="h-3 w-3" /> Titular
                       </span>
                     )}
                     {member.status !== "active" && (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] text-slate-500">{member.status}</span>
+                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">{member.status}</span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-400">{member.email}</div>
+                  <div className="text-xs text-muted-foreground">{member.email}</div>
                 </td>
                 {areas.map((area) => {
                   const key = `${member.userId}:${area.key}`;
@@ -157,7 +157,7 @@ export default function PermissoesView() {
       </div>
 
       {members.length <= 1 && (
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-muted-foreground">
           Ainda não há colaboradores na sua conta. Quando você cadastrar usuários para sua equipe, eles aparecerão aqui para receber permissões.
         </p>
       )}

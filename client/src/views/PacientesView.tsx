@@ -38,7 +38,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { User, Search, Plus, Loader2, Pencil, AlertCircle, CheckCircle2, Upload, Download } from "lucide-react";
+import { User, Search, Plus, Loader2, Pencil, AlertCircle, CheckCircle2, Upload, Download, MoreVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { useOrganizationId } from "@/hooks/useOrganizationId";
@@ -404,26 +405,27 @@ export default function PacientesView() {
       {/* Cabeçalho */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#075e63]">Núcleo clínico</p>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">Pacientes</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Núcleo clínico</p>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">Pacientes</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
             Cadastre, busque e gerencie o histórico dos pacientes da clínica.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" onClick={() => setImportOpen(true)}>
+        <div className="flex flex-wrap items-center gap-2 max-sm:grid max-sm:grid-cols-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)} className="max-sm:order-2">
             <Upload className="mr-2 h-4 w-4" />
             Importar
           </Button>
-          <Button variant="outline" onClick={handleExportCsv} disabled={exporting}>
+          <Button variant="outline" onClick={handleExportCsv} disabled={exporting} className="max-sm:order-3">
             {exporting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Download className="mr-2 h-4 w-4" />
             )}
-            Exportar consultas (CSV)
+            <span className="hidden sm:inline">Exportar consultas (CSV)</span>
+            <span className="sm:hidden">Exportar CSV</span>
           </Button>
-          <Button onClick={openCreate}>
+          <Button onClick={openCreate} className="max-sm:order-1 max-sm:col-span-2">
             <Plus className="h-4 w-4 mr-2" />
             Novo Paciente
           </Button>
@@ -433,18 +435,84 @@ export default function PacientesView() {
       {/* Busca */}
       <div className="flex max-w-md">
         <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome, CPF ou telefone..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="h-11 border-slate-200 bg-white pl-10 shadow-sm"
+            className="h-11 border-border bg-card pl-10 shadow-sm"
           />
         </div>
       </div>
 
+      {/* Mobile: mesma lista em cards (a tabela só aparece a partir de md) */}
+      <div className="space-y-3 md:hidden">
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-sm">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Carregando pacientes...
+          </div>
+        ) : filteredPatients.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground shadow-sm">
+            Nenhum paciente encontrado.
+          </div>
+        ) : (
+          filteredPatients.map((patient) => (
+            <article key={patient.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-soft font-semibold text-primary">
+                    {patient.fullName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-foreground">{patient.fullName}</p>
+                    <p className="truncate text-xs text-muted-foreground">{patient.phone || "Sem telefone"}</p>
+                  </div>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon-sm" aria-label={`Ações de ${patient.fullName}`}>
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => openEdit(patient)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Editar paciente
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                <div className="min-w-0">
+                  <dt className="text-muted-foreground">CPF</dt>
+                  <dd className="truncate font-mono text-foreground-soft">{patient.cpf || "—"}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-muted-foreground">Nascimento</dt>
+                  <dd className="truncate text-foreground-soft">
+                    {patient.birthDate ? format(new Date(patient.birthDate), "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                  </dd>
+                </div>
+                <div className="col-span-2 min-w-0">
+                  <dt className="text-muted-foreground">E-mail</dt>
+                  <dd className="truncate text-foreground-soft">{patient.email || "—"}</dd>
+                </div>
+              </dl>
+              <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                <Badge variant="success">Ativo</Badge>
+                <Button variant="outline" size="sm" onClick={() => openEdit(patient)}>
+                  <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                  Editar
+                </Button>
+              </div>
+            </article>
+          ))
+        )}
+      </div>
+
       {/* Tabela de pacientes */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-card shadow-sm md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -461,7 +529,7 @@ export default function PacientesView() {
             {isLoading ? (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-8">
-                  <div className="flex items-center justify-center gap-2 text-slate-500">
+                  <div className="flex items-center justify-center gap-2 text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Carregando pacientes...
                   </div>
@@ -469,7 +537,7 @@ export default function PacientesView() {
               </TableRow>
             ) : filteredPatients.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Nenhum paciente encontrado.
                 </TableCell>
               </TableRow>
@@ -477,16 +545,16 @@ export default function PacientesView() {
               filteredPatients.map((patient) => (
                 <TableRow
                   key={patient.id}
-                  className="hover:bg-slate-50 transition-colors border-b border-slate-200 last:border-0"
+                  className="hover:bg-muted transition-colors border-b border-border last:border-0"
                 >
                   <TableCell className="font-medium text-foreground">
                     <div className="flex items-center gap-3">
-                      <div className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-primary font-medium">
+                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-primary font-medium">
                         {patient.fullName.charAt(0).toUpperCase()}
                       </div>
                       <div>
                         <div className="text-sm font-medium">{patient.fullName}</div>
-                        <div className="text-xs text-slate-500">
+                        <div className="text-xs text-muted-foreground">
                           {patient.createdAt
                             ? `${format(new Date(patient.createdAt), "dd/MM/yyyy", { locale: ptBR })} • Cadastro`
                             : "—"}
@@ -546,7 +614,7 @@ export default function PacientesView() {
           </DialogHeader>
 
           <div className="space-y-4 p-1">
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-4">
+            <div className="rounded-xl border border-dashed border-border bg-card p-4">
               <Label htmlFor="import-file" className="text-sm font-medium">
                 Arquivo (.csv, .tsv, .txt)
               </Label>
@@ -554,16 +622,16 @@ export default function PacientesView() {
                 id="import-file"
                 type="file"
                 accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"
-                className="mt-2 cursor-pointer bg-white"
+                className="mt-2 cursor-pointer bg-card"
                 onChange={handleImportFileChange}
                 disabled={createImportBatchMutation.isPending}
               />
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-muted-foreground">
                 Colunas reconhecidas: nome, cpf, data de nascimento, telefone, e-mail, endereço,
                 cidade, UF, CEP, responsável e CPF do responsável.
               </p>
               {createImportBatchMutation.isPending && (
-                <p className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+                <p className="mt-2 flex items-center gap-2 text-sm text-foreground-soft">
                   <Loader2 className="h-4 w-4 animate-spin" /> Processando arquivo...
                 </p>
               )}
@@ -572,9 +640,9 @@ export default function PacientesView() {
             {importPreview && (
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <div className="rounded-lg border border-slate-200 bg-white p-3">
-                    <p className="text-xs text-slate-500">Linhas</p>
-                    <p className="text-lg font-semibold text-slate-900">{importPreview.totalRows}</p>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <p className="text-xs text-muted-foreground">Linhas</p>
+                    <p className="text-lg font-semibold text-foreground">{importPreview.totalRows}</p>
                   </div>
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
                     <p className="text-xs text-emerald-700">Válidas</p>
@@ -584,9 +652,9 @@ export default function PacientesView() {
                     <p className="text-xs text-red-700">Rejeitadas</p>
                     <p className="text-lg font-semibold text-red-700">{importPreview.rejectedRows}</p>
                   </div>
-                  <div className="rounded-lg border border-slate-200 bg-white p-3">
-                    <p className="text-xs text-slate-500">Colunas</p>
-                    <p className="text-lg font-semibold text-slate-900">{importPreview.columns.length}</p>
+                  <div className="rounded-lg border border-border bg-card p-3">
+                    <p className="text-xs text-muted-foreground">Colunas</p>
+                    <p className="text-lg font-semibold text-foreground">{importPreview.columns.length}</p>
                   </div>
                 </div>
 
@@ -607,7 +675,7 @@ export default function PacientesView() {
                 )}
 
                 {importPreview.validRows > 0 && (
-                  <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                  <div className="overflow-x-auto rounded-lg border border-border bg-card">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -629,7 +697,7 @@ export default function PacientesView() {
                       </TableBody>
                     </Table>
                     {importPreview.validRows > 10 && (
-                      <p className="border-t border-slate-200 p-2 text-xs text-slate-500">
+                      <p className="border-t border-border p-2 text-xs text-muted-foreground">
                         Exibindo as primeiras 10 de {importPreview.validRows} linhas válidas.
                       </p>
                     )}
@@ -686,8 +754,8 @@ export default function PacientesView() {
               handleSave();
             }}
           >
-            <div className="rounded-xl border border-teal-100 bg-teal-50/60 p-4">
-              <p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-[#075e63]">Identificação</p>
+            <div className="rounded-xl border border-teal-100 bg-primary-soft/60 p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-primary">Identificação</p>
               <div className="space-y-2">
               <Label htmlFor="fullName">
                 Nome Completo <span className="text-red-600">*</span>
@@ -705,7 +773,7 @@ export default function PacientesView() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 rounded-xl border border-border bg-card p-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="socialName">Nome social</Label>
                 <Input
@@ -819,8 +887,8 @@ export default function PacientesView() {
               </div>
             </div>
 
-            <div className="space-y-2 rounded-xl border border-slate-200 bg-white p-4">
-              <p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-[#075e63]">Endereço e contato</p>
+            <div className="space-y-2 rounded-xl border border-border bg-card p-4">
+              <p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-primary">Endereço e contato</p>
             <div className="space-y-2">
               <Label htmlFor="address">
                 Endereço {isRequired("address") && <span className="text-red-600">*</span>}
@@ -881,7 +949,7 @@ export default function PacientesView() {
               </div>
             </div>
 
-            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="space-y-3 rounded-xl border border-border bg-muted p-4">
               <p className="text-xs font-medium text-foreground/70">Consentimentos (LGPD)</p>
               <div className="flex items-center gap-2">
                 <Checkbox
@@ -910,7 +978,7 @@ export default function PacientesView() {
             </div>
 
             <DialogFooter className="sticky bottom-0 -mx-1 gap-2 border-t border-border bg-popover/95 pt-4 backdrop-blur sm:justify-between">
-              <p className="hidden items-center gap-1 text-xs text-slate-500 sm:flex"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Seus dados ficam protegidos</p>
+              <p className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Seus dados ficam protegidos</p>
               <Button
                 type="button"
                 variant="outline"
@@ -918,7 +986,7 @@ export default function PacientesView() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={saving} className="bg-primary text-white hover:bg-primary/90">
+              <Button type="submit" disabled={saving} className="bg-primary text-primary-foreground hover:bg-primary/90">
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                 {editing ? "Salvar alterações" : "Salvar Paciente"}
               </Button>

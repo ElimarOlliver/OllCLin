@@ -624,7 +624,7 @@ export default function AgendaView() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
-          <p className="text-slate-500 text-sm">
+          <p className="text-muted-foreground text-sm">
             Gerencie agendamentos, visualize disponibilidade e sincronize com o Google Calendar.
           </p>
         </div>
@@ -688,7 +688,7 @@ export default function AgendaView() {
 
           <Button
             onClick={handleNewAppointment}
-            className="w-full bg-primary text-white hover:bg-primary/90 sm:w-auto"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90 sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
             Novo Agendamento
@@ -723,7 +723,7 @@ export default function AgendaView() {
       <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-12">
         {/* Filtros laterais */}
         <div className="min-w-0 space-y-4 xl:col-span-3">
-          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+          <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
             <h3 className="text-sm font-semibold text-foreground mb-3">
               Visualização
             </h3>
@@ -741,7 +741,7 @@ export default function AgendaView() {
             </div>
           </div>
 
-          <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+          <div className="bg-card rounded-xl p-4 border border-border shadow-sm">
             <h3 className="text-sm font-semibold text-foreground mb-3">
               Profissional
             </h3>
@@ -768,14 +768,14 @@ export default function AgendaView() {
 
         {/* Área principal do calendário */}
         <div className="min-w-0 xl:col-span-9">
-          <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
+          <div className="bg-card p-6 rounded-lg border border-border shadow-sm">
             {/* Data selecionada */}
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-xl font-bold text-foreground">
                   {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}
                 </h2>
-                <p className="text-slate-500 text-sm">
+                <p className="text-muted-foreground text-sm">
                   {format(selectedDate, "EEEE", { locale: ptBR })}
                 </p>
               </div>
@@ -832,7 +832,7 @@ export default function AgendaView() {
                   ).map((hour) => (
                     <div
                       key={hour}
-                      className="text-xs text-slate-500 text-right w-full h-[60px] flex items-end pr-2"
+                      className="text-xs text-muted-foreground text-right w-full h-[60px] flex items-end pr-2"
                     >
                       {hour.toString().padStart(2, "0")}:00
                     </div>
@@ -843,7 +843,7 @@ export default function AgendaView() {
               <div className="col-span-9">
                 {/* Grade de agendamentos (1px por minuto) */}
                 <div
-                  className="relative border-b border-slate-200 overflow-hidden"
+                  className="relative border-b border-border overflow-hidden"
                   style={{ height: `${AGENDA_GRID_MINUTES}px` }}
                 >
                   {dayAppointments.map((appt) => {
@@ -878,15 +878,15 @@ export default function AgendaView() {
                           className={cn(
                             "rounded-md p-2 flex flex-col justify-between h-full text-xs font-medium shadow-sm border",
                             status.variant === "default"
-                              ? "bg-primary text-white border-primary"
+                              ? "bg-primary text-primary-foreground border-primary"
                               : status.variant === "success"
-                              ? "bg-success text-white border-success"
+                              ? "bg-success text-primary-foreground border-success"
                               : status.variant === "warning"
                               ? "bg-yellow-100 text-yellow-800 border-yellow-200"
                               : status.variant === "destructive"
                               ? "bg-red-100 text-red-800 border-red-200"
                               : status.variant === "outline"
-                              ? "bg-transparent text-foreground border-slate-200"
+                              ? "bg-transparent text-foreground border-border"
                               : "bg-secondary text-secondary-foreground border-secondary",
                           )}
                         >
@@ -920,7 +920,7 @@ export default function AgendaView() {
                 Agendamentos de hoje
               </h3>
               {dayAppointments.length === 0 ? (
-                <p className="text-slate-500 text-sm">Nenhum agendamento para este dia.</p>
+                <p className="text-muted-foreground text-sm">Nenhum agendamento para este dia.</p>
               ) : (
                 <Table>
                   <TableHeader>
@@ -939,7 +939,7 @@ export default function AgendaView() {
                       const startTime = parseISO(appt.startsAt);
                       const status = STATUS_CONFIG[appt.status];
                       return (
-                        <TableRow key={appt.id} className="hover:bg-slate-50 transition-colors">
+                        <TableRow key={appt.id} className="hover:bg-muted transition-colors">
                           <TableCell className="font-medium text-foreground">
                             {format(startTime, "HH:mm", { locale: ptBR })}
                           </TableCell>
@@ -1027,7 +1027,7 @@ export default function AgendaView() {
 
             {/* Eventos existentes na agenda do Google (leitura) */}
             {googleConnected && (
-              <div className="mt-8 border-t border-slate-200 pt-6">
+              <div className="mt-8 border-t border-border pt-6">
                 <h3 className="text-sm font-semibold text-foreground mb-3">
                   Eventos no Google Calendar
                 </h3>
@@ -1036,13 +1036,13 @@ export default function AgendaView() {
                     {googleEventsData.map((event) => (
                       <li
                         key={event.id}
-                        className="flex items-start justify-between gap-3 rounded-md border border-slate-200 p-2 text-sm"
+                        className="flex items-start justify-between gap-3 rounded-md border border-border p-2 text-sm"
                       >
                         <div>
                           <p className="font-medium text-foreground">
                             {event.summary}
                           </p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-muted-foreground">
                             {formatGoogleEventTime(event)}
                           </p>
                         </div>
@@ -1060,7 +1060,7 @@ export default function AgendaView() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted-foreground">
                     Nenhum evento encontrado no Google Calendar neste dia.
                   </p>
                 )}
@@ -1087,7 +1087,7 @@ export default function AgendaView() {
           <form className="space-y-4" onSubmit={submitAppointmentForm} noValidate>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label htmlFor="appointmentPatient" className="text-sm font-medium text-slate-700">
+                <label htmlFor="appointmentPatient" className="text-sm font-medium text-foreground-soft">
                   Paciente
                   <span className="text-red-600"> *</span>
                 </label>
@@ -1110,7 +1110,7 @@ export default function AgendaView() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="appointmentProfessional" className="text-sm font-medium text-slate-700">
+                <label htmlFor="appointmentProfessional" className="text-sm font-medium text-foreground-soft">
                   Profissional
                   <span className="text-red-600"> *</span>
                 </label>
@@ -1134,7 +1134,7 @@ export default function AgendaView() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="appointmentProcedure" className="text-sm font-medium text-slate-700">
+              <label htmlFor="appointmentProcedure" className="text-sm font-medium text-foreground-soft">
                 Procedimento
                 <span className="text-red-600"> *</span>
               </label>
@@ -1176,7 +1176,7 @@ export default function AgendaView() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label htmlFor="appointmentDate" className="text-sm font-medium text-slate-700">
+                <label htmlFor="appointmentDate" className="text-sm font-medium text-foreground-soft">
                   Data
                   <span className="text-red-600"> *</span>
                 </label>
@@ -1193,7 +1193,7 @@ export default function AgendaView() {
                 {appointmentErrors.startsAt && <p className="text-xs text-red-600">{appointmentErrors.startsAt}</p>}
               </div>
               <div className="space-y-2">
-                <label htmlFor="appointmentTime" className="text-sm font-medium text-slate-700">
+                <label htmlFor="appointmentTime" className="text-sm font-medium text-foreground-soft">
                   Hora de início
                   <span className="text-red-600"> *</span>
                 </label>
@@ -1212,7 +1212,7 @@ export default function AgendaView() {
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <label htmlFor="appointmentDuration" className="text-sm font-medium text-slate-700">
+                <label htmlFor="appointmentDuration" className="text-sm font-medium text-foreground-soft">
                   Duração
                   <span className="text-red-600"> *</span>
                 </label>
@@ -1238,9 +1238,9 @@ export default function AgendaView() {
                 )}
               </div>
               <div className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Término (calculado)</span>
+                <span className="text-sm font-medium text-foreground-soft">Término (calculado)</span>
                 <div
-                  className="flex h-10 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-foreground"
+                  className="flex h-10 items-center rounded-md border border-border bg-muted px-3 text-sm text-foreground"
                   aria-live="polite"
                 >
                   {appointmentEnd
@@ -1251,7 +1251,7 @@ export default function AgendaView() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="appointmentStatus" className="text-sm font-medium text-slate-700">
+              <label htmlFor="appointmentStatus" className="text-sm font-medium text-foreground-soft">
                 Status
               </label>
               <Select
@@ -1275,13 +1275,13 @@ export default function AgendaView() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="appointmentNotes" className="text-sm font-medium text-slate-700">
+              <label htmlFor="appointmentNotes" className="text-sm font-medium text-foreground-soft">
                 Observações
               </label>
               <Input id="appointmentNotes" type="text" placeholder="Observações adicionais" value={appointmentForm.notes} onChange={(event) => setAppointmentForm((current) => ({ ...current, notes: event.target.value }))} />
             </div>
 
-            <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-2 pt-4 sm:flex-row sm:justify-end max-sm:sticky max-sm:bottom-0 max-sm:z-10 max-sm:-mx-4 max-sm:border-t max-sm:border-border max-sm:bg-popover max-sm:px-4 max-sm:pb-4 max-sm:pt-3">
               <Button
                 type="button"
                 variant="outline"
@@ -1305,9 +1305,9 @@ export default function AgendaView() {
 
       {/* Toast para Google Calendar não conectado */}
       {!googleConnected && showConnectBanner && (
-        <div className="fixed bottom-4 right-4 max-w-sm bg-popover text-foreground border border-border shadow-lg rounded-lg p-4 z-fab">
+        <div className="mt-4 rounded-lg border border-border bg-popover p-4 text-foreground shadow-sm sm:fixed sm:bottom-4 sm:right-4 sm:mt-0 sm:max-w-sm sm:shadow-lg">
           <div className="flex items-start gap-3">
-            <Cloud className="h-5 w-5 text-slate-500 mt-0.5" />
+            <Cloud className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
             <div>
               <h3 className="text-sm font-semibold text-foreground">
                 {googleStatus?.migrationRequired
@@ -1316,7 +1316,7 @@ export default function AgendaView() {
                     ? "Google Calendar não configurado"
                     : "Conecte ao Google Calendar"}
               </h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {googleStatus?.migrationRequired
                   ? googleStatus.hint ??
                     "Aplique a migração 0004 no Supabase para habilitar a integração."

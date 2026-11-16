@@ -49,13 +49,13 @@ export default function LoginView() {
     <div className="flex items-center justify-center min-h-screen w-full">
       <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
         <div className="flex flex-col items-center gap-6">
-          <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center text-white">
+          <div className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center text-primary-foreground">
             <Stethoscope className="h-6 w-6" />
           </div>
           <h1 className="text-2xl font-bold text-foreground text-center">
             OllCLin
           </h1>
-          <p className="text-slate-500 text-sm text-center">
+          <p className="text-muted-foreground text-sm text-center">
             Acesse o sistema clínico com sua conta da organização.
           </p>
         </div>
@@ -93,20 +93,20 @@ export default function LoginView() {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-primary text-white hover:bg-primary/90"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {isSubmitting ? "Entrar..." : "Entrar"}
           </Button>
         </form>
 
-        <p className="text-sm text-center text-slate-500">
+        <p className="text-sm text-center text-muted-foreground">
           Não tem conta?{" "}
-          <a href="/cadastro" className="font-semibold text-[#075e63] hover:underline">
+          <a href="/cadastro" className="font-semibold text-primary hover:underline">
             Criar conta (10 dias grátis)
           </a>
         </p>
 
-        <p className="text-xs text-slate-500 text-center">
+        <p className="text-xs text-muted-foreground text-center">
           Ainda em ambiente de desenvolvimento? Defina <code>ALLOW_DEV_AUTH=true</code> no
           <code>.env</code> para usar o modo local sem Supabase Auth.
         </p>

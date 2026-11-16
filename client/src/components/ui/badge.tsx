@@ -14,13 +14,21 @@ const badgeVariants = cva(
         primary:
           "border-transparent bg-primary text-primary-foreground [a&]:hover:bg-primary/90",
         success:
-          "border-transparent bg-success text-white [a&]:hover:bg-success/90",
+          "border-transparent bg-success text-primary-foreground [a&]:hover:bg-success/90",
         warning:
-          "border-transparent bg-amber-100 text-amber-800 [a&]:hover:bg-amber-200",
+          "border-transparent bg-warning-soft text-warning-strong [a&]:hover:bg-warning-soft/80",
+        "success-soft":
+          "border-transparent bg-success-soft text-success-strong [a&]:hover:bg-success-soft/80",
+        "warning-soft":
+          "border-transparent bg-warning-soft text-warning-strong [a&]:hover:bg-warning-soft/80",
+        "danger-soft":
+          "border-transparent bg-danger-soft text-destructive [a&]:hover:bg-danger-soft/80",
+        "info-soft":
+          "border-transparent bg-info-soft text-info [a&]:hover:bg-info-soft/80",
         secondary:
           "border-transparent bg-secondary text-secondary-foreground [a&]:hover:bg-secondary/90",
         destructive:
-          "border-transparent bg-destructive text-white [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "border-transparent bg-destructive text-primary-foreground [a&]:hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:
           "text-foreground [a&]:hover:bg-accent [a&]:hover:text-accent-foreground",
       },
