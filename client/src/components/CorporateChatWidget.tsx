@@ -82,7 +82,7 @@ export default function CorporateChatWidget() {
       {open && (
         <section
           aria-label="Chat corporativo"
-          className="fixed bottom-20 right-3 z-fab flex h-[min(680px,calc(100vh-6rem))] w-[min(92vw,420px)] min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-popover shadow-2xl sm:right-5"
+          className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] right-3 z-fab flex h-[min(560px,calc(100dvh-11rem))] w-[min(92vw,380px)] min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-popover shadow-2xl sm:bottom-20 sm:right-5"
         >
           <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-primary px-4 py-3 text-primary-foreground">
             <div className="flex min-w-0 items-center gap-3">
@@ -148,7 +148,7 @@ export default function CorporateChatWidget() {
           )}
         </section>
       )}
-      <Button type="button" onClick={() => setOpen((value) => !value)} aria-label={open ? "Fechar chat corporativo" : "Abrir chat corporativo"} className={cn("fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-3 z-fab h-12 w-12 min-w-12 rounded-full bg-primary px-0 text-primary-foreground shadow-lg hover:bg-primary-hover sm:bottom-4 sm:right-5 sm:w-auto sm:px-4", unreadCount > 0 && !open && "ring-4 ring-primary/10")}>
+      <Button type="button" onClick={() => setOpen((value) => !value)} aria-label={open ? "Fechar chat corporativo" : "Abrir chat corporativo"} className={cn("fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-3 z-fab h-12 w-12 min-w-12 rounded-full bg-primary px-0 text-primary-foreground shadow-lg hover:bg-primary-hover sm:bottom-4 sm:right-5 sm:w-auto sm:px-4", open && "max-sm:hidden", unreadCount > 0 && !open && "ring-4 ring-primary/10")}>
         <MessageCircle className="h-5 w-5" />
         <span className="hidden sm:inline">Chat da equipe</span>
         {unreadCount > 0 && <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-card px-1.5 text-[10px] font-bold text-primary">{unreadCount}</span>}
