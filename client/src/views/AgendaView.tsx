@@ -704,7 +704,7 @@ export default function AgendaView() {
             "flex items-start justify-between gap-3 rounded-lg border p-3 text-sm",
             googleNotice.type === "success"
               ? "border-success/30 bg-success/10 text-foreground"
-              : "border-destructive/30 bg-red-50 text-foreground",
+              : "border-destructive/30 bg-danger-soft text-foreground",
           )}
         >
           <span>{googleNotice.message}</span>
@@ -882,9 +882,9 @@ export default function AgendaView() {
                               : status.variant === "success"
                               ? "bg-success text-primary-foreground border-success"
                               : status.variant === "warning"
-                              ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+                              ? "bg-warning-soft text-warning-strong border-warning/40"
                               : status.variant === "destructive"
-                              ? "bg-red-100 text-red-800 border-red-200"
+                              ? "bg-danger-soft text-danger-strong border-danger/40"
                               : status.variant === "outline"
                               ? "bg-transparent text-foreground border-border"
                               : "bg-secondary text-secondary-foreground border-secondary",
@@ -940,20 +940,20 @@ export default function AgendaView() {
                       const status = STATUS_CONFIG[appt.status];
                       return (
                         <TableRow key={appt.id} className="hover:bg-muted transition-colors">
-                          <TableCell className="font-medium text-foreground">
+                          <TableCell data-label="Horário" className="font-medium text-foreground">
                             {format(startTime, "HH:mm", { locale: ptBR })}
                           </TableCell>
-                          <TableCell className="text-foreground/90">
+                          <TableCell data-label="Paciente" className="text-foreground/90">
                             {appt.patient.fullName}
                           </TableCell>
-                          <TableCell>{appt.procedure.name}</TableCell>
-                          <TableCell>{appt.professional.fullName}</TableCell>
-                          <TableCell>
+                          <TableCell data-label="Procedimento">{appt.procedure.name}</TableCell>
+                          <TableCell data-label="Profissional">{appt.professional.fullName}</TableCell>
+                          <TableCell data-label="Status">
                             <Badge variant={status.variant}>
                               {status.label}
                             </Badge>
                           </TableCell>
-                          <TableCell>
+                          <TableCell data-label="Google">
                             {(() => {
                               const syncState = syncJobStates.get(appt.id);
                               const syncStatus = syncState?.status;
@@ -1008,7 +1008,7 @@ export default function AgendaView() {
                               );
                             })()}
                           </TableCell>
-                          <TableCell className="text-right">
+                          <TableCell data-label="Ações" className="text-right">
                             <Button
                               variant="outline"
                               size="sm"
@@ -1089,7 +1089,7 @@ export default function AgendaView() {
               <div className="space-y-2">
                 <label htmlFor="appointmentPatient" className="text-sm font-medium text-foreground-soft">
                   Paciente
-                  <span className="text-red-600"> *</span>
+                  <span className="text-destructive"> *</span>
                 </label>
                 <Select
                   value={appointmentForm.patientId}
@@ -1106,13 +1106,13 @@ export default function AgendaView() {
                     ))}
                   </SelectContent>
                 </Select>
-                {appointmentErrors.patientId && <p className="text-xs text-red-600">{appointmentErrors.patientId}</p>}
+                {appointmentErrors.patientId && <p className="text-xs text-destructive">{appointmentErrors.patientId}</p>}
               </div>
 
               <div className="space-y-2">
                 <label htmlFor="appointmentProfessional" className="text-sm font-medium text-foreground-soft">
                   Profissional
-                  <span className="text-red-600"> *</span>
+                  <span className="text-destructive"> *</span>
                 </label>
                 <Select
                   value={appointmentForm.professionalId}
@@ -1129,14 +1129,14 @@ export default function AgendaView() {
                     ))}
                   </SelectContent>
                 </Select>
-                {appointmentErrors.professionalId && <p className="text-xs text-red-600">{appointmentErrors.professionalId}</p>}
+                {appointmentErrors.professionalId && <p className="text-xs text-destructive">{appointmentErrors.professionalId}</p>}
               </div>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="appointmentProcedure" className="text-sm font-medium text-foreground-soft">
                 Procedimento
-                <span className="text-red-600"> *</span>
+                <span className="text-destructive"> *</span>
               </label>
               <Select
                 value={appointmentForm.procedureId}
@@ -1171,14 +1171,14 @@ export default function AgendaView() {
                     ))}
                   </SelectContent>
               </Select>
-              {appointmentErrors.procedureId && <p className="text-xs text-red-600">{appointmentErrors.procedureId}</p>}
+              {appointmentErrors.procedureId && <p className="text-xs text-destructive">{appointmentErrors.procedureId}</p>}
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <label htmlFor="appointmentDate" className="text-sm font-medium text-foreground-soft">
                   Data
-                  <span className="text-red-600"> *</span>
+                  <span className="text-destructive"> *</span>
                 </label>
                 <Input
                   id="appointmentDate"
@@ -1190,12 +1190,12 @@ export default function AgendaView() {
                     setAppointmentForm((current) => ({ ...current, date: event.target.value }))
                   }
                 />
-                {appointmentErrors.startsAt && <p className="text-xs text-red-600">{appointmentErrors.startsAt}</p>}
+                {appointmentErrors.startsAt && <p className="text-xs text-destructive">{appointmentErrors.startsAt}</p>}
               </div>
               <div className="space-y-2">
                 <label htmlFor="appointmentTime" className="text-sm font-medium text-foreground-soft">
                   Hora de início
-                  <span className="text-red-600"> *</span>
+                  <span className="text-destructive"> *</span>
                 </label>
                 <Input
                   id="appointmentTime"
@@ -1214,7 +1214,7 @@ export default function AgendaView() {
               <div className="space-y-2">
                 <label htmlFor="appointmentDuration" className="text-sm font-medium text-foreground-soft">
                   Duração
-                  <span className="text-red-600"> *</span>
+                  <span className="text-destructive"> *</span>
                 </label>
                 <Select
                   value={appointmentForm.durationMinutes}
@@ -1234,7 +1234,7 @@ export default function AgendaView() {
                   </SelectContent>
                 </Select>
                 {appointmentErrors.durationMinutes && (
-                  <p className="text-xs text-red-600">{appointmentErrors.durationMinutes}</p>
+                  <p className="text-xs text-destructive">{appointmentErrors.durationMinutes}</p>
                 )}
               </div>
               <div className="space-y-2">

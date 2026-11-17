@@ -75,9 +75,9 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  a_pagar: "bg-amber-100 text-amber-800",
-  pago: "bg-emerald-100 text-emerald-700",
-  cancelado: "bg-gray-100 text-gray-500",
+  a_pagar: "bg-warning-soft text-warning-strong",
+  pago: "bg-success-soft text-success-strong",
+  cancelado: "bg-muted text-muted-foreground",
 };
 
 function brl(value: number): string {
@@ -292,24 +292,24 @@ export default function DespesasView() {
             <TableBody>
               {visible.map((exp) => (
                 <TableRow key={exp.id}>
-                  <TableCell className="font-medium">
+                  <TableCell data-label="Descrição" className="font-medium">
                     {exp.description || `Despesa #${exp.id}`}
                     {exp.recurrenceRule ? (
                       <span className="ml-2 text-xs text-muted-foreground">(recorrente)</span>
                     ) : null}
                   </TableCell>
-                  <TableCell>{exp.payeeName || "—"}</TableCell>
-                  <TableCell>
+                  <TableCell data-label="Favorecido">{exp.payeeName || "—"}</TableCell>
+                  <TableCell data-label="Parcela">
                     {exp.installmentsTotal > 1 ? `${exp.installmentNo}/${exp.installmentsTotal}` : "—"}
                   </TableCell>
-                  <TableCell>{exp.dueDate ? formatDateBR(exp.dueDate) : "—"}</TableCell>
-                  <TableCell className="font-semibold">{brl(exp.amount)}</TableCell>
-                  <TableCell>
-                    <Badge className={STATUS_STYLE[exp.status] ?? "bg-gray-100"}>
+                  <TableCell data-label="Vencimento">{exp.dueDate ? formatDateBR(exp.dueDate) : "—"}</TableCell>
+                  <TableCell data-label="Valor" className="font-semibold">{brl(exp.amount)}</TableCell>
+                  <TableCell data-label="Status">
+                    <Badge className={STATUS_STYLE[exp.status] ?? "bg-muted"}>
                       {STATUS_LABEL[exp.status] ?? exp.status}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell data-label="Ações" className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="sm" title="Histórico" onClick={() => openHistory(exp)}>
                         <History className="h-4 w-4" />
@@ -324,7 +324,7 @@ export default function DespesasView() {
                             setCancelReason("");
                           }}
                         >
-                          <Ban className="h-4 w-4 text-red-500" />
+                          <Ban className="h-4 w-4 text-destructive" />
                         </Button>
                       )}
                     </div>
@@ -338,19 +338,19 @@ export default function DespesasView() {
         {/* Resumo (Cap. 15.2) */}
         <div className="mt-4 flex gap-6 justify-end text-sm">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-amber-600" />
+            <Clock className="h-4 w-4 text-warning-strong" />
             <span className="text-muted-foreground">A pagar:</span>
-            <span className="font-bold text-amber-700">{brl(summary.toPayTotal)}</span>
+            <span className="font-bold text-warning-strong">{brl(summary.toPayTotal)}</span>
           </div>
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <AlertTriangle className="h-4 w-4 text-destructive" />
             <span className="text-muted-foreground">Atrasado:</span>
-            <span className="font-bold text-red-600">{brl(summary.overdueTotal)}</span>
+            <span className="font-bold text-destructive">{brl(summary.overdueTotal)}</span>
           </div>
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <CheckCircle2 className="h-4 w-4 text-success-strong" />
             <span className="text-muted-foreground">Pago:</span>
-            <span className="font-bold text-emerald-700">{brl(summary.paidTotal)}</span>
+            <span className="font-bold text-success-strong">{brl(summary.paidTotal)}</span>
           </div>
         </div>
       </div>
@@ -549,7 +549,7 @@ export default function DespesasView() {
             <Button variant="outline" onClick={() => setCancelTarget(null)}>
               Voltar
             </Button>
-            <Button onClick={handleCancel} className="bg-red-600 text-primary-foreground hover:bg-red-700">
+            <Button onClick={handleCancel} className="bg-destructive text-primary-foreground hover:bg-destructive">
               Confirmar cancelamento
             </Button>
           </DialogFooter>

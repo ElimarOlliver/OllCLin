@@ -32,6 +32,7 @@
   --color-warning-strong: var(--warning-strong);
   --color-warning-soft: var(--warning-soft);
   --color-danger-soft: var(--danger-soft);
+  --color-danger-strong: var(--danger-strong);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
   --color-border: var(--border);
@@ -89,6 +90,7 @@
   --surface-muted: #F1F5F9;
   --accent-soft: #F1F5F9;
   --danger: #DC2626;
+  --danger-strong: #991B1B;
   --warning: #D97706;
   --info: #0284C7;
   /* Fundos suaves usados em toasts, badges e alertas */
@@ -1401,4 +1403,71 @@ a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 [data-slot="sheet-content"] {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+}
+
+/* === Tabelas viram cards no mobile (<768px) === */
+/* As views marcam cada TableCell com data-label (texto do TableHead). Abaixo
+   de 768px o cabeçalho some, a linha vira card e a célula vira o par
+   rótulo (esquerda) / valor (direita). Linhas de total ou aviso (colSpan)
+   ficam centradas, sem rótulo. O escopo :has([data-label]) preserva as
+   tabelas sem rótulo (ex.: showcase de componentes). As regras ficam fora de
+   @layer para vencer as utilities das células (whitespace-nowrap, p-2,
+   border-b) e eliminar o scroll horizontal. */
+@media (max-width: 767px) {
+  [data-slot="table"]:has([data-label]),
+  [data-slot="table"]:has([data-label]) [data-slot="table-body"] {
+    display: block;
+    min-width: 0;
+  }
+
+  [data-slot="table"]:has([data-label]) [data-slot="table-header"] {
+    display: none;
+  }
+
+  [data-slot="table"]:has([data-label]) [data-slot="table-row"] {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 0 0 12px;
+    padding: 16px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow: var(--shadow-sm);
+  }
+
+  [data-slot="table"]:has([data-label]) [data-slot="table-row"]:last-child {
+    margin-bottom: 0;
+  }
+
+  [data-slot="table"]:has([data-label]) [data-slot="table-cell"] {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    height: auto;
+    padding: 0;
+    border: 0;
+    text-align: right;
+    white-space: normal;
+  }
+
+  [data-slot="table"]:has([data-label]) [data-slot="table-cell"][data-label]::before {
+    content: attr(data-label);
+    flex: 1 1 40%;
+    max-width: 45%;
+    text-align: left;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted-foreground);
+  }
+
+  [data-slot="table"]:has([data-label]) [data-slot="table-cell"][colspan] {
+    justify-content: center;
+    text-align: center;
+  }
+
+  [data-slot="table"]:has([data-label]) [data-slot="table-cell"][colspan]::before {
+    content: none;
+  }
 }

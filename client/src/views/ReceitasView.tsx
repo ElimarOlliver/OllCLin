@@ -78,11 +78,11 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  a_receber: "bg-amber-100 text-amber-800",
-  recebido: "bg-emerald-100 text-emerald-700",
-  cancelado: "bg-gray-100 text-gray-500",
-  desconto: "bg-blue-100 text-blue-700",
-  cortesia: "bg-purple-100 text-purple-700",
+  a_receber: "bg-warning-soft text-warning-strong",
+  recebido: "bg-success-soft text-success-strong",
+  cancelado: "bg-muted text-muted-foreground",
+  desconto: "bg-info-soft text-info",
+  cortesia: "bg-info-soft text-info",
 };
 
 function brl(value: number): string {
@@ -321,23 +321,23 @@ export default function ReceitasView() {
             <TableBody>
               {visible.map((rev) => (
                 <TableRow key={rev.id}>
-                  <TableCell className="font-medium">{rev.description || `Receita #${rev.id}`}</TableCell>
-                  <TableCell>{rev.payerName || "—"}</TableCell>
-                  <TableCell>{rev.paymentMethodName || "Não informado"}</TableCell>
-                  <TableCell>
+                  <TableCell data-label="Descrição" className="font-medium">{rev.description || `Receita #${rev.id}`}</TableCell>
+                  <TableCell data-label="Pagador">{rev.payerName || "—"}</TableCell>
+                  <TableCell data-label="Pagamento">{rev.paymentMethodName || "Não informado"}</TableCell>
+                  <TableCell data-label="Parcela">
                     {rev.installmentsTotal > 1
                       ? `${rev.installmentNo}/${rev.installmentsTotal}`
                       : "—"}
                   </TableCell>
-                  <TableCell>{rev.dueDate ? formatDateBR(rev.dueDate) : "—"}</TableCell>
-                  <TableCell className="font-semibold">{brl(rev.amount)}</TableCell>
-                  <TableCell>
-                    <Badge className={STATUS_STYLE[rev.status] ?? "bg-gray-100"}>
+                  <TableCell data-label="Vencimento">{rev.dueDate ? formatDateBR(rev.dueDate) : "—"}</TableCell>
+                  <TableCell data-label="Valor" className="font-semibold">{brl(rev.amount)}</TableCell>
+                  <TableCell data-label="Status">
+                    <Badge className={STATUS_STYLE[rev.status] ?? "bg-muted"}>
                       {STATUS_LABEL[rev.status] ?? rev.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{rev.invoiceStatus || "Não informado"}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell data-label="Status NF">{rev.invoiceStatus || "Não informado"}</TableCell>
+                  <TableCell data-label="Ações" className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="sm" title="Histórico" onClick={() => openHistory(rev)}>
                         <History className="h-4 w-4" />
@@ -349,7 +349,7 @@ export default function ReceitasView() {
                           title="Marcar como recebido"
                           onClick={() => markAsReceived(rev)}
                         >
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          <CheckCircle2 className="h-4 w-4 text-success-strong" />
                         </Button>
                       )}
                       {rev.status === "a_receber" && (
@@ -362,7 +362,7 @@ export default function ReceitasView() {
                             setCancelReason("");
                           }}
                         >
-                          <Ban className="h-4 w-4 text-red-500" />
+                          <Ban className="h-4 w-4 text-destructive" />
                         </Button>
                       )}
                     </div>
@@ -376,14 +376,14 @@ export default function ReceitasView() {
         {/* Resumo (Cap. 15.1) */}
         <div className="mt-4 flex gap-6 justify-end text-sm">
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-amber-600" />
+            <Clock className="h-4 w-4 text-warning-strong" />
             <span className="text-muted-foreground">A receber:</span>
-            <span className="font-bold text-amber-700">{brl(summary.toReceiveTotal)}</span>
+            <span className="font-bold text-warning-strong">{brl(summary.toReceiveTotal)}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Wallet className="h-4 w-4 text-emerald-600" />
+            <Wallet className="h-4 w-4 text-success-strong" />
             <span className="text-muted-foreground">Recebido:</span>
-            <span className="font-bold text-emerald-700">{brl(summary.receivedTotal)}</span>
+            <span className="font-bold text-success-strong">{brl(summary.receivedTotal)}</span>
           </div>
         </div>
       </div>
@@ -600,7 +600,7 @@ export default function ReceitasView() {
             <Button variant="outline" onClick={() => setCancelTarget(null)}>
               Voltar
             </Button>
-            <Button onClick={handleCancel} className="bg-red-600 text-primary-foreground hover:bg-red-700">
+            <Button onClick={handleCancel} className="bg-destructive text-primary-foreground hover:bg-destructive">
               Confirmar cancelamento
             </Button>
           </DialogFooter>

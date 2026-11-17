@@ -179,22 +179,22 @@ export default function ProcedimentosView() {
                   key={proc.id}
                   className="hover:bg-muted transition-colors border-b border-border last:border-0"
                 >
-                  <TableCell className="font-medium text-foreground">
+                  <TableCell data-label="Procedimento" className="font-medium text-foreground">
                     {proc.name}
                   </TableCell>
-                  <TableCell className="text-sm text-foreground/70">
+                  <TableCell data-label="Descrição" className="text-sm text-foreground/70">
                     {proc.description || "—"}
                   </TableCell>
-                  <TableCell className="text-sm text-center text-foreground/90">
+                  <TableCell data-label="Duração" className="text-sm text-center text-foreground/90">
                     {proc.durationMinutes} min
                   </TableCell>
-                  <TableCell className="text-sm text-center text-foreground/90 font-mono">
+                  <TableCell data-label="Preço" className="text-sm text-center text-foreground/90 font-mono">
                     R$ {proc.price}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell data-label="Status" className="text-center">
                     <Badge variant="success">Ativo</Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell data-label="Ações" className="text-right">
                     <Button variant="outline" size="sm" aria-label={`Editar ${proc.name}`} onClick={() => openEdit(proc)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -212,9 +212,9 @@ export default function ProcedimentosView() {
             <DialogDescription>Informe os dados do procedimento e mantenha o catálogo atualizado.</DialogDescription>
           </DialogHeader>
           <form className="space-y-4" onSubmit={(event) => { event.preventDefault(); void handleSave(); }}>
-            <div className="space-y-2"><Label htmlFor="procedureName">Nome <span className="text-red-600">*</span></Label><Input id="procedureName" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></div>
+            <div className="space-y-2"><Label htmlFor="procedureName">Nome <span className="text-destructive">*</span></Label><Input id="procedureName" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></div>
             <div className="space-y-2"><Label htmlFor="procedureDescription">Descrição</Label><Input id="procedureDescription" value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} /></div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="procedureDuration">Duração (minutos) <span className="text-red-600">*</span></Label><Input id="procedureDuration" type="number" min="1" step="1" value={form.durationMinutes} onChange={(event) => setForm({ ...form, durationMinutes: event.target.value })} required /></div><div className="space-y-2"><Label htmlFor="procedurePrice">Preço</Label><Input id="procedurePrice" inputMode="decimal" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} /></div></div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2"><div className="space-y-2"><Label htmlFor="procedureDuration">Duração (minutos) <span className="text-destructive">*</span></Label><Input id="procedureDuration" type="number" min="1" step="1" value={form.durationMinutes} onChange={(event) => setForm({ ...form, durationMinutes: event.target.value })} required /></div><div className="space-y-2"><Label htmlFor="procedurePrice">Preço</Label><Input id="procedurePrice" inputMode="decimal" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} /></div></div>
             <DialogFooter className="flex-col-reverse sm:flex-row"><Button type="button" variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancelar</Button><Button type="submit" disabled={saving}>{saving && <Loader2 className="h-4 w-4 animate-spin" />}{editing ? "Salvar alterações" : "Cadastrar procedimento"}</Button></DialogFooter>
           </form>
         </DialogContent>

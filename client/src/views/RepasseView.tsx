@@ -437,26 +437,26 @@ export default function RepasseView() {
                   <TableBody>
                     {eligible.map((revenue) => (
                       <TableRow key={revenue.id}>
-                        <TableCell>
+                        <TableCell data-label="toggleAll(v === true) aria-label=&quot;Selecionar todos&quot; />">
                           <Checkbox
                             checked={selected.includes(revenue.id)}
                             disabled={revenue.repassed}
                             onCheckedChange={(v) => toggleRevenue(revenue.id, v === true)}
                           />
                         </TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell data-label="Recebimento" className="text-sm">
                           {revenue.description || `Receita #${revenue.id}`}
                         </TableCell>
-                        <TableCell className="text-sm">{revenue.patientName ?? "—"}</TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell data-label="Paciente" className="text-sm">{revenue.patientName ?? "—"}</TableCell>
+                        <TableCell data-label="Data" className="text-sm">
                           {revenue.receivedAt ? formatDateBR(revenue.receivedAt) : "—"}
                         </TableCell>
-                        <TableCell className="font-semibold">{brl(revenue.amount)}</TableCell>
-                        <TableCell>
+                        <TableCell data-label="Valor" className="font-semibold">{brl(revenue.amount)}</TableCell>
+                        <TableCell data-label="Situação">
                           {revenue.repassed ? (
-                            <Badge className="bg-blue-100 text-blue-700">Repassado</Badge>
+                            <Badge className="bg-info-soft text-info">Repassado</Badge>
                           ) : (
-                            <Badge className="bg-amber-100 text-amber-800">Não repassado</Badge>
+                            <Badge className="bg-warning-soft text-warning-strong">Não repassado</Badge>
                           )}
                         </TableCell>
                       </TableRow>
@@ -568,25 +568,25 @@ export default function RepasseView() {
                   <TableBody>
                     {payouts.map((payout) => (
                       <TableRow key={payout.id}>
-                        <TableCell className="text-sm font-medium">
+                        <TableCell data-label="Profissional" className="text-sm font-medium">
                           {payout.professionalName ?? `Profissional #${payout.professionalId}`}
                         </TableCell>
-                        <TableCell className="text-sm">{payout.locationName ?? "—"}</TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell data-label="Local" className="text-sm">{payout.locationName ?? "—"}</TableCell>
+                        <TableCell data-label="Período" className="text-sm">
                           {formatDateBR(payout.periodStart)} → {formatDateBR(payout.periodEnd)}
                         </TableCell>
-                        <TableCell className="text-sm text-center">{payout.percentage}%</TableCell>
-                        <TableCell className="text-sm text-right">{brl(payout.expectedAmount)}</TableCell>
-                        <TableCell className="text-sm text-right">{brl(payout.carryoverAmount)}</TableCell>
-                        <TableCell className="font-semibold text-right">{brl(payout.amount)}</TableCell>
-                        <TableCell>
+                        <TableCell data-label="%" className="text-sm text-center">{payout.percentage}%</TableCell>
+                        <TableCell data-label="Esperado" className="text-sm text-right">{brl(payout.expectedAmount)}</TableCell>
+                        <TableCell data-label="Retroativo" className="text-sm text-right">{brl(payout.carryoverAmount)}</TableCell>
+                        <TableCell data-label="Pago" className="font-semibold text-right">{brl(payout.amount)}</TableCell>
+                        <TableCell data-label="Status">
                           {payout.status === "confirmado" ? (
-                            <Badge className="bg-emerald-100 text-emerald-700">Confirmado</Badge>
+                            <Badge className="bg-success-soft text-success-strong">Confirmado</Badge>
                           ) : (
-                            <Badge className="bg-gray-100 text-gray-500">Cancelado</Badge>
+                            <Badge className="bg-muted text-muted-foreground">Cancelado</Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell data-label="Ações" className="text-right">
                           <div className="flex justify-end gap-1">
                             <Button
                               variant="ghost"
@@ -606,7 +606,7 @@ export default function RepasseView() {
                                   setCancelReason("");
                                 }}
                               >
-                                <Ban className="h-4 w-4 text-red-500" />
+                                <Ban className="h-4 w-4 text-destructive" />
                               </Button>
                             )}
                           </div>
@@ -619,10 +619,10 @@ export default function RepasseView() {
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 text-sm">
-              <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <div className="flex items-center gap-2 rounded-lg bg-success-soft px-3 py-2">
+                <CheckCircle2 className="h-4 w-4 text-success-strong" />
                 <span className="text-muted-foreground">Confirmados:</span>
-                <span className="font-bold text-emerald-700 ml-auto">
+                <span className="font-bold text-success-strong ml-auto">
                   {brl(
                     payouts
                       .filter((p) => p.status === "confirmado")
@@ -699,7 +699,7 @@ export default function RepasseView() {
             <Button variant="outline" onClick={() => setCancelTarget(null)}>
               Voltar
             </Button>
-            <Button onClick={handleCancelPayout} className="bg-red-600 text-primary-foreground hover:bg-red-700">
+            <Button onClick={handleCancelPayout} className="bg-destructive text-primary-foreground hover:bg-destructive">
               Confirmar cancelamento
             </Button>
           </DialogFooter>

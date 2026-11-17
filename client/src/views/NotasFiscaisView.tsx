@@ -42,11 +42,11 @@ const LABEL_FISCAL: Record<string, string> = {
 };
 
 const COR_FISCAL: Record<string, string> = {
-  NAO_EMITIDA: "bg-gray-100 text-gray-700",
-  PENDENTE: "bg-blue-100 text-blue-700",
-  EMITIDA: "bg-green-100 text-green-700",
-  CANCELADA: "bg-yellow-100 text-yellow-700",
-  ERRO: "bg-red-100 text-red-700",
+  NAO_EMITIDA: "bg-muted text-muted-foreground",
+  PENDENTE: "bg-info-soft text-info",
+  EMITIDA: "bg-success-soft text-success-strong",
+  CANCELADA: "bg-warning-soft text-warning-strong",
+  ERRO: "bg-danger-soft text-danger-strong",
 };
 
 const AMBIENTE_PADRAO = "PRODUCAO";
@@ -175,7 +175,7 @@ export default function NotasFiscaisView() {
       </div>
 
       {ambiente === "HOMOLOGACAO" && (
-        <div className="rounded-md border border-yellow-300 bg-yellow-50 p-3 text-sm text-yellow-800">
+        <div className="rounded-md border border-warning/50 bg-warning-soft p-3 text-sm text-warning-strong">
           Você está vendo notas de HOMOLOGAÇÃO — não representam documentos válidos.
         </div>
       )}
@@ -210,23 +210,23 @@ export default function NotasFiscaisView() {
                   <TableCell>
                     <Checkbox checked={selecionados.includes(item.id)} onCheckedChange={() => toggle(item.id)} />
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-label="Consulta">
                     <div className="font-medium">{item.startsAt ? new Date(item.startsAt).toLocaleDateString("pt-BR") : "—"}</div>
                     <div className="text-xs text-muted-foreground">#{item.id}</div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-label="Profissional">
                     <div>{item.profissionalNome ?? "—"}</div>
                     <div className="text-xs text-muted-foreground">{item.profissionalCrm ?? "CRM não cadastrado"}</div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-label="Valor">
                     {item.valorConsulta ? Number(item.valorConsulta).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
                   </TableCell>
-                  <TableCell>
+                  <TableCell data-label="Status">
                     <Badge className={COR_FISCAL[item.fiscalStatus] ?? ""}>
                       {LABEL_FISCAL[item.fiscalStatus] ?? item.fiscalStatus}
                     </Badge>
                   </TableCell>
-                  <TableCell className="max-w-xs text-xs text-red-600">
+                  <TableCell data-label="Bloqueios" className="max-w-xs text-xs text-destructive">
                     {bloqueios.length > 0 ? (
                       <span className="inline-flex items-start gap-1">
                         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -234,7 +234,7 @@ export default function NotasFiscaisView() {
                       </span>
                     ) : null}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell data-label="Ações" className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button
                         size="sm"

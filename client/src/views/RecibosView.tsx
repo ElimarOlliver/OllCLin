@@ -369,23 +369,23 @@ export default function RecibosView() {
               <TableBody>
                 {receipts.map((receipt) => (
                   <TableRow key={receipt.id}>
-                    <TableCell className="font-mono text-sm">#{receipt.id}</TableCell>
-                    <TableCell className="text-sm">{receipt.issuerName ?? "—"}</TableCell>
-                    <TableCell className="text-sm font-medium">{receipt.payerName}</TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell data-label="Nº" className="font-mono text-sm">#{receipt.id}</TableCell>
+                    <TableCell data-label="Emitente" className="text-sm">{receipt.issuerName ?? "—"}</TableCell>
+                    <TableCell data-label="Pagador" className="text-sm font-medium">{receipt.payerName}</TableCell>
+                    <TableCell data-label="Data" className="text-sm">
                       {receipt.issuedAt
                         ? new Date(receipt.issuedAt).toLocaleDateString("pt-BR")
                         : "—"}
                     </TableCell>
-                    <TableCell className="font-semibold">{brl(receipt.amount)}</TableCell>
-                    <TableCell>
+                    <TableCell data-label="Valor" className="font-semibold">{brl(receipt.amount)}</TableCell>
+                    <TableCell data-label="Status">
                       {receipt.status === "emitido" ? (
-                        <Badge className="bg-emerald-100 text-emerald-700">Emitido</Badge>
+                        <Badge className="bg-success-soft text-success-strong">Emitido</Badge>
                       ) : (
-                        <Badge className="bg-gray-100 text-gray-500">Cancelado</Badge>
+                        <Badge className="bg-muted text-muted-foreground">Cancelado</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell data-label="Ações" className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
@@ -413,7 +413,7 @@ export default function RecibosView() {
                               setCancelReason("");
                             }}
                           >
-                            <Ban className="h-4 w-4 text-red-500" />
+                            <Ban className="h-4 w-4 text-destructive" />
                           </Button>
                         )}
                       </div>
@@ -606,7 +606,7 @@ export default function RecibosView() {
             <Button variant="outline" onClick={() => setCancelTarget(null)}>
               Voltar
             </Button>
-            <Button onClick={handleCancel} className="bg-red-600 text-primary-foreground hover:bg-red-700">
+            <Button onClick={handleCancel} className="bg-destructive text-primary-foreground hover:bg-destructive">
               Confirmar cancelamento
             </Button>
           </DialogFooter>

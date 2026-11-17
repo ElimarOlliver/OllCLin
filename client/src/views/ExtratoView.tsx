@@ -58,10 +58,10 @@ const SOURCE_LABEL: Record<string, string> = {
 };
 
 const SOURCE_STYLE: Record<string, string> = {
-  receita: "bg-emerald-100 text-emerald-700",
-  venda: "bg-blue-100 text-blue-700",
-  despesa: "bg-red-100 text-red-700",
-  repasse: "bg-purple-100 text-purple-700",
+  receita: "bg-success-soft text-success-strong",
+  venda: "bg-info-soft text-info",
+  despesa: "bg-danger-soft text-danger-strong",
+  repasse: "bg-info-soft text-info",
 };
 
 function brl(value: number): string {
@@ -194,28 +194,28 @@ export default function ExtratoView() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-          <div className="rounded-lg bg-emerald-50 px-4 py-3">
-            <div className="flex items-center gap-2 text-emerald-700">
+          <div className="rounded-lg bg-success-soft px-4 py-3">
+            <div className="flex items-center gap-2 text-success-strong">
               <ArrowUpCircle className="h-4 w-4" />
               <span className="text-sm">Entradas</span>
             </div>
-            <p className="text-xl font-bold text-emerald-800 mt-1">{brl(summary.entriesTotal)}</p>
+            <p className="text-xl font-bold text-success-strong mt-1">{brl(summary.entriesTotal)}</p>
           </div>
-          <div className="rounded-lg bg-red-50 px-4 py-3">
-            <div className="flex items-center gap-2 text-red-700">
+          <div className="rounded-lg bg-danger-soft px-4 py-3">
+            <div className="flex items-center gap-2 text-danger-strong">
               <ArrowDownCircle className="h-4 w-4" />
               <span className="text-sm">Saídas</span>
             </div>
-            <p className="text-xl font-bold text-red-800 mt-1">{brl(summary.exitsTotal)}</p>
+            <p className="text-xl font-bold text-danger-strong mt-1">{brl(summary.exitsTotal)}</p>
           </div>
-          <div className={`rounded-lg px-4 py-3 ${summary.balance >= 0 ? "bg-blue-50" : "bg-amber-50"}`}>
+          <div className={`rounded-lg px-4 py-3 ${summary.balance >= 0 ? "bg-info-soft" : "bg-warning-soft"}`}>
             <div className="flex items-center gap-2 text-foreground/80">
               <Scale className="h-4 w-4" />
               <span className="text-sm">Saldo do período</span>
             </div>
             <p
               className={`text-xl font-bold mt-1 ${
-                summary.balance >= 0 ? "text-blue-800" : "text-amber-800"
+                summary.balance >= 0 ? "text-info" : "text-warning-strong"
               }`}
             >
               {brl(summary.balance)}
@@ -228,7 +228,7 @@ export default function ExtratoView() {
             <Loader2 className="h-5 w-5 animate-spin mr-2" /> Carregando extrato...
           </div>
         ) : error ? (
-          <p className="text-red-600 text-sm py-8 text-center">
+          <p className="text-destructive text-sm py-8 text-center">
             Não foi possível gerar o extrato. Verifique se a migração 0003 já foi aplicada.
           </p>
         ) : entries.length === 0 ? (
@@ -251,11 +251,11 @@ export default function ExtratoView() {
               <TableBody>
                 {entries.map((entry) => (
                   <TableRow key={entry.id}>
-                    <TableCell className="text-sm">{entry.date ? formatDateBR(entry.date) : "—"}</TableCell>
-                    <TableCell>
+                    <TableCell data-label="Data" className="text-sm">{entry.date ? formatDateBR(entry.date) : "—"}</TableCell>
+                    <TableCell data-label="Tipo">
                       <span
                         className={`inline-flex items-center gap-1 text-xs font-medium ${
-                          entry.type === "entrada" ? "text-emerald-700" : "text-red-600"
+                          entry.type === "entrada" ? "text-success-strong" : "text-destructive"
                         }`}
                       >
                         {entry.type === "entrada" ? (
@@ -266,16 +266,16 @@ export default function ExtratoView() {
                         {entry.type === "entrada" ? "Entrada" : "Saída"}
                       </span>
                     </TableCell>
-                    <TableCell>
-                      <Badge className={SOURCE_STYLE[entry.source] ?? "bg-gray-100"}>
+                    <TableCell data-label="Origem">
+                      <Badge className={SOURCE_STYLE[entry.source] ?? "bg-muted"}>
                         {SOURCE_LABEL[entry.source] ?? entry.source}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm">{entry.description}</TableCell>
-                    <TableCell className="text-sm">{entry.counterpart ?? "—"}</TableCell>
-                    <TableCell
+                    <TableCell data-label="Descrição" className="text-sm">{entry.description}</TableCell>
+                    <TableCell data-label="Contraparte" className="text-sm">{entry.counterpart ?? "—"}</TableCell>
+                    <TableCell data-label="Valor"
                       className={`text-right font-semibold ${
-                        entry.type === "entrada" ? "text-emerald-700" : "text-red-600"
+                        entry.type === "entrada" ? "text-success-strong" : "text-destructive"
                       }`}
                     >
                       {entry.type === "entrada" ? "+" : "−"} {brl(entry.amount)}

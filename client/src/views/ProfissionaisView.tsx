@@ -270,7 +270,7 @@ export default function ProfissionaisView() {
                   key={prof.id}
                   className="hover:bg-muted transition-colors border-b border-border last:border-0"
                 >
-                  <TableCell className="font-medium text-foreground">
+                  <TableCell data-label="Profissional" className="font-medium text-foreground">
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-primary font-medium">
                         {prof.fullName.charAt(0).toUpperCase()}
@@ -281,27 +281,27 @@ export default function ProfissionaisView() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-center text-foreground/90">
+                  <TableCell data-label="Especialidade" className="text-sm text-center text-foreground/90">
                     {prof.specialty || "—"}
                   </TableCell>
-                  <TableCell className="text-sm text-center text-foreground/90 font-mono">
+                  <TableCell data-label="Conselho" className="text-sm text-center text-foreground/90 font-mono">
                     {prof.council || prof.councilNumber
                       ? `${prof.council ?? ""} ${prof.councilNumber ?? ""}`.trim()
                       : "—"}
                   </TableCell>
-                  <TableCell className="text-sm text-center text-foreground/90 font-mono">
+                  <TableCell data-label="CPF" className="text-sm text-center text-foreground/90 font-mono">
                     {prof.cpf || "—"}
                   </TableCell>
-                  <TableCell className="text-sm text-center text-foreground/90">
+                  <TableCell data-label="Telefone" className="text-sm text-center text-foreground/90">
                     {prof.phone || "—"}
                   </TableCell>
-                  <TableCell className="text-sm text-center font-medium text-foreground/90">
+                  <TableCell data-label="Repasse" className="text-sm text-center font-medium text-foreground/90">
                     {prof.commissionPercentage}%
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell data-label="Status" className="text-center">
                     <Badge variant="success">Ativo</Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell data-label="Ações" className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button
                         variant="outline"
@@ -317,7 +317,7 @@ export default function ProfissionaisView() {
                         title="Desativar profissional"
                         onClick={() => setDeactivateTarget(prof)}
                       >
-                        <UserX className="h-4 w-4 text-red-500" />
+                        <UserX className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </TableCell>
@@ -347,7 +347,7 @@ export default function ProfissionaisView() {
           >
             <div className="space-y-2">
               <Label htmlFor="profFullName">
-                Nome Completo <span className="text-red-600">*</span>
+                Nome Completo <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="profFullName"
@@ -461,7 +461,7 @@ export default function ProfissionaisView() {
             </Button>
             <Button
               onClick={handleDeactivate}
-              className="bg-red-600 text-primary-foreground hover:bg-red-700"
+              className="bg-destructive text-primary-foreground hover:bg-destructive"
             >
               Desativar
             </Button>

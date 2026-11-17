@@ -121,9 +121,9 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_STYLE: Record<string, string> = {
-  a_receber: "bg-amber-100 text-amber-800",
-  recebido: "bg-emerald-100 text-emerald-700",
-  cancelada: "bg-gray-100 text-gray-500",
+  a_receber: "bg-warning-soft text-warning-strong",
+  recebido: "bg-success-soft text-success-strong",
+  cancelada: "bg-muted text-muted-foreground",
 };
 
 function brl(value: number): string {
@@ -402,25 +402,25 @@ export default function VendasView() {
               <TableBody>
                 {sales.map((sale) => (
                   <TableRow key={sale.id}>
-                    <TableCell className="text-sm">{sale.issuedAt ? formatDateBR(sale.issuedAt) : "—"}</TableCell>
-                    <TableCell className="text-sm">
+                    <TableCell data-label="Data" className="text-sm">{sale.issuedAt ? formatDateBR(sale.issuedAt) : "—"}</TableCell>
+                    <TableCell data-label="Paciente / Pagador" className="text-sm">
                       {sale.patientId
                         ? patientName.get(sale.patientId) ?? sale.payerName ?? `Paciente #${sale.patientId}`
                         : sale.payerName || "—"}
                     </TableCell>
-                    <TableCell className="text-sm text-center">{sale.items.length}</TableCell>
-                    <TableCell className="text-sm text-center">
+                    <TableCell data-label="Itens" className="text-sm text-center">{sale.items.length}</TableCell>
+                    <TableCell data-label="Parcela" className="text-sm text-center">
                       {sale.installmentsTotal > 1
                         ? `${sale.installmentNo}/${sale.installmentsTotal}`
                         : "—"}
                     </TableCell>
-                    <TableCell className="font-semibold">{brl(sale.amount)}</TableCell>
-                    <TableCell>
-                      <Badge className={STATUS_STYLE[sale.status] ?? "bg-gray-100"}>
+                    <TableCell data-label="Valor" className="font-semibold">{brl(sale.amount)}</TableCell>
+                    <TableCell data-label="Status">
+                      <Badge className={STATUS_STYLE[sale.status] ?? "bg-muted"}>
                         {STATUS_LABEL[sale.status] ?? sale.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell data-label="Ações" className="text-right">
                       <div className="flex justify-end gap-1">
                         <Button variant="ghost" size="sm" title="Histórico" onClick={() => openHistory(sale)}>
                           <History className="h-4 w-4" />
@@ -435,7 +435,7 @@ export default function VendasView() {
                               setCancelReason("");
                             }}
                           >
-                            <Ban className="h-4 w-4 text-red-500" />
+                            <Ban className="h-4 w-4 text-destructive" />
                           </Button>
                         )}
                       </div>
@@ -448,15 +448,15 @@ export default function VendasView() {
         )}
 
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
-          <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2">
-            <Clock className="h-4 w-4 text-amber-600" />
+          <div className="flex items-center gap-2 rounded-lg bg-warning-soft px-3 py-2">
+            <Clock className="h-4 w-4 text-warning-strong" />
             <span className="text-muted-foreground">A receber:</span>
-            <span className="font-bold text-amber-700 ml-auto">{brl(summary.toReceiveTotal)}</span>
+            <span className="font-bold text-warning-strong ml-auto">{brl(summary.toReceiveTotal)}</span>
           </div>
-          <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          <div className="flex items-center gap-2 rounded-lg bg-success-soft px-3 py-2">
+            <CheckCircle2 className="h-4 w-4 text-success-strong" />
             <span className="text-muted-foreground">Recebido:</span>
-            <span className="font-bold text-emerald-700 ml-auto">{brl(summary.receivedTotal)}</span>
+            <span className="font-bold text-success-strong ml-auto">{brl(summary.receivedTotal)}</span>
           </div>
           <div className="flex items-center gap-2 rounded-lg bg-surface px-3 py-2">
             <ShoppingCart className="h-4 w-4 text-primary" />
@@ -697,7 +697,7 @@ export default function VendasView() {
                         })
                       }
                     >
-                      <Trash2 className="h-4 w-4 text-red-500" />
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
                 </div>
@@ -782,7 +782,7 @@ export default function VendasView() {
             <Button variant="outline" onClick={() => setCancelTarget(null)}>
               Voltar
             </Button>
-            <Button onClick={handleCancel} className="bg-red-600 text-primary-foreground hover:bg-red-700">
+            <Button onClick={handleCancel} className="bg-destructive text-primary-foreground hover:bg-destructive">
               Confirmar cancelamento
             </Button>
           </DialogFooter>

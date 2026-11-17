@@ -211,28 +211,28 @@ export default function ConveniosView() {
             <TableBody>
               {plans.map((plan) => (
                 <TableRow key={plan.id}>
-                  <TableCell className="font-medium">{plan.operatorName}</TableCell>
-                  <TableCell>{plan.ansCode || "—"}</TableCell>
-                  <TableCell>{plan.tissXmlVersion || "—"}</TableCell>
-                  <TableCell>{plan.contactEmail || plan.contactPhone || "—"}</TableCell>
-                  <TableCell>
+                  <TableCell data-label="Operadora" className="font-medium">{plan.operatorName}</TableCell>
+                  <TableCell data-label="Código ANS">{plan.ansCode || "—"}</TableCell>
+                  <TableCell data-label="XML TISS">{plan.tissXmlVersion || "—"}</TableCell>
+                  <TableCell data-label="Contato">{plan.contactEmail || plan.contactPhone || "—"}</TableCell>
+                  <TableCell data-label="Status">
                     <Badge
                       className={
                         plan.isActive
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-gray-100 text-gray-600"
+                          ? "bg-success-soft text-success-strong"
+                          : "bg-muted text-muted-foreground"
                       }
                     >
                       {plan.isActive ? "Ativo" : "Inativo"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell data-label="Ações" className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(plan)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => handleDelete(plan)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
                   </TableCell>

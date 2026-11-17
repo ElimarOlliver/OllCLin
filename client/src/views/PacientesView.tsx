@@ -281,12 +281,12 @@ export default function PacientesView() {
 
   function fieldState(field: string) {
     const hasError = Boolean(touched[field] && validationErrors[field]);
-    return { "aria-invalid": hasError, "aria-describedby": hasError ? `${field}-error` : undefined, className: hasError ? "border-red-400 focus-visible:ring-red-400" : "" };
+    return { "aria-invalid": hasError, "aria-describedby": hasError ? `${field}-error` : undefined, className: hasError ? "border-danger/60 focus-visible:ring-red-400" : "" };
   }
 
   function ErrorMessage({ field }: { field: string }) {
     if (!touched[field] || !validationErrors[field]) return null;
-    return <p id={`${field}-error`} className="flex items-center gap-1 text-xs font-medium text-red-600"><AlertCircle className="h-3.5 w-3.5" />{validationErrors[field]}</p>;
+    return <p id={`${field}-error`} className="flex items-center gap-1 text-xs font-medium text-destructive"><AlertCircle className="h-3.5 w-3.5" />{validationErrors[field]}</p>;
   }
 
   function buildPayload() {
@@ -574,7 +574,7 @@ export default function PacientesView() {
                   key={patient.id}
                   className="hover:bg-muted transition-colors border-b border-border last:border-0"
                 >
-                  <TableCell className="font-medium text-foreground">
+                  <TableCell data-label="Paciente" className="font-medium text-foreground">
                     <div className="flex items-center gap-3">
                       <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-primary font-medium">
                         {patient.fullName.charAt(0).toUpperCase()}
@@ -589,24 +589,24 @@ export default function PacientesView() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm text-center text-foreground/90 font-mono">
+                  <TableCell data-label="CPF" className="text-sm text-center text-foreground/90 font-mono">
                     {patient.cpf || "—"}
                   </TableCell>
-                  <TableCell className="text-sm text-center text-foreground/90">
+                  <TableCell data-label="Nascimento" className="text-sm text-center text-foreground/90">
                     {patient.birthDate
                       ? format(new Date(patient.birthDate), "dd/MM/yyyy", { locale: ptBR })
                       : "—"}
                   </TableCell>
-                  <TableCell className="text-sm text-center text-foreground/90">
+                  <TableCell data-label="Telefone" className="text-sm text-center text-foreground/90">
                     {patient.phone || "—"}
                   </TableCell>
-                  <TableCell className="text-sm text-center text-foreground/90">
+                  <TableCell data-label="E-mail" className="text-sm text-center text-foreground/90">
                     {patient.email || "—"}
                   </TableCell>
-                  <TableCell className="text-center">
+                  <TableCell data-label="Status" className="text-center">
                     <Badge variant="success">Ativo</Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell data-label="Ações" className="text-right">
                     <Button
                       variant="outline"
                       size="sm"
@@ -671,13 +671,13 @@ export default function PacientesView() {
                     <p className="text-xs text-muted-foreground">Linhas</p>
                     <p className="text-lg font-semibold text-foreground">{importPreview.totalRows}</p>
                   </div>
-                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                    <p className="text-xs text-emerald-700">Válidas</p>
-                    <p className="text-lg font-semibold text-emerald-700">{importPreview.validRows}</p>
+                  <div className="rounded-lg border border-success/40 bg-success-soft p-3">
+                    <p className="text-xs text-success-strong">Válidas</p>
+                    <p className="text-lg font-semibold text-success-strong">{importPreview.validRows}</p>
                   </div>
-                  <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                    <p className="text-xs text-red-700">Rejeitadas</p>
-                    <p className="text-lg font-semibold text-red-700">{importPreview.rejectedRows}</p>
+                  <div className="rounded-lg border border-danger/40 bg-danger-soft p-3">
+                    <p className="text-xs text-danger-strong">Rejeitadas</p>
+                    <p className="text-lg font-semibold text-danger-strong">{importPreview.rejectedRows}</p>
                   </div>
                   <div className="rounded-lg border border-border bg-card p-3">
                     <p className="text-xs text-muted-foreground">Colunas</p>
@@ -686,11 +686,11 @@ export default function PacientesView() {
                 </div>
 
                 {importPreview.errors.length > 0 && (
-                  <div className="max-h-40 overflow-y-auto rounded-lg border border-red-200 bg-red-50 p-3">
-                    <p className="mb-2 flex items-center gap-1 text-sm font-medium text-red-700">
+                  <div className="max-h-40 overflow-y-auto rounded-lg border border-danger/40 bg-danger-soft p-3">
+                    <p className="mb-2 flex items-center gap-1 text-sm font-medium text-danger-strong">
                       <AlertCircle className="h-4 w-4" /> Linhas rejeitadas
                     </p>
-                    <ul className="space-y-1 text-xs text-red-700">
+                    <ul className="space-y-1 text-xs text-danger-strong">
                       {importPreview.errors.map((error, index) => (
                         <li key={`${error.row}-${index}`}>
                           Linha {error.row}
@@ -715,10 +715,10 @@ export default function PacientesView() {
                       <TableBody>
                         {importPreview.rows.slice(0, 10).map((row, index) => (
                           <TableRow key={`${row.fullName}-${index}`}>
-                            <TableCell className="text-sm">{row.fullName}</TableCell>
-                            <TableCell className="text-sm font-mono">{row.cpf || "—"}</TableCell>
-                            <TableCell className="text-sm">{row.birthDate || "—"}</TableCell>
-                            <TableCell className="text-sm">{row.guardianName || "—"}</TableCell>
+                            <TableCell data-label="Nome" className="text-sm">{row.fullName}</TableCell>
+                            <TableCell data-label="CPF" className="text-sm font-mono">{row.cpf || "—"}</TableCell>
+                            <TableCell data-label="Nascimento" className="text-sm">{row.birthDate || "—"}</TableCell>
+                            <TableCell data-label="Responsável" className="text-sm">{row.guardianName || "—"}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -771,7 +771,7 @@ export default function PacientesView() {
           <DialogHeader>
             <DialogTitle>{editing ? "Editar Paciente" : "Novo Paciente"}</DialogTitle>
             <DialogDescription>
-              Preencha os dados com atenção. Campos marcados com <span className="font-bold text-red-600">*</span> são obrigatórios.
+              Preencha os dados com atenção. Campos marcados com <span className="font-bold text-destructive">*</span> são obrigatórios.
             </DialogDescription>
           </DialogHeader>
           <form
@@ -781,11 +781,11 @@ export default function PacientesView() {
               handleSave();
             }}
           >
-            <div className="rounded-xl border border-teal-100 bg-primary-soft/60 p-4">
+            <div className="rounded-xl border border-primary/20 bg-primary-soft/60 p-4">
               <p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-primary">Identificação</p>
               <div className="space-y-2">
               <Label htmlFor="fullName">
-                Nome Completo <span className="text-red-600">*</span>
+                Nome Completo <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="fullName"
@@ -811,7 +811,7 @@ export default function PacientesView() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="cpf">
-                  CPF {isRequired("cpf") && <span className="text-red-600">*</span>}
+                  CPF {isRequired("cpf") && <span className="text-destructive">*</span>}
                 </Label>
                 <Input
                   id="cpf"
@@ -826,7 +826,7 @@ export default function PacientesView() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="rg">
-                  RG {isRequired("rg") && <span className="text-red-600">*</span>}
+                  RG {isRequired("rg") && <span className="text-destructive">*</span>}
                 </Label>
                 <Input
                   id="rg"
@@ -841,7 +841,7 @@ export default function PacientesView() {
               <div className="space-y-2">
                 <Label htmlFor="birthDate">
                   Data de Nascimento{" "}
-                  {isRequired("birthDate") && <span className="text-red-600">*</span>}
+                  {isRequired("birthDate") && <span className="text-destructive">*</span>}
                 </Label>
                 <Input
                   id="birthDate"
@@ -857,7 +857,7 @@ export default function PacientesView() {
               </div>
               <div className="space-y-2">
                 <Label>
-                  Gênero {isRequired("gender") && <span className="text-red-600">*</span>}
+                  Gênero {isRequired("gender") && <span className="text-destructive">*</span>}
                 </Label>
                 <Select
                   value={form.gender}
@@ -875,7 +875,7 @@ export default function PacientesView() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">
-                  Telefone {isRequired("phone") && <span className="text-red-600">*</span>}
+                  Telefone {isRequired("phone") && <span className="text-destructive">*</span>}
                 </Label>
                 <Input
                   id="phone"
@@ -890,7 +890,7 @@ export default function PacientesView() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">
-                  E-mail {isRequired("email") && <span className="text-red-600">*</span>}
+                  E-mail {isRequired("email") && <span className="text-destructive">*</span>}
                 </Label>
                 <Input
                   id="email"
@@ -918,7 +918,7 @@ export default function PacientesView() {
               <p className="mb-3 text-xs font-bold uppercase tracking-[0.12em] text-primary">Endereço e contato</p>
             <div className="space-y-2">
               <Label htmlFor="address">
-                Endereço {isRequired("address") && <span className="text-red-600">*</span>}
+                Endereço {isRequired("address") && <span className="text-destructive">*</span>}
               </Label>
               <Input
                 id="address"
@@ -954,7 +954,7 @@ export default function PacientesView() {
               <div className="space-y-2">
                 <Label htmlFor="emergencyContact">
                   Contato de emergência{" "}
-                  {isRequired("emergencyContact") && <span className="text-red-600">*</span>}
+                  {isRequired("emergencyContact") && <span className="text-destructive">*</span>}
                 </Label>
                 <Input
                   id="emergencyContact"
@@ -1005,7 +1005,7 @@ export default function PacientesView() {
             </div>
 
             <DialogFooter className="sticky bottom-0 -mx-1 gap-2 border-t border-border bg-popover/95 pt-4 backdrop-blur sm:justify-between">
-              <p className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Seus dados ficam protegidos</p>
+              <p className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex"><CheckCircle2 className="h-4 w-4 text-success-strong" /> Seus dados ficam protegidos</p>
               <Button
                 type="button"
                 variant="outline"

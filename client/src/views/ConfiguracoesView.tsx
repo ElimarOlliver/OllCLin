@@ -243,15 +243,15 @@ export default function ConfiguracoesView() {
                   className={selectedLocation?.id === loc.id ? "bg-primary/5 cursor-pointer" : "cursor-pointer"}
                   onClick={() => setSelectedLocation(loc)}
                 >
-                  <TableCell className="font-medium">{loc.name}</TableCell>
-                  <TableCell>{loc.address || "—"}</TableCell>
-                  <TableCell>{loc.phone || "—"}</TableCell>
-                  <TableCell>
-                    <Badge className={loc.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100"}>
+                  <TableCell data-label="Local" className="font-medium">{loc.name}</TableCell>
+                  <TableCell data-label="Endereço">{loc.address || "—"}</TableCell>
+                  <TableCell data-label="Telefone">{loc.phone || "—"}</TableCell>
+                  <TableCell data-label="Status">
+                    <Badge className={loc.isActive ? "bg-success-soft text-success-strong" : "bg-muted"}>
                       {loc.isActive ? "Ativo" : "Inativo"}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell data-label="Salas" className="text-right">
                     <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); setSelectedLocation(loc); }}>
                       <DoorOpen className="h-4 w-4 mr-1" /> Abrir salas
                     </Button>
@@ -282,7 +282,7 @@ export default function ConfiguracoesView() {
                   <li key={room.id} className="flex items-center justify-between border-b py-1.5 text-sm">
                     <span>{room.name}</span>
                     <Button variant="ghost" size="sm" onClick={() => handleDeleteRoom(room)}>
-                      <Trash2 className="h-4 w-4 text-red-500" />
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </li>
                 ))}
