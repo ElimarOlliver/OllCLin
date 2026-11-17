@@ -12,10 +12,9 @@ import {
 import { Check, Lock, MessageCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
-// TODO(comercial): substituir pelo número real da equipe de vendas
-// (formato wa.me: "55" + DDD + número, só dígitos) e pelo rótulo legível.
-const WHATSAPP_NUMBER = "5511999999999";
-const SUPPORT_PHONE_LABEL = "(11) 99999-9999";
+// Contato comercial da equipe de vendas (formato wa.me: "55" + DDD + número).
+const WHATSAPP_NUMBER = "5511992508860";
+const SUPPORT_PHONE_LABEL = "(11) 99250-8860";
 
 const TRIAL_EVENT = "ollclin:trial-expired";
 const AUTO_SHOWN_KEY = "ollclin-trial-dialog-shown";
