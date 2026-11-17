@@ -100,7 +100,7 @@ export default function AceitarConviteView({ token }: { token: string }) {
         />
       </div>
 
-      {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+      {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
       <Button type="submit" disabled={submitting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
         {submitting ? "Salvando..." : "Aceitar convite"}

@@ -385,7 +385,7 @@ export default function LandingPageView({ onEnter }: { onEnter: () => void }) {
                   <ul className="mt-4 space-y-2 text-sm text-foreground-soft">
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-2">
-                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden="true" />
+                        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-success-strong" aria-hidden="true" />
                         {f}
                       </li>
                     ))}
@@ -410,11 +410,11 @@ export default function LandingPageView({ onEnter }: { onEnter: () => void }) {
         <section id="seguranca" className="bg-gradient-to-br from-primary to-primary-hover py-14 text-primary-foreground">
           <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-8 px-4 sm:px-6 lg:grid-cols-2">
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-200">Segurança e LGPD</p>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary-soft">Segurança e LGPD</p>
               <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
                 Seus dados protegidos por padrão
               </h2>
-              <ul className="mt-6 space-y-3 text-sm leading-6 text-teal-50 sm:text-base">
+              <ul className="mt-6 space-y-3 text-sm leading-6 text-primary-soft sm:text-base">
                 {[
                   "Isolamento total por clínica (multi-tenant) com Row Level Security no banco.",
                   "Trilha de auditoria de cada acesso e alteração de dados sensíveis.",
@@ -423,7 +423,7 @@ export default function LandingPageView({ onEnter }: { onEnter: () => void }) {
                   "Consentimento de paciente registrando compartilhamento e marketing.",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
-                    <Lock className="mt-0.5 h-4 w-4 shrink-0 text-teal-200" aria-hidden="true" />
+                    <Lock className="mt-0.5 h-4 w-4 shrink-0 text-primary-soft" aria-hidden="true" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -432,7 +432,7 @@ export default function LandingPageView({ onEnter }: { onEnter: () => void }) {
             <div className="rounded-2xl border border-white/25 bg-white/10 p-6 backdrop-blur-sm">
               <ShieldCheck className="h-10 w-10 text-primary-soft" aria-hidden="true" />
               <p className="mt-4 text-lg font-semibold">Privacidade desde o primeiro clique</p>
-              <p className="mt-2 text-sm leading-6 text-teal-50">
+              <p className="mt-2 text-sm leading-6 text-primary-soft">
                 O OllCLin foi desenhado com o princípio do mínimo privilégio: cada perfil —
                 médico, recepção ou financeiro — enxerga apenas o que precisa para trabalhar.
               </p>
@@ -519,7 +519,7 @@ export default function LandingPageView({ onEnter }: { onEnter: () => void }) {
                   Enviar mensagem
                 </Button>
                 {contactSent && (
-                  <p role="status" className="rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800">
+                  <p role="status" className="rounded-lg bg-success-soft px-3 py-2 text-sm font-medium text-success-strong">
                     Mensagem registrada! Entraremos em contato em breve.
                   </p>
                 )}

@@ -55,7 +55,7 @@ export default function PrimeiroAcessoView({ token }: { token: string }) {
   if (done) {
     return (
       <div className="flex flex-col items-center gap-4 text-center">
-        <ShieldCheck className="h-10 w-10 text-emerald-600" />
+        <ShieldCheck className="h-10 w-10 text-success-strong" />
         <h1 className="text-xl font-bold text-foreground">Conta ativada!</h1>
         <p className="text-sm text-muted-foreground">Faça login com a senha que você definiu.</p>
         <a href="/entrar" className="font-semibold text-primary hover:underline">
@@ -110,7 +110,7 @@ export default function PrimeiroAcessoView({ token }: { token: string }) {
           minLength={8}
         />
         {password && !strong && (
-          <p className="text-xs text-amber-600">
+          <p className="text-xs text-warning-strong">
             Use maiúsculas, minúsculas e números (mínimo 8 caracteres).
           </p>
         )}
@@ -127,7 +127,7 @@ export default function PrimeiroAcessoView({ token }: { token: string }) {
         />
       </div>
 
-      {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+      {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
       <Button type="submit" disabled={submitting || !strong} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
         {submitting ? "Ativando..." : "Ativar conta"}

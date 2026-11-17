@@ -87,7 +87,7 @@ export default function LoginView() {
           </div>
 
           {errorMessage && (
-            <p className="text-sm text-red-600 text-center">{errorMessage}</p>
+            <p className="text-sm text-destructive text-center">{errorMessage}</p>
           )}
 
           <Button

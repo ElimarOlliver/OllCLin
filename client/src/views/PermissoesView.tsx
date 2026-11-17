@@ -105,7 +105,7 @@ export default function PermissoesView() {
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-foreground">{member.name ?? member.email ?? `#${member.userId}`}</span>
                     {member.isOwner && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning-strong">
                         <Crown className="h-3 w-3" /> Titular
                       </span>
                     )}
@@ -122,7 +122,7 @@ export default function PermissoesView() {
                   return (
                     <td key={area.key} className="px-3 py-2 text-center">
                       {isOwner ? (
-                        <span className="inline-flex items-center justify-center gap-1 rounded-md bg-emerald-50 px-2 py-1.5 text-xs font-medium text-emerald-700" title="Titular: acesso total garantido">
+                        <span className="inline-flex items-center justify-center gap-1 rounded-md bg-success-soft px-2 py-1.5 text-xs font-medium text-success-strong" title="Titular: acesso total garantido">
                           <ShieldCheck className="h-3.5 w-3.5" /> Total
                         </span>
                       ) : (

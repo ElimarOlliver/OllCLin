@@ -66,7 +66,7 @@ export default function EquipeView() {
 
   if (list.isError) {
     return (
-      <div className="p-8 text-sm text-red-600">
+      <div className="p-8 text-sm text-destructive">
         Acesso restrito: somente o titular ou administradores gerenciam a equipe.
       </div>
     );
@@ -167,7 +167,7 @@ export default function EquipeView() {
                 </td>
                 <td className="px-4 py-3">
                   {m.isOwner ? (
-                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Titular</span>
+                    <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[11px] font-semibold text-warning-strong">Titular</span>
                   ) : (
                     <Select
                       value={m.role}
@@ -186,7 +186,7 @@ export default function EquipeView() {
                 </td>
                 <td className="px-4 py-3">
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${m.status === "active" ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"
+                    className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${m.status === "active" ? "bg-success-soft text-success-strong" : "bg-muted text-muted-foreground"
                       }`}
                   >
                     {m.status === "active" ? "Ativo" : "Desativado"}

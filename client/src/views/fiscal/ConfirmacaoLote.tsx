@@ -113,8 +113,8 @@ export default function ConfirmacaoLote({ open, ambiente, itens, lotePendente, o
 
         <div
           className={`rounded-md border p-3 text-sm ${ambiente === "PRODUCAO"
-              ? "border-red-300 bg-red-50 text-red-800"
-              : "border-yellow-300 bg-yellow-50 text-yellow-800"
+              ? "border-danger/40 bg-danger-soft text-danger-strong"
+              : "border-warning/50 bg-warning-soft text-warning-strong"
             }`}
         >
           Ambiente ativo: <strong>{ambiente === "PRODUCAO" ? "PRODUÇÃO" : "HOMOLOGAÇÃO"}</strong>
@@ -177,7 +177,7 @@ export default function ConfirmacaoLote({ open, ambiente, itens, lotePendente, o
                     {i.profissional ?? "—"}
                     {i.crm ? ` (${i.crm})` : ""}
                   </td>
-                  <td className="p-2 text-xs text-red-600">
+                  <td className="p-2 text-xs text-destructive">
                     {i.bloqueios.length > 0 ? (
                       <span className="inline-flex items-start gap-1">
                         <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />

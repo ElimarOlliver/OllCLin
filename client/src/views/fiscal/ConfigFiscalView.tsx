@@ -216,7 +216,7 @@ export default function ConfigFiscalView() {
 
       {/* Credencial — entra uma vez, nunca mais volta (R05/R07). */}
       {credencial.data?.existe ? (
-        <div className="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+        <div className="rounded-md border border-success/50 bg-success-soft p-3 text-sm text-success-strong">
           Credencial cadastrada ({credencial.data.tipo}) · válida até{" "}
           {credencial.data.validoAte ? new Date(credencial.data.validoAte).toLocaleDateString("pt-BR") : "—"}
           {credencial.data.venceEm != null && ` · vence em ${credencial.data.venceEm} dia(s)`}

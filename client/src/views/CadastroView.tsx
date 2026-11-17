@@ -112,8 +112,8 @@ export default function CadastroView({ onDone }: { onDone?: () => void }) {
             />
           </div>
 
-          {errorMessage && <p className="text-sm text-red-600 text-center">{errorMessage}</p>}
-          {successMessage && <p className="text-sm text-emerald-700 text-center">{successMessage}</p>}
+          {errorMessage && <p className="text-sm text-destructive text-center">{errorMessage}</p>}
+          {successMessage && <p className="text-sm text-success-strong text-center">{successMessage}</p>}
 
           <Button
             type="submit"

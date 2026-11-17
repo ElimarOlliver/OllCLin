@@ -143,7 +143,7 @@ export default function CorporateChatWidget() {
                 <Textarea id="chatMessage" value={draft} maxLength={2000} onChange={(event) => setDraft(event.target.value)} placeholder="Escreva uma mensagem..." rows={1} className="max-h-24 min-h-10 resize-none" onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); sendMessage(event); } }} />
                 <Button type="submit" size="icon" disabled={!draft.trim() || sendMutation.isPending} aria-label="Enviar mensagem" className="shrink-0 bg-primary hover:bg-primary-hover"><Send className="h-4 w-4" /></Button>
               </form>
-              {sendMutation.error && <p role="alert" className="bg-red-50 px-3 py-1 text-xs text-red-700">{sendMutation.error.message}</p>}
+              {sendMutation.error && <p role="alert" className="bg-danger-soft px-3 py-1 text-xs text-danger-strong">{sendMutation.error.message}</p>}
             </div>
           )}
         </section>
