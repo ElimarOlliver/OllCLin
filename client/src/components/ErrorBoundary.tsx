@@ -21,34 +21,40 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    // A stack fica só no console (diagnóstico em devtools); a tela nunca
+    // mostra stack nem detalhes técnicos — regra de LGPD do AGENTS.md.
+    console.error("[ErrorBoundary]", error, info.componentStack);
+  }
+
   render() {
     if (this.state.hasError) {
       return (
         <div className="flex items-center justify-center min-h-screen p-8 bg-background">
-          <div className="flex flex-col items-center w-full max-w-2xl p-8">
+          <div className="flex flex-col items-center w-full max-w-2xl p-8 text-center">
             <AlertTriangle
               size={48}
               className="text-destructive mb-6 flex-shrink-0"
             />
 
-            <h2 className="text-xl mb-4">An unexpected error occurred.</h2>
-
-            <div className="p-4 w-full rounded bg-muted overflow-auto mb-6">
-              <pre className="text-sm text-muted-foreground whitespace-break-spaces">
-                {this.state.error?.stack}
-              </pre>
-            </div>
+            <h2 className="text-xl font-semibold text-foreground mb-2">
+              Ocorreu um erro inesperado
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Tente recarregar a página. Se o problema continuar, avise a
+              equipe de suporte.
+            </p>
 
             <button
               onClick={() => window.location.reload()}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg",
+                "flex items-center gap-2 h-11 px-4 rounded-lg text-sm font-medium",
                 "bg-primary text-primary-foreground",
-                "hover:opacity-90 cursor-pointer"
+                "transition-opacity duration-150 ease-out hover:opacity-90 active:scale-[.98] cursor-pointer"
               )}
             >
               <RotateCcw size={16} />
-              Reload Page
+              Recarregar página
             </button>
           </div>
         </div>
