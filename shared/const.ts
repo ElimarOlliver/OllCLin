@@ -4,6 +4,13 @@ export const AXIOS_TIMEOUT_MS = 30_000;
 export const UNAUTHED_ERR_MSG = 'Please login (10001)';
 export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
 
+// SaaS: mensagem estável enviada pelo servidor quando a organização em trial
+// expira e uma mutation é bloqueada (modo somente leitura). O cliente compara
+// a mensagem do erro com esta constante para abrir o popup de contratação —
+// não renomeie o texto sem atualizar o TrialGate.
+export const TRIAL_EXPIRED_ERR_MSG =
+  "Trial encerrado: a clínica está em modo somente leitura. Fale com a nossa equipe para contratar um plano.";
+
 // One-time nonce cookie that binds an OAuth login to the browser that started
 // it. The `__Host-` prefix forces the cookie host-only (Secure, Path=/, no
 // Domain), so a sibling *.manus.space site cannot plant a matching value in a

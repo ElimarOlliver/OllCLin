@@ -1,5 +1,5 @@
 import { getSupabaseAuthHeaders, trpc } from "@/lib/trpc";
-import { COOKIE_NAME, UNAUTHED_ERR_MSG } from '@shared/const';
+import { COOKIE_NAME, TRIAL_EXPIRED_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
@@ -38,6 +38,10 @@ queryClient.getMutationCache().subscribe(event => {
   if (event.type === "updated" && event.action.type === "error") {
     const error = event.mutation.state.error;
     redirectToLoginIfUnauthorized(error);
+    // Trial expirado: abre o popup de contratação onde a mutação falhou.
+    if (error instanceof TRPCClientError && error.message === TRIAL_EXPIRED_ERR_MSG) {
+      window.dispatchEvent(new CustomEvent("ollclin:trial-expired"));
+    }
     console.error("[API Mutation Error]", error);
   }
 });

@@ -1,7 +1,8 @@
-import { NOT_ADMIN_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
+import { NOT_ADMIN_ERR_MSG, TRIAL_EXPIRED_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import type { TrpcContext } from "./context";
+import { getOrganizationTrial } from "../models/saas.model";
 
 const t = initTRPC.context<TrpcContext>().create({
   transformer: superjson,
@@ -25,6 +26,43 @@ const requireUser = t.middleware(async opts => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Trial expirado → modo somente leitura
+// ---------------------------------------------------------------------------
+// Mutações de negócio voltam a ser permitidas assim que a org sair do plano
+// "trial" (contratação) ou o trial for renovado. O chat interno fica isento
+// para a equipe poder combinar a contratação.
+const TRIAL_EXEMPT_PREFIXES = ["chat."];
+const TRIAL_CACHE_MS = 60_000;
+const trialCache = new Map<number, { expired: boolean; checkedAt: number }>();
+
+async function isTrialExpired(organizationId: number): Promise<boolean> {
+  const cached = trialCache.get(organizationId);
+  if (cached && Date.now() - cached.checkedAt < TRIAL_CACHE_MS) return cached.expired;
+
+  const trial = await getOrganizationTrial(organizationId);
+  // Org sem dados de trial (legado) ou já contratada não bloqueia nada.
+  const expired = Boolean(trial && trial.plan === "trial" && trial.trialExpired);
+  trialCache.set(organizationId, { expired, checkedAt: Date.now() });
+  return expired;
+}
+
+const enforceTrialForWrites = t.middleware(async opts => {
+  const { ctx, type, path } = opts;
+
+  if (type === "mutation" && ctx.user?.organizationId) {
+    const exempt = TRIAL_EXEMPT_PREFIXES.some((p) => path.startsWith(p));
+    if (!exempt && (await isTrialExpired(ctx.user.organizationId))) {
+      throw new TRPCError({
+        code: "PRECONDITION_FAILED",
+        message: TRIAL_EXPIRED_ERR_MSG,
+      });
+    }
+  }
+
+  return opts.next();
+});
+
 const requireTenantScope = t.middleware(async (opts) => {
   const { ctx, input, next } = opts;
   const requested = (input as { organizationId?: unknown } | undefined)?.organizationId;
@@ -44,7 +82,8 @@ const requireTenantScope = t.middleware(async (opts) => {
 
 export const protectedProcedure = t.procedure
   .use(requireUser)
-  .use(requireTenantScope);
+  .use(requireTenantScope)
+  .use(enforceTrialForWrites);
 
 export const adminProcedure = t.procedure.use(
   t.middleware(async opts => {
