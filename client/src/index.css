@@ -1459,7 +1459,7 @@ a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
     text-align: left;
     font-size: 12px;
     font-weight: 500;
-    color: var(--muted-foreground);
+    color: var(--muted); /* --muted-foreground não existe como variável; o token do tema é --muted (#64748B) */
   }
 
   [data-slot="table"]:has([data-label]) [data-slot="table-cell"][colspan] {
