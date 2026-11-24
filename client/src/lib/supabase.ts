@@ -24,9 +24,24 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     // backend (tRPC) via header Authorization: Bearer, que o server valida.
     persistSession: true,
     autoRefreshToken: true,
+    // detectSessionInUrl consome hash/query (magic link / OAuth implicit) e
+    // depois remove da URL via history.replaceState.
     detectSessionInUrl: true,
   },
 });
+
+/**
+ * Consumo do token que veio na URL (callback OAuth / magic link).
+ * Após ler a sessão, a URL é limpa imediatamente: token de sessão
+ * nunca pode permanecer visível em query string ou hash fragment.
+ */
+export async function consumeUrlSession(): Promise<void> {
+  if (typeof window === "undefined") return;
+  const { data } = await supabase.auth.getSession();
+  if (data.session) {
+    window.history.replaceState(null, "", window.location.pathname);
+  }
+}
 
 /** Sessão atual do Supabase Auth (null quando deslogado). */
 export async function getSupabaseSession() {

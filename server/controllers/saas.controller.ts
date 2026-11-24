@@ -37,11 +37,72 @@ async function findLocalUserIdByEmail(email: string): Promise<number | null> {
   return data ? Number(data.id) : null;
 }
 
+/**
+ * Validação de CNPJ (dígitos verificadores). Recebe 14 dígitos — máscara é
+ * removida antes; nunca logar o CNPJ completo (LGPD: dado sensível).
+ */
+export function isValidCnpj(cnpj: string): boolean {
+  if (!/^\d{14}$/.test(cnpj)) return false;
+  // Rejeita sequências idênticas (11.111.../ 22.222... etc.) que passam no DV.
+  if (/^(\d)\1{13}$/.test(cnpj)) return false;
+  const calc = (base: string, weights: number[]) => {
+    const sum = base
+      .split("")
+      .reduce((acc, digit, i) => acc + Number(digit) * weights[i], 0);
+    const rest = sum % 11;
+    return rest < 2 ? 0 : 11 - rest;
+  };
+  const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const d1 = calc(cnpj.slice(0, 12), w1);
+  if (d1 !== Number(cnpj[12])) return false;
+  const d2 = calc(cnpj.slice(0, 13), w2);
+  return d2 === Number(cnpj[13]);
+}
+
+/** Configuração SaaS com defaults seguros (variáveis de ambiente > default). */
+function saasDefaults() {
+  const envInt = (v: string | undefined, fallback: number) => {
+    const n = Number(v);
+    return Number.isInteger(n) && n > 0 ? n : fallback;
+  };
+  const rawAction = (process.env.SAAS_EXPIRY_ACTION ?? "readonly").toLowerCase();
+  const rawDup = (process.env.SAAS_DUPLICATE_CNPJ ?? "block").toLowerCase();
+  const rawApproval = (process.env.SAAS_APPROVAL_MODE ?? "auto").toLowerCase();
+  return {
+    trialDays: envInt(process.env.SAAS_TRIAL_DAYS, 10),
+    expiryWarningDays: envInt(process.env.SAAS_EXPIRY_WARNING_DAYS, 7),
+    expiryAction: ["block", "readonly", "auto_renew"].includes(rawAction) ? rawAction : "readonly",
+    maxUsers: envInt(process.env.SAAS_MAX_USERS, 10),
+    duplicateCnpj: rawDup === "link" ? "link" : "block",
+    approvalMode: rawApproval === "manual" ? "manual" : "auto",
+    timezone: process.env.SAAS_TIMEZONE ?? "America/Sao_Paulo",
+  };
+}
+
 const signupSchema = z.object({
   organizationName: z.string().min(2, "Informe o nome da clínica").max(120),
   name: z.string().min(2, "Informe seu nome").max(120),
   email: z.string().email("E-mail inválido"),
   password: z.string().min(8, "Senha deve ter no mínimo 8 caracteres").max(72),
+  // Dados da empresa — CNPJ validado por DV (isValidCnpj).
+  cnpj: z
+    .string()
+    .transform((v) => v.replace(/\D/g, ""))
+    .refine((v) => isValidCnpj(v), "CNPJ inválido"),
+  corporateEmail: z.string().email("E-mail corporativo inválido"),
+  corporatePhone: z.string().min(8, "Telefone inválido").max(32),
+  address: z.object({
+    street: z.string().min(1, "Informe o endereço").max(200),
+    number: z.string().min(1, "Informe o número").max(20),
+    district: z.string().max(120).optional(),
+    city: z.string().min(1, "Informe a cidade").max(120),
+    state: z.string().min(2, "Informe a UF").max(2),
+    zip: z.string().min(8, "CEP inválido").max(9),
+  }),
+  // LGPD: aceite explícito dos termos e da política de privacidade.
+  acceptTerms: z.boolean().refine((v) => v === true, "É necessário aceitar os termos de uso."),
+  acceptPrivacy: z.boolean().refine((v) => v === true, "É necessário aceitar a política de privacidade (LGPD)."),
 });
 
 export const saasRouter = router({
@@ -223,9 +284,38 @@ export const saasRouter = router({
       }
     }
 
-    // 2. Organização com trial de 10 dias
+    // 2. Organização com trial + dados da empresa (CNPJ = chave do tenant).
+    // CNPJ duplicado: bloqueia ou vincula à empresa existente (configurável).
+    const defaults = saasDefaults();
+    const { data: cnpjOwner } = await admin
+      .from("organizations")
+      .select("id")
+      .eq("cnpj", input.cnpj)
+      .maybeSingle<{ id: number }>();
+    if (cnpjOwner && defaults.duplicateCnpj === "block") {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "Já existe uma conta para este CNPJ. Faça login ou fale com o titular.",
+      });
+    }
+    if (cnpjOwner && defaults.duplicateCnpj === "link") {
+      // Vínculo à empresa existente: o titular aprova (ou é automático).
+      if (defaults.approvalMode === "manual") {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: "Cadastro vinculado a CNPJ existente aguarda aprovação do titular.",
+        });
+      }
+      // TODO (aprovação manual): fluxo de aprovação pendente do titular.
+    }
+
     const { organizationId } = await model.createOrganizationWithTrial({
       name: input.organizationName.trim(),
+      cnpj: input.cnpj,
+      corporateEmail: input.corporateEmail,
+      corporatePhone: input.corporatePhone,
+      address: input.address,
+      trialDays: defaults.trialDays,
     });
 
     // 3. Registro local (users) — titular
@@ -271,15 +361,14 @@ export const saasRouter = router({
       action: "CREATE",
       entity: "organizations",
       entityId: organizationId,
-      newValues: { email, trialDays: 10 },
+      newValues: { email, trialDays: defaults.trialDays },
     });
 
     return {
       success: true as const,
       organizationId,
-      trialDays: 10,
-      message:
-        "Conta criada! Você tem 10 dias grátis. Faça login para acessar seu painel.",
+      trialDays: defaults.trialDays,
+      message: `Conta criada! Você tem ${defaults.trialDays} dias grátis. Faça login para acessar seu painel.`,
     };
   }),
 });

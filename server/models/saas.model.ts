@@ -197,12 +197,19 @@ export async function getOrganizationTrial(
   };
 }
 
-/** Cria a organização com trial de 10 dias a partir de agora. */
+/** Cria a organização com trial (dias configuráveis, default 10). */
 export async function createOrganizationWithTrial(input: {
   name: string;
+  cnpj?: string;
+  corporateEmail?: string;
+  corporatePhone?: string;
+  address?: Record<string, string>;
+  /** Quantidade de dias do trial — default TRIAL_DAYS (env SAAS_TRIAL_DAYS). */
+  trialDays?: number;
 }): Promise<{ organizationId: number }> {
   const now = new Date();
-  const ends = new Date(now.getTime() + TRIAL_DAYS * 86_400_000);
+  const days = input.trialDays ?? TRIAL_DAYS;
+  const ends = new Date(now.getTime() + days * 86_400_000);
 
   const { data, error } = await getSupabaseAdmin()
     .from("organizations")
@@ -210,6 +217,10 @@ export async function createOrganizationWithTrial(input: {
       name: input.name,
       is_active: true,
       plan: "trial",
+      cnpj: input.cnpj ?? null,
+      corporate_email: input.corporateEmail ?? null,
+      corporate_phone: input.corporatePhone ?? null,
+      address: input.address ?? null,
       trial_started_at: now.toISOString(),
       trial_ends_at: ends.toISOString(),
     })

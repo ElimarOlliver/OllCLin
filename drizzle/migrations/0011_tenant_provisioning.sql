@@ -18,7 +18,16 @@ alter table organizations add column if not exists gateway_subscription_id varch
 alter table organizations add column if not exists onboarding_completed_at timestamptz;
 -- plan/trial_started_at/trial_ends_at já existem (0010). Adiciona plano pago escolhido:
 alter table organizations add column if not exists plan_key varchar(32);
+-- Cadastro SaaS: dados da empresa (CNPJ é a chave de tenant; 14 dígitos).
+alter table organizations add column if not exists cnpj varchar(14); -- apenas dígitos
+alter table organizations add column if not exists corporate_email varchar(255);
+alter table organizations add column if not exists corporate_phone varchar(32);
+alter table organizations add column if not exists address jsonb; -- {street,number,district,city,state,zip}
 alter table organizations add column if not exists payment_provider varchar(32);
+
+-- CNPJ único entre tenants (nullable: legado sem CNPJ continua válido).
+create unique index if not exists organizations_cnpj_key
+  on organizations (cnpj) where cnpj is not null;
 
 -- slug único (nullable — só para orgs provisionadas)
 create unique index if not exists organizations_slug_key

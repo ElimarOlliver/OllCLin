@@ -223,6 +223,9 @@ function MobileBottomNav({
 
 const PUBLIC_ROUTES = ["/landing", "/entrar", "/cadastro", "/primeiro-acesso", "/aceitar-convite"];
 
+/** Rota inicial pública do app logado — o dashboard só é acessível autenticado. */
+const PRIVATE_HOME = "/";
+
 function DashboardShell() {
   const { loading, user, logout } = useAuth();
   const [location, setLocation] = useLocation();
@@ -249,6 +252,11 @@ function DashboardShell() {
   // Fluxo de login: sessão carregada sem usuário em rota privada → landing.
   const activeLabel = menuItems.find((item) => item.path === location)?.label ?? "Menu";
 
+  // BUG CRÍTICO: enquanto `loading`, o router abaixo já renderizava as rotas
+  // privadas, e o fallback do Manus (sessionStorage "manus-cookie") / cache
+  // do auth.me deixava qualquer visitante novo entrar direto no dashboard.
+  // A rota privada SÓ pode renderizar depois de confirmar sessão válida;
+  // sem usuário → landing pública, nunca o dashboard.
   if (loading) return <div className="flex min-h-screen w-full items-center justify-center bg-background"><div className="flex flex-col items-center gap-3"><div className="h-8 w-8 animate-pulse rounded-full bg-primary" /><p className="text-sm text-muted-foreground">Carregando sessão...</p></div></div>;
   if (!user) return <LandingPageView onEnter={() => setLocation("/entrar")} />;
 

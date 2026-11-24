@@ -1,5 +1,5 @@
 import { getSupabaseAuthHeaders, trpc } from "@/lib/trpc";
-import { COOKIE_NAME, TRIAL_EXPIRED_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
+import { TRIAL_EXPIRED_ERR_MSG, UNAUTHED_ERR_MSG } from '@shared/const';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink, TRPCClientError } from "@trpc/client";
 import { createRoot } from "react-dom/client";
@@ -54,26 +54,21 @@ const trpcClient = trpc.createClient({
       async headers() {
         // O login principal usa Supabase Auth. Ele deve ter prioridade sobre
         // um cookie Manus antigo que possa ter ficado no sessionStorage.
+        // Auto-login indevido: o cookie Manus herdado do template (`webdev_app_session`)
+        // é só do ambiente Manus Preview — no SaaS real a sessão é o JWT do Supabase
+        // enviado como Bearer. Enviar esse cookie legado autenticava qualquer
+        // visitante novo com a conta dona do cookie (auto-login compartilhado).
+        try {
+          if (sessionStorage.getItem("manus-cookie")) sessionStorage.removeItem("manus-cookie");
+        } catch {
+          // sessionStorage indisponível
+        }
         const supabaseHeaders = await getSupabaseAuthHeaders();
         if (supabaseHeaders.Authorization) return supabaseHeaders;
 
-        // Preview auto-login fallback: quando o navegador bloqueia iframe cookies
-        // (Safari ITP / private browsing / WebView), the runtime mirrors the
-        // session into sessionStorage so we can forward it as a Bearer token.
-        // The regular OAuth cookie flow keeps working and takes priority server-side.
-        try {
-          const raw = sessionStorage.getItem("manus-cookie");
-          if (raw) {
-            const prefix = `${COOKIE_NAME}=`;
-            const pair = raw.split(";").find(s => s.trim().startsWith(prefix));
-            const token = pair?.trim().slice(prefix.length);
-            if (token) {
-              return { Authorization: `Bearer ${token}` };
-            }
-          }
-        } catch {
-          // sessionStorage unavailable
-        }
+        // Nunca mais espelhamos a sessão em sessionStorage: token em storage é
+        // visível a qualquer script XSS e sobrevive à navegação aberta por
+        // terceiros — a sessão passa a viver só no Supabase Auth.
         return {};
       },
       fetch(input, init) {

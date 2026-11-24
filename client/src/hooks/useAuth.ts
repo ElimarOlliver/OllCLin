@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
-import { signOutSupabase, supabase } from "@/lib/supabase";
+import { consumeUrlSession, signOutSupabase, supabase } from "@/lib/supabase";
 
 export function useAuth() {
   const utils = trpc.useUtils();
@@ -16,6 +16,12 @@ export function useAuth() {
     staleTime: 5 * 60 * 1000, // 5 minutos
     retry: false,
   });
+
+  // Callback OAuth/magic link: consome o token da URL e limpa a query/hash
+  // imediatamente (token nunca permanece visível na barra de endereço).
+  useEffect(() => {
+    void consumeUrlSession();
+  }, []);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
@@ -38,6 +44,20 @@ export function useAuth() {
       await signOutSupabase();
     } catch {
       // Sem sessão ativa no Supabase: segue para a tela inicial.
+    }
+    // LGPD: sai de todos os storages — nada de sessão/usuario sobrevive ao
+    // logout neste navegador (inclui rastro legado do template Manus).
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {
+      // storage bloqueado (navegação privada)
+    }
+    // Token de sessão nunca pode trafegar/permancer em URL visível.
+    try {
+      window.history.replaceState(null, "", "/entrar");
+    } catch {
+      // replaceState indisponível
     }
     utils.auth.me.setData(undefined, null);
     await utils.auth.me.invalidate();
